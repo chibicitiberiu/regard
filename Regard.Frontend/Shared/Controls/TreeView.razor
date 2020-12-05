@@ -1,0 +1,30 @@
+﻿@typeparam TData
+
+<div class="tree-view">
+    @foreach (var child in Root.Children)
+    {
+        @BuildTreeItem(child);
+    }
+</div>
+
+
+@code {
+    private RenderFragment BuildTreeItem(TreeViewNode<TData> item)
+    {
+        return __builder =>
+        {
+            <div class="tree-item">
+                @ItemTemplate(item.Data)
+                @if (item.IsExpanded)
+                {
+                    <div class="tree-item-children">
+                        @foreach (var child in item.Children)
+                        {
+                            @BuildTreeItem(child)
+                        }
+                    </div>
+                }
+            </div>
+        };
+    }
+} 

@@ -1,0 +1,17 @@
+﻿<div class="tab-view">
+    <div class="tab-headers">
+        @foreach(var tab in Tabs)
+        {
+            <div class="tab-header @GetSelectedClass(tab)">
+                <a href="#" @onclick="@(e => OnTabHeaderClicked(tab))">
+                    @tab.Title
+                </a>
+            </div>
+        }
+    </div>
+    <div class="tab-content">
+        <CascadingValue Value="this">
+            @ChildContent
+        </CascadingValue>
+    </div>
+</div>

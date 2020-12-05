@@ -1,0 +1,214 @@
+﻿@import "lib/import/icons_material";
+@import "lib/import/font_adventpro";
+@import "lib/import/font_opensans";
+@import "lib/import/font_raleway";
+@import "lib/import/font_roboto";
+@import "lib/theme";
+@import "lib/base";
+@import "lib/controls";
+@import "lib/dropdown";
+@import "lib/nav";
+@import "lib/toolbar";
+@import "lib/modal";
+@import "lib/tabs";
+@import "lib/logo";
+@import "lib/loading";
+//@import "lib/hamburger";
+@import "lib/toast";
+
+#main_footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2rem;
+    line-height: 2rem;
+    padding: 0 1rem;
+    display: flex;
+    align-content: center;
+    font-size: 10pt;
+}
+
+.black-overlay {
+    position: fixed; /* Sit on top of the page content */
+    display: none; /* Hidden by default */
+    width: 100%; /* Full width (cover the whole page) */
+    height: 100%; /* Full height (cover the whole page) */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5); /* Black background with opacity */
+    z-index: 2; /* Specify a stack order in case you're using a different order for other elements */
+    cursor: pointer; /* Add a pointer on hover */
+}
+
+.video-gallery {
+    .card-wrapper {
+        padding: 1rem;
+        margin-bottom: .5rem;
+
+        &:hover {
+            background-color: #fafafa;
+        }
+    }
+
+    .card {
+        border: none;
+        background: none;
+
+        .card-body {
+            margin-top: .5em;
+            padding: 0;
+        }
+
+        .card-text {
+            font-size: 10pt;
+            margin-bottom: .5rem;
+        }
+
+        .card-title {
+            font-size: 11pt;
+            margin-bottom: .5rem;
+            line-height: 1.2rem;
+
+            .badge {
+                font-size: 8pt;
+            }
+        }
+
+        .card-footer {
+            padding: .5rem .75rem;
+        }
+
+        .card-more {
+            margin-right: -0.25rem;
+            margin-top: -0.27rem;
+
+            &:hover {
+                text-decoration: none;
+            }
+        }
+
+        .card-img-top {
+        }
+
+        .progress {
+            width: 100px;
+        }
+    }
+}
+
+.video-badges {
+    position: absolute;
+    top: .6em;
+    left: 0;
+    width: 6.2em;
+
+    .video-badge {
+        width: 100%;
+        margin: 0 0 .6em 0;
+        padding: 0 0 0 .5em;
+        line-height: 1.65em;
+        background-color: #9af;
+        box-shadow: .2em 0 .6em 0 rgba(0,0,0,0.4);
+        border-radius: 0 3px 3px 0;
+        color: white;
+        text-align: center;
+        font-family: Noto Sans, Helvetica, Arial, sans-serif;
+        font-weight: 500;
+        font-size: 8pt;
+        text-transform: uppercase;
+
+        &.video-badge-new {
+            background-color: var(--color-bg-primary);
+        }
+
+        &.video-badge-downloaded {
+            background-color: #59b352;
+        }
+
+        &.video-badge-watched {
+            background-color: #444;
+        }
+    }
+}
+
+
+.alert-card {
+    max-width: 35rem;
+    margin: 2rem 0;
+}
+
+.no-asterisk {
+    .asteriskField {
+        display: none;
+    }
+}
+
+.modal-field-error {
+    margin: 0.5rem 0;
+    padding: 0.5rem 0;
+
+    ul {
+        margin: 0;
+    }
+}
+
+.star-rating {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+
+.btn-toolbar {
+    margin: .5rem 0;
+
+    .btn {
+        padding: 0.15rem 0.4rem;
+        font-size: 14pt;
+    }
+}
+
+.status-timestamp {
+    margin-right: 0.25rem;
+}
+
+.dropdown-jobs {
+    min-width: 25rem;
+
+    .dropdown-item p {
+        margin: 0;
+        line-height: normal;
+    }
+}
+
+img.muted {
+    opacity: .5;
+}
+
+.provider-wrapper {
+    padding-left: 5px;
+    padding-right: 5px;
+
+    button {
+        width: 100%;
+    }
+}
+
+.provider-logo {
+    display: inline-block;
+    width: 8rem;
+    height: 4rem;
+    object-fit: contain;
+    margin: .25em auto;
+    font-size: 3rem;
+    text-align: center;
+    line-height: 4rem;
+}
+
+.provider-status {
+    font-size: 2rem;
+    position: absolute;
+    bottom: 0;
+    right: .5rem;
+}

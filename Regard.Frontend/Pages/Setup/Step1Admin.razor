@@ -1,0 +1,55 @@
+﻿@page "/setup/step1"
+@using RegardBackend.Common.API.Request 
+@inject BackendService backend
+@inject AppState appState
+@inject AuthenticationService auth
+@inject MainAppController appCtrl
+
+<h3>Step 1: Create an administrator account</h3>
+
+@if (appState.ServerStatus != null && appState.ServerStatus.HaveUsers && pickUser)
+{
+    <p>Type the credentials of the user which will become the system administrator.</p>
+
+    <LoginForm SubmitText="Next" LoggedIn="OnFormCompleted">
+        <ExtraButtons>
+            <a href="#" @onclick="OnTogglePickCreate">Create new administrator account</a>
+        </ExtraButtons>
+    </LoginForm>
+}
+else
+{
+    <RegisterForm SubmitText="Next" Registered="OnFormCompleted">
+        <ExtraButtons>
+            @if (appState.ServerStatus != null && appState.ServerStatus.HaveUsers)
+            {
+                <a href="#" @onclick="OnTogglePickCreate">Login as an existing user</a>
+            }
+        </ExtraButtons>
+    </RegisterForm>
+}
+
+@code {
+    bool pickUser = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await appCtrl.OnInitialize();
+    }
+
+    private async Task OnFormCompleted()
+    {
+        // Promote user
+        string username = await auth.GetUsername();
+        var (result, httpResponse) = await auth.Promote(new UserPromote() { Username = username });
+        httpResponse.EnsureSuccessStatusCode();
+
+        await appCtrl.ContinueSetup();
+    }
+
+    void OnTogglePickCreate()
+    {
+        pickUser = !pickUser;
+    }
+}

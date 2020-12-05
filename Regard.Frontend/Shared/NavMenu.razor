@@ -1,0 +1,36 @@
+﻿<nav class="navbar navbar-fixed-top">
+    <NavLink class="navbar-brand nav-link logo-small" href="" Match="NavLinkMatch.All">
+        Regard
+    </NavLink>
+
+    <AuthorizeView>
+        <Authorized>
+            <ul class="navbar-nav navbar-nav-right">
+                <li class="nav-item" onclick="">
+
+                    <a href="#" class="nav-link" @onclick="@ToggleNotificationsPanel">
+                        <span class="material-icons">@HaveNotificationsIcon</span>
+                    </a>
+                    <div class="dropdown dropdown-right @CssUtils.BoolToVisible(NotificationsPanelVisible)"
+                         style="--pos-right: 6.2em">
+                        Notifications panel
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" @onclick="@ToggleUserPanel">
+                        <span class="material-icons">person</span>
+                    </a>
+                    <div class="dropdown dropdown-right @CssUtils.BoolToVisible(UserPanelVisible)"
+                         style="--pos-right: 3.75em">
+                        User panel
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/settings">
+                        <span class="material-icons">settings</span>
+                    </NavLink>
+                </li>
+            </ul>
+        </Authorized>
+    </AuthorizeView>
+</nav>

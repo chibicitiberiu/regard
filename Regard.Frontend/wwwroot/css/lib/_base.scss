@@ -1,0 +1,80 @@
+﻿@import "theme.scss";
+
+// Base styles
+@each $style in window, primary, secondary, success, warning, error {
+    .bg-#{$style} {
+        background-color: var(--color-bg-#{$style});
+    }
+    .fg-#{$style} {
+        color: var(--color-fg-#{$style});
+    }
+    .#{$style} {
+        background-color: var(--color-bg-#{$style});
+        color: var(--color-fg-#{$style});
+    }
+}
+
+.ml-auto {
+    margin-left: auto !important;
+}
+
+.mr-auto {
+    margin-right: auto !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.row-table {
+    display: table;
+    width: 100%;
+
+    > * {
+        display: table-cell;
+    }
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    background: url(/img/bg.png) no-repeat;
+    background-size: auto;
+    /*background: var(--color-bg) no-repeat;*/
+    color: var(--color-fg);
+    font-family: var(--font-family-sans-serif);
+}
+
+.content {
+    padding: 1em;
+}
+
+.text-muted {
+    opacity: .75;
+}
+
+.center-screen {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.fade-in-fast {
+    animation: fade-in ease .25s;
+}
+
+.fade-in {
+    animation: fade-in ease .5s;
+}
+
+.fade-in-slow {
+    animation: fade-in ease 2s;
+}
+
+@keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}

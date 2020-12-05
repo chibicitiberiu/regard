@@ -1,0 +1,45 @@
+﻿@import "theme";
+
+@mixin neon($color-text, $color-glow) {
+    color: $color-text;
+    text-shadow: 
+        0 0 0 transparent, 
+        0 0 10px $color-glow,
+        0 0 20px rgba($color-glow, 0.5),
+        0 0 40px $color-glow, 
+        0 0 100px $color-glow, 
+        0 0 200px $color-glow;
+}
+
+.logo {
+    @include neon($neon-magenta-text, $neon-magenta-glow);
+    font-family: "Advent Pro", sans-serif;
+    font-weight: 200;
+    font-size: 6em;
+    text-transform: uppercase;
+    letter-spacing: .025em;
+}
+
+.logo-1 {
+    @include neon($neon-magenta-text, $neon-magenta-glow);
+}
+.logo-2 {
+    @include neon($neon-green-text, $neon-green-glow);
+}
+.logo-3 {
+    @include neon($neon-red-text, $neon-red-glow);
+}
+.logo-4 {
+    @include neon($neon-cyan-text, $neon-cyan-glow);
+}
+.logo-6 {
+    @include neon($neon-yellow-text, $neon-yellow-glow);
+}
+.logo-5 {
+    @include neon($neon-magenta-text, $neon-magenta-glow);
+}
+
+.logo-small {
+    @extend .logo;
+    font-size: 2em;
+}

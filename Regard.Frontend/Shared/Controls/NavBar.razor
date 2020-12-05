@@ -1,0 +1,15 @@
+﻿<nav class="navbar @FixedTopClass">
+    <div class="navbar-brand">
+        @Brand
+    </div>
+
+</nav>
+
+@code {
+    public bool FixedTop { get; set; } = true;
+
+    private string FixedTopClass => FixedTop ? "navbar-fixed-top" : "";
+
+    [Parameter]
+    public RenderFragment Brand { get; set; }
+}

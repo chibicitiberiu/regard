@@ -1,0 +1,128 @@
+﻿@using RegardBackend.Common.API.Request;
+@inject AuthenticationService auth
+@inject AppState appState
+
+<EditForm Model="Request"
+          OnValidSubmit="OnSubmit"
+          class="form-horizontal">
+
+    <FormField Id="register_username"
+               Label="Username"
+               Required="true">
+        <Field>
+            <InputText @bind-Value="Request.Username"
+                       id="register_username"
+                       class="form-control"
+                       autocomplete="username"
+                       autocapitalize="none">
+            </InputText>
+        </Field>
+        <HelpText>Required. 150 characters or fewer. Letters, digits and @@/./+/-/_ only.</HelpText>
+    </FormField>
+
+    <FormField Id="register_email"
+               Label="Email address">
+        <Field>
+            <InputText @bind-Value="Request.Email"
+                       id="register_email"
+                       class="form-control" />
+        </Field>
+        <HelpText>The e-mail address is optional, but it is the only way to recover a lost password.</HelpText>
+    </FormField>
+
+    <FormField Id="register_first_name"
+               Label="First name">
+        <Field>
+            <InputText @bind-Value="Request.FirstName"
+                       id="register_first_name"
+                       class="form-control" />
+        </Field>
+    </FormField>
+
+    <FormField Id="register_last_name"
+               Label="Last name">
+        <Field>
+            <InputText @bind-Value="Request.LastName"
+                       id="register_last_name"
+                       class="form-control" />
+        </Field>
+    </FormField>
+
+    <FormField Id="register_password"
+               Label="Password"
+               Required="true">
+        <Field>
+            <InputText @bind-Value="Request.Password1"
+                       type="password"
+                       id="register_password"
+                       class="form-control"
+                       autocomplete="new-password" />
+        </Field>
+        <HelpText>
+            <ul>
+                <li>Your password can’t be too similar to your other personal information.</li>
+                <li>Your password must contain at least 8 characters.</li>
+                <li>Your password can’t be a commonly used password.</li>
+                <li>Your password can’t be entirely numeric.</li>
+            </ul>
+        </HelpText>
+    </FormField>
+
+    <FormField Id="register_password_confirm"
+               Label="Password confirmation"
+               Required="true">
+        <Field>
+            <InputText @bind-Value="Request.Password2"
+                       type="password"
+                       id="register_password_confirm"
+                       class="form-control"
+                       autocomplete="new-password" />
+        </Field>
+        <HelpText>Enter the same password as before, for verification.</HelpText>
+    </FormField>
+
+    <div class="form-group">
+        <DataAnnotationsValidator />
+        <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
+        @if (loginMessage != null)
+        {
+            <p>@loginMessage</p>
+        }
+    </div>
+
+    <div class="row">
+        <div class="col-xs-12 row">
+            <button class="primary ml-auto" type="submit" disabled="@SubmitClicked">@SubmitText</button>
+            @ExtraButtons
+        </div>
+    </div>
+
+</EditForm>
+
+@code {
+    bool SubmitClicked { get; set; }
+
+    public UserRegister Request { get; } = new UserRegister();
+
+    [Parameter]
+    public RenderFragment ExtraButtons { get; set; }
+
+    [Parameter]
+    public string SubmitText { get; set; } = "Submit";
+
+    [Parameter]
+    public EventCallback Registered { get; set; }
+
+    private string loginMessage = null;
+
+    async Task OnSubmit()
+    {
+        SubmitClicked = true;
+
+        var (response, httpResponse) = await auth.Register(Request);
+        if (httpResponse.IsSuccessStatusCode)
+            await Registered.InvokeAsync(null);
+        else
+            loginMessage = response.Message;
+    }
+}

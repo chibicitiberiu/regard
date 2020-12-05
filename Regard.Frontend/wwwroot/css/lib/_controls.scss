@@ -1,0 +1,171 @@
+﻿@import "import/icons_material";
+
+a {
+    color: var(--color-fg-secondary)
+}
+
+input, textarea {
+    padding: .5em .75em;
+    background: var(--color-bg-input);
+    color: var(--color-fg-window);
+    border: none;
+    border-radius: var(--border-radius-window);
+    opacity: .75;
+    transition: opacity .35s;
+    line-height: 1em;
+
+    &:hover, &:focus {
+        opacity: 1;
+        outline: none;
+        transition: opacity .2s;
+    }
+}
+
+@mixin input-indicator($icon, $color) {
+    @extend .material-icons;
+    content: $icon;
+    float: right;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    right: .25em;
+    color: $color;
+}
+
+.input-wrapper {
+    position: relative;
+    
+    &.valid {
+        > input {
+            padding-right: 2.2em;
+        }
+        &:after {
+            @include input-indicator("done", var(--color-fg-success));
+        }
+    }
+    &.loading {
+        > input {
+            padding-right: 2.2em;
+        }
+        &:after {
+            @include input-indicator("sync", var(--color-fg));
+            animation: input-wrapper-loading-spin 1s infinite linear;
+        }
+    }
+    &.invalid {
+        > input {
+            padding-right: 2.2em;
+        }
+        &:after {
+            @include input-indicator("error_outline", var(--color-fg-error));
+        }
+    }
+}
+
+@keyframes input-wrapper-loading-spin {
+    from {
+        transform: translateY(-50%) rotate(0deg);
+    }
+    to {
+        transform: translateY(-50%) rotate(-360deg);
+    }
+}
+
+$button-horiz-margin: 3px;
+
+button, .button, input[type=button], input[type=submit] {
+    display: inline-block;
+    padding: .5em .75em;
+//    margin: 1px $button-horiz-margin;
+    text-decoration: none;
+    color: var(--color-fg-secondary);
+    background-color: var(--color-bg-secondary);
+    transition: background-color linear 0.25s, opacity 0.25s, text-shadow 0.25s;
+    border: 0;
+    border-radius: --var(--border-radius-btn);
+
+    &:hover:not(:disabled) {
+        color: var(--color-bg-secondary);
+        background: var(--color-fg-secondary);
+        box-shadow: 0 0 .5em var(--color-fg-secondary);
+        transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s;
+    }
+
+    &:focus {
+        outline: none;
+    }
+
+    &:disabled {
+        opacity: .5;
+    }
+
+    &.primary {
+        color: var(--color-bg-primary);
+        background-color: var(--color-fg-primary);
+        box-shadow: 0 0 .5em var(--color-shadow-primary);
+
+        &:hover:not(:disabled) {
+            background-color: var(--color-fg);
+        }
+    }
+}
+
+.button-group {
+    display: flex;
+    flex-direction: row;
+
+    & > button, .button {
+        margin-left: 0;
+        margin-right: 0;
+        border-radius: 0;
+
+        &:first-child {
+            margin-left: $button-horiz-margin;
+            border-radius: var(--border-radius-btn) 0 0 var(--border-radius-btn);
+        }
+
+        &:last-child {
+            margin-right: $button-horiz-margin;
+            border-radius: 0 var(--border-radius-btn) var(--border-radius-btn) 0;
+        }
+
+        &:first-child:last-child {
+            margin-left: $button-horiz-margin;
+            margin-right: $button-horiz-margin;
+            border-radius: var(--border-radius-btn);
+        }
+    }
+}
+
+.button-undecorated {
+    padding: .125em .25em;
+    margin: 1px $button-horiz-margin;
+    background-color: transparent;
+}
+
+form {
+    display: block;
+}
+
+.form-label {
+    margin-top: .5em;
+    padding-right: .25em;
+    text-align: right;
+
+    &.required:after {
+        content: '*';
+        color: var(--color-fg-primary);
+        font-size: 9pt;
+        vertical-align: super;
+        padding-left: .15em;
+    }
+}
+
+.form-group {
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}

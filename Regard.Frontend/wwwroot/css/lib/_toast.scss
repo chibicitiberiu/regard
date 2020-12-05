@@ -1,0 +1,56 @@
+﻿@import "theme";
+
+#toast-wrapper {
+    position: fixed;
+    right: 2rem;
+    top: 2rem;
+    z-index: 1000;
+}
+
+.toast {
+    min-width: 15rem;
+    line-height: 1.5rem;
+
+    .typcn {
+        font-size: 1.5rem;
+    }
+
+    &.bg-success {
+        background-color: var(--color-bg-success) !important;
+
+        .toast-header {
+            background-color: var(--color-bg-success);
+            color: var(--color-fg);
+
+            > * {
+                color: var(--color-fg);
+            }
+        }
+    }
+
+    &.bg-warning {
+        background-color: var(--color-bg-warning) !important;
+
+        .toast-header {
+            background-color: var(--color-bg-warning);
+            color: var(--color-fg);
+
+            > * {
+                color: var(--color-fg);
+            }
+        }
+    }
+
+    &.bg-danger {
+        background-color: var(--color-bg-error) !important;
+
+        .toast-header {
+            background-color: var(--color-bg-error);
+            color: var(--color-fg);
+
+            > * {
+                color: var(--color-fg);
+            }
+        }
+    }
+}

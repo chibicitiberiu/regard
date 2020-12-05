@@ -1,0 +1,31 @@
+﻿<div class="form-group row">
+    <label class="form-label col-xs-@LabelWidth @CssUtils.BoolToClass(Required, "required")" for="@Id">
+        @Label
+    </label>
+    <div class="col-xs-@(12-LabelWidth)">
+        @Field
+        <small id="hint_@Id" class="form-text text-muted">
+            @HelpText
+        </small>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    [Parameter]
+    public string Label { get; set; }
+
+    [Parameter]
+    public bool Required { get; set; } = false;
+
+    [Parameter]
+    public RenderFragment Field { get; set; }
+
+    [Parameter]
+    public RenderFragment HelpText { get; set; }
+
+    [Parameter]
+    public int LabelWidth { get; set; } = 3;
+}

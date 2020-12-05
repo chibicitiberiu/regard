@@ -1,0 +1,37 @@
+﻿<Modal @ref="modal" 
+       IsCloseable="false" 
+       IsInitialVisible="true">
+    <Title>@tabView?.SelectedPage?.Title</Title>
+    <Body>
+        <TabView @ref="tabView" ActivePageChanged="OnTabChanged">
+            <TabPage>
+                <Title>Login</Title>
+                <Content>
+                    <LoginForm />
+                </Content>
+            </TabPage>
+            <TabPage>
+                <Title>Register</Title>
+                <Content>
+                    <RegisterForm />
+                </Content>
+            </TabPage>
+        </TabView>
+    </Body>
+</Modal>
+
+@code {
+    Modal modal;
+    TabView tabView;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+    }
+
+    private void OnTabChanged()
+    {
+        StateHasChanged();
+    }
+}

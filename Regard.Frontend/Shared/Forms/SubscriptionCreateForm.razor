@@ -1,0 +1,36 @@
+﻿<EditForm Model="Request"
+          OnValidSubmit="OnSubmit">
+    <FormField Id="subcreate_url"
+               Label="Url:" LabelWidth="1"
+               Required="true">
+        <Field>
+            <div class="input-wrapper @UrlStateClass">
+                <BOIInputText @bind-Value="@Request.Url"
+                                @onkeyup="OnUrlKeyUp"
+                                type="url"
+                                id="register_username"
+                                class="form-control"
+                                autocomplete="username"
+                                autocapitalize="none"
+                                autofocus
+                                required>
+                </BOIInputText>
+            </div>
+        </Field>
+        <HelpText>Paste an URL to something you want to subscribe to, such as a channel, a playlist or a search.</HelpText>
+    </FormField>
+
+    <div class="form-group row">
+        <div class="col-xs-12 fg-error">
+            @ValidationMessage
+        </div>
+    </div>
+
+    @*TODO: folder select*@
+    <div class="row">
+        <div class="col-xs-12 row">
+            <button class="primary ml-auto" type="submit" disabled="@(!SubmitEnabled)">Create</button>
+        </div>
+    </div>
+
+</EditForm>

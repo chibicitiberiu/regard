@@ -1,0 +1,46 @@
+﻿<EditForm Model="Request"
+          OnValidSubmit="OnSubmit"
+          class="form-horizontal">
+
+    <FormField Id="login_username"
+               Label="Username:"
+               Required="true">
+        <Field>
+            <InputText @bind-Value="Request.Username"
+                       id="login_username"
+                       class="form-control"
+                       autocomplete="username"
+                       autocapitalize="none">
+            </InputText>
+        </Field>
+    </FormField>
+
+    <FormField Id="login_password"
+               Label="Password:"
+               Required="true">
+        <Field>
+            <InputText @bind-Value="Request.Password"
+                       type="password"
+                       id="login_password"
+                       class="form-control"
+                       autocomplete="new-password" />
+        </Field>
+    </FormField>
+
+    <div class="form-group">
+        <DataAnnotationsValidator />
+        <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
+        @if (loginMessage != null)
+        {
+            <p>@loginMessage</p>
+        }
+    </div>
+
+    <div class="row">
+        <div class="col-xs-12 row">
+            <button class="primary ml-auto" type="submit" disabled="@SubmitClicked">@SubmitText</button>
+            @ExtraButtons
+        </div>
+    </div>
+
+</EditForm>

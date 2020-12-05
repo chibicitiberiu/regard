@@ -1,0 +1,49 @@
+﻿@page "/"
+
+<SubscriptionCreateModal @ref="subscriptionCreateModal" />
+
+<Modal @ref="@folderCreateModal">
+    <Title>Create folder</Title>
+    <Body>
+        This is my body
+        <div class="button-group ml-auto">
+            <button class="primary">Create folder</button>
+        </div>
+    </Body>
+</Modal>
+
+<div class="row">
+
+    <div class="col-xs-3">
+
+        <div class="toolbar">
+
+            <div class="button-group">
+                <button type="button" title="Create subscription"
+                        @onclick="@CreateSubscription">
+                    <MaterialIcon Icon="playlist_add" />
+                </button>
+
+                <button type="button" title="Create folder"
+                        @onclick="@CreateFolder">
+                    <MaterialIcon Icon="create_new_folder" />
+                </button>
+
+                <button type="button" title="Import"
+                        @onclick="@Import">
+                    <MaterialIcon Icon="publish" />
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xs-9">
+        Videos go here!
+        <div class="logo">
+            <span class="logo-1">R</span><span class="logo-2">e</span><span class="logo-3">g</span><span class="logo-4">a</span><span class="logo-5">r</span><span class="logo-6">d</span>
+        </div>
+        <div class="logo-small">
+            Regard
+        </div>
+    </div>
+</div>

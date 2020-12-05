@@ -1,0 +1,44 @@
+﻿@inject BackendService backend
+
+@if (serverConfig != null && serverConfig.Errors.Length > 0)
+{
+    <div class="alert alert-danger alert-card mx-auto">
+        <p>Attention! Some critical configuration errors have been found!</p>
+        <ul>
+            @foreach (var err in serverConfig.Errors)
+            {
+                <li>@err</li>
+            }
+        </ul>
+        <p>
+            Until these problems are fixed, the server may have encounter serious problems while running.
+            Please correct these errors, and then restart the server.
+        </p>
+    </div>
+}
+
+@if (serverConfig != null && serverConfig.Warnings.Length > 0)
+{
+    <div class="alert alert-warning alert-card mx-auto">
+        <p>Warning: some configuration problems have been found!</p>
+        <ul>
+            @foreach (var err in serverConfig.Warnings)
+            {
+                <li>@err</li>
+            }
+        </ul>
+        <p>We recommend that you fix these issues before continuing.</p>
+    </div>
+}
+
+@code {
+
+    Regard.Api.CheckServerConfigResponse serverConfig;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        //serverConfig = await backend.CheckServerConfig();
+    }
+
+}

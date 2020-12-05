@@ -1,0 +1,19 @@
+﻿<div class="modal @CssUtils.BoolToVisible(IsVisible)"
+     @onclick="@OnClickedBehind" @onmousedown="@OnMouseDown">
+    <div class="modal-content" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true">
+        <div class="modal-header">
+            <h3>@Title</h3>
+            @if (IsCloseable)
+            {
+                <div class="modal-close">
+                    <button class="button-undecorated" @onclick="@OnCloseClicked">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+            }
+        </div>
+        <div class="modal-body">
+            @Body
+        </div>
+    </div>
+</div>

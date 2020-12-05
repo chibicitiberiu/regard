@@ -1,0 +1,49 @@
+﻿.navbar {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: .25em 1em;
+    margin: 0;
+}
+
+.navbar-fixed-top {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+    line-height: 2em;
+    padding: .25em 0;
+    height: 3em;
+
+    &+ *:first-of-type {
+        margin-top: 3em;
+    }
+}
+
+.navbar-brand {
+    display: inline-block;
+    font-size: 1.25em;
+    margin: 0 1em;
+    padding: 0;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.navbar-nav {
+    display: flex;
+    padding-left: 0;
+    margin: 0 1em;
+    padding: 0;
+    flex-direction: row;
+    list-style: none;
+
+    & > li {
+        margin-left: .5em;
+        margin-right: .5em;
+    }
+
+    &.navbar-nav-right {
+        margin-left: auto;
+    }
+}

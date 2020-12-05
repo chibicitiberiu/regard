@@ -1,0 +1,35 @@
+﻿@page "/setup/finished"
+@inject MainAppController appCtrl
+
+<h3>Setup complete!</h3>
+
+<p>You will be redirected to the home page.</p>
+
+<button class="btn btn-primary" @onclick="GoNext" disabled="@NextClicked">Finish</button>
+
+@code {
+    System.Timers.Timer timer;
+    bool NextClicked { get; set; }
+
+    override protected async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await appCtrl.OnInitialize();
+
+        timer = new System.Timers.Timer(2 * 1000);
+        timer.Elapsed += OnElapsed;
+        timer.Start();
+    }
+
+    private async void OnElapsed(object source, System.Timers.ElapsedEventArgs e)
+    {
+        await GoNext();
+        timer.Stop();
+    }
+
+    private async Task GoNext()
+    {
+        NextClicked = true;
+        await appCtrl.ContinueSetup();
+    }
+}
