@@ -6,7 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-namespace Regard.Shared.Controls
+namespace Regard.Frontend.Shared.Controls
 {
     public class TreeViewNode<TData> : INotifyPropertyChanged
     {

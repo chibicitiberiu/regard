@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 
-namespace Regard.Shared.Forms
+namespace Regard.Frontend.Shared.Forms
 {
     public partial class SubscriptionCreateForm
     {

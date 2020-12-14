@@ -1,14 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
+using Regard.Frontend.Shared.Controls;
+using Regard.Frontend.Shared.Modals;
 using Regard.Services;
-using Regard.Shared.Controls;
-using Regard.Shared.Modals;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
-namespace Regard.Pages
+namespace Regard.Frontend.Pages
 {
     [Authorize]
     public partial class Index

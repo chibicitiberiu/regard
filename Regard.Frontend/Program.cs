@@ -11,7 +11,7 @@ using Regard.Services;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 
-namespace Regard
+namespace Regard.Frontend
 {
     public class Program
     {

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Regard.Shared.Forms
+namespace Regard.Frontend.Shared.Forms
 {
     public partial class LoginForm
     {

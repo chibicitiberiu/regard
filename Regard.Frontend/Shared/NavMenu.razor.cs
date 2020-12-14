@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Regard.Shared
+namespace Regard.Frontend.Shared
 {
     public partial class NavMenu
     {

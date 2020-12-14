@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Regard.Shared.Controls
+namespace Regard.Frontend.Shared.Controls
 {
     public partial class TabPage
     {
