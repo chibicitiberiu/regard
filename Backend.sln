@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30717.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Regard.Common", "Regard.Common\Regard.Common.csproj", "{7ADCE589-8F5E-479E-A3EA-AD630F9CEB94}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Regard.Backend.Common", "Regard.Backend.Model\Regard.Backend.Common.csproj", "{35166690-AC82-47A3-B45B-8A33F48AA6E2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Regard.Backend.Providers.Rss", "Regard.Backend.Providers.Rss\Regard.Backend.Providers.Rss.csproj", "{5DB5CB44-1B27-46FE-BBAB-66671E07CB20}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Regard.Backend.Providers.YouTube", "Regard.Backend.Providers.YouTube\Regard.Backend.Providers.YouTube.csproj", "{3CD25390-12D3-4645-8134-AC9C814F2360}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Regard.Backend", "Regard.Backend\Regard.Backend.csproj", "{F45B2A87-61CC-4E2B-A31D-EDA0766BBE10}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{351851C0-87F3-47EE-9520-30B639C80460}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		Jenkinsfile = Jenkinsfile
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7ADCE589-8F5E-479E-A3EA-AD630F9CEB94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7ADCE589-8F5E-479E-A3EA-AD630F9CEB94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7ADCE589-8F5E-479E-A3EA-AD630F9CEB94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7ADCE589-8F5E-479E-A3EA-AD630F9CEB94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35166690-AC82-47A3-B45B-8A33F48AA6E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35166690-AC82-47A3-B45B-8A33F48AA6E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35166690-AC82-47A3-B45B-8A33F48AA6E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35166690-AC82-47A3-B45B-8A33F48AA6E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5DB5CB44-1B27-46FE-BBAB-66671E07CB20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DB5CB44-1B27-46FE-BBAB-66671E07CB20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DB5CB44-1B27-46FE-BBAB-66671E07CB20}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DB5CB44-1B27-46FE-BBAB-66671E07CB20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3CD25390-12D3-4645-8134-AC9C814F2360}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CD25390-12D3-4645-8134-AC9C814F2360}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CD25390-12D3-4645-8134-AC9C814F2360}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CD25390-12D3-4645-8134-AC9C814F2360}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F45B2A87-61CC-4E2B-A31D-EDA0766BBE10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F45B2A87-61CC-4E2B-A31D-EDA0766BBE10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F45B2A87-61CC-4E2B-A31D-EDA0766BBE10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F45B2A87-61CC-4E2B-A31D-EDA0766BBE10}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2A21DED5-C5BF-46B9-A5F2-12C69B775CA3}
+	EndGlobalSection
+EndGlobal
