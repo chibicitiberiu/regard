@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace RegardBackend.Model
+namespace Regard.Backend.Model
 {
     public class UserAccount : IdentityUser
     {

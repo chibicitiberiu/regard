@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Regard.Common.API.Response
+namespace Regard.Common.API.Auth
 {
-    public class AuthResult
+    public class AuthResponse
     {
         public string Token { get; set; }
 

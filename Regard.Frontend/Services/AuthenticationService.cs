@@ -1,7 +1,8 @@
 ﻿using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
-using Regard.Common.API.Response;
-using RegardBackend.Common.API.Request;
+using Microsoft.Extensions.DependencyInjection;
+using Regard.Common.API;
+using Regard.Common.API.Auth;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,20 +16,20 @@ namespace Regard.Services
         public static readonly string StorageAuthTokenKey = "authToken";
         public static readonly string StorageAuthUsernameKey = "authUserName";
 
-        private readonly BackendService backend;
-        private readonly ILocalStorageService localStorage;
-        private readonly AuthenticationStateProvider authStateProvider;
+        private readonly IServiceProvider serviceProvider;
 
+        public event EventHandler AuthenticationStateChanged;
 
-        public AuthenticationService(BackendService backend, ILocalStorageService localStorage, AuthenticationStateProvider authStateProvider)
+        public AuthenticationService(IServiceProvider serviceProvider)
         {
-            this.backend = backend;
-            this.localStorage = localStorage;
-            this.authStateProvider = authStateProvider;
+            this.serviceProvider = serviceProvider;
         }
 
-        private async Task UpdateToken(DataApiResponse<AuthResult> result, HttpResponseMessage httpResponse, string username = null)
+        private async Task UpdateToken(IServiceScope scope, ApiResponse<AuthResponse> result, HttpResponseMessage httpResponse, string username = null)
         {
+            var localStorage = scope.ServiceProvider.GetRequiredService<ILocalStorageService>();
+            var authStateProvider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+
             if (httpResponse.IsSuccessStatusCode)
             {
                 await localStorage.SetItemAsync(StorageAuthTokenKey, result.Data.Token);
@@ -37,38 +38,68 @@ namespace Regard.Services
 
                 if (authStateProvider is ApiAuthenticationStateProvider apiAuthenticationStateProvider)
                     apiAuthenticationStateProvider.UpdateAuthenticationState();
+                
+                AuthenticationStateChanged?.Invoke(this, new EventArgs());
             }
         }
 
-        public async Task<(DataApiResponse<AuthResult>, HttpResponseMessage)> Register(UserRegister register)
+        public async Task<(ApiResponse<AuthResponse>, HttpResponseMessage)> Register(UserRegisterRequest register)
         {
+            using var scope = serviceProvider.CreateScope();
+            var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
             var (result, httpResponse) = await backend.AuthRegister(register);
-            await UpdateToken(result, httpResponse, register.Username);
+
+            await UpdateToken(scope, result, httpResponse, register.Username);
             return (result, httpResponse);
         }
 
-
-        public async Task<(DataApiResponse<AuthResult>, HttpResponseMessage)> Login(UserLogin login)
+        public async Task<(ApiResponse<AuthResponse>, HttpResponseMessage)> Login(UserLoginRequest login)
         {
+            using var scope = serviceProvider.CreateScope();
+            var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
             var (result, httpResponse) = await backend.AuthLogin(login);
-            await UpdateToken(result, httpResponse, login.Username);
+
+            await UpdateToken(scope, result, httpResponse, login.Username);
             return (result, httpResponse);
         }
 
-        public async Task<(DataApiResponse<AuthResult>, HttpResponseMessage)> Promote(UserPromote promote)
+        public async Task<(ApiResponse<AuthResponse>, HttpResponseMessage)> Promote(UserPromoteRequest promote)
         {
+            using var scope = serviceProvider.CreateScope();
+            var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
             var (result, httpResponse) = await backend.AuthPromote(promote);
-            await UpdateToken(result, httpResponse);
+
+            await UpdateToken(scope, result, httpResponse);
             return (result, httpResponse);
         }
 
         public async Task Logout()
         {
+            using var scope = serviceProvider.CreateScope();
+            var localStorage = scope.ServiceProvider.GetRequiredService<ILocalStorageService>();
+            var authStateProvider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+
             await localStorage.RemoveItemAsync(StorageAuthTokenKey);
+            if (authStateProvider is ApiAuthenticationStateProvider apiAuthenticationStateProvider)
+                apiAuthenticationStateProvider.UpdateAuthenticationState();
+
+            AuthenticationStateChanged?.Invoke(this, new EventArgs());
         }
 
-        public async Task<string> GetToken() => await localStorage.GetItemAsync<string>(StorageAuthTokenKey);
+        public async Task<string> GetToken()
+        {
+            using var scope = serviceProvider.CreateScope();
+            var localStorage = scope.ServiceProvider.GetRequiredService<ILocalStorageService>();
 
-        public async Task<string> GetUsername() => await localStorage.GetItemAsync<string>(StorageAuthUsernameKey);
+            return await localStorage.GetItemAsync<string>(StorageAuthTokenKey);
+        }
+
+        public async Task<string> GetUsername()
+        {
+            using var scope = serviceProvider.CreateScope();
+            var localStorage = scope.ServiceProvider.GetRequiredService<ILocalStorageService>();
+
+            return await localStorage.GetItemAsync<string>(StorageAuthUsernameKey);
+        }
     }
 }

@@ -1,11 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
-using Regard.Common.API.Request;
+using Regard.Common.API.Subscriptions;
 using Regard.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -16,7 +12,7 @@ namespace Regard.Frontend.Shared.Forms
         [Inject]
         BackendService Backend { get; set; }
 
-        SubscriptionCreate Request { get; set; } = new SubscriptionCreate();
+        SubscriptionCreateRequest Request { get; set; } = new SubscriptionCreateRequest();
 
         bool LoadingVisible { get; set; }
 
@@ -73,7 +69,7 @@ namespace Regard.Frontend.Shared.Forms
             {
                 LoadingVisible = true;
                 StateHasChanged();
-                var (resp, httpResp) = await Backend.SubscriptionValidateUrl(new SubscriptionValidate() { Url = Request.Url });
+                var (resp, httpResp) = await Backend.SubscriptionValidateUrl(new SubscriptionValidateRequest() { Url = Request.Url });
 
                 ValidationMessage = resp.Message;
                 ValidationResult = httpResp.IsSuccessStatusCode;
@@ -91,7 +87,7 @@ namespace Regard.Frontend.Shared.Forms
                 await Submitted.InvokeAsync(null);
 
                 // clear request
-                Request = new SubscriptionCreate();
+                Request = new SubscriptionCreateRequest();
             }
 
             ValidationMessage = resp.Message;

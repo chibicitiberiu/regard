@@ -4,22 +4,17 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.VisualBasic;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
-using Regard.Common.API;
-using Regard.Common.API.Response;
-using RegardBackend.Common.API.Request;
-using RegardBackend.Model;
+using Regard.Common.API.Auth;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RegardBackend.Controllers
+namespace Regard.Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -65,7 +60,7 @@ namespace RegardBackend.Controllers
 
         [HttpPost]
         [Route("login")]
-        public async Task<IActionResult> Login([FromBody] UserLogin login)
+        public async Task<IActionResult> Login([FromBody] UserLoginRequest login)
         {
             var user = await userManager.FindByNameAsync(login.Username);
 
@@ -73,7 +68,7 @@ namespace RegardBackend.Controllers
             {
                 JwtSecurityToken token = await GenerateAuthToken(user, login.RememberMe);
 
-                return Ok(responseFactory.Success(new AuthResult()
+                return Ok(responseFactory.Success(new AuthResponse()
                 {
                     Token = new JwtSecurityTokenHandler().WriteToken(token),
                     ValidTo = token.ValidTo
@@ -85,7 +80,7 @@ namespace RegardBackend.Controllers
 
         [HttpPost]
         [Route("register")]
-        public async Task<IActionResult> Register([FromBody] UserRegister register)
+        public async Task<IActionResult> Register([FromBody] UserRegisterRequest register)
         {
             var userExists = await userManager.FindByNameAsync(register.Username);
             if (userExists != null)
@@ -125,7 +120,7 @@ namespace RegardBackend.Controllers
             // Login
             JwtSecurityToken token = await GenerateAuthToken(user);
 
-            return Ok(responseFactory.Success(new AuthResult()
+            return Ok(responseFactory.Success(new AuthResponse()
             {
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 ValidTo = token.ValidTo
@@ -135,7 +130,7 @@ namespace RegardBackend.Controllers
         [Authorize]
         [HttpPost]
         [Route("promote")]
-        public async Task<IActionResult> Promote([FromBody] UserPromote promote)
+        public async Task<IActionResult> Promote([FromBody] UserPromoteRequest promote)
         {
             // This method can be executed by any registered user if there is NO admin account. 
             // This should only be used during setup.
@@ -161,7 +156,7 @@ namespace RegardBackend.Controllers
             // Generate new token with updated credentials
             JwtSecurityToken token = await GenerateAuthToken(user);
 
-            return Ok(responseFactory.Success(new AuthResult() 
+            return Ok(responseFactory.Success(new AuthResponse() 
             { 
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 ValidTo = token.ValidTo
@@ -178,7 +173,7 @@ namespace RegardBackend.Controllers
             if (user == null)
                 return StatusCode(StatusCodes.Status500InternalServerError, responseFactory.Error("Failed to retrieve user details!"));
 
-            return Ok(responseFactory.Success(new UserDetails()
+            return Ok(responseFactory.Success(new MeResponse()
             {
                 Username = user.UserName,
                 Email = user.Email,

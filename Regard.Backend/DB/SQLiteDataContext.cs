@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace RegardBackend.DB
+namespace Regard.Backend.DB
 {
     public class SQLiteDataContext : DataContext
     {

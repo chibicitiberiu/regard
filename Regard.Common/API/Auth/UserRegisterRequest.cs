@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace RegardBackend.Common.API.Request
+namespace Regard.Common.API.Auth
 {
-    public class UserRegister
+    public class UserRegisterRequest
     {
         [Required(AllowEmptyStrings = false, ErrorMessage = "Username is required!")]
         [StringLength(150, MinimumLength = 4)]

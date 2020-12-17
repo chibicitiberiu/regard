@@ -1,6 +1,5 @@
 ﻿using Regard.Backend.Model;
-using RegardBackend.DB;
-using RegardBackend.Model;
+using Regard.Backend.DB;
 using System.Text.Json;
 using System.Threading.Tasks;
 

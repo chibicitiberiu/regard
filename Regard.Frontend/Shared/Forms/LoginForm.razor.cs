@@ -1,9 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Regard.Common.API.Auth;
 using Regard.Services;
-using RegardBackend.Common.API.Request;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Regard.Frontend.Shared.Forms
@@ -15,7 +12,7 @@ namespace Regard.Frontend.Shared.Forms
 
         bool SubmitClicked { get; set; }
 
-        public UserLogin Request { get; } = new UserLogin();
+        public UserLoginRequest Request { get; } = new UserLoginRequest();
 
         [Parameter]
         public RenderFragment ExtraButtons { get; set; }

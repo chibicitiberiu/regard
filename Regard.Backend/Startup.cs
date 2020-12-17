@@ -1,21 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Quartz;
 using Regard.Backend.Hubs;
@@ -23,10 +17,10 @@ using Regard.Backend.Model;
 using Regard.Backend.Providers;
 using Regard.Backend.Providers.YouTube;
 using Regard.Backend.Services;
-using RegardBackend.DB;
-using RegardBackend.Model;
+using Regard.Backend.DB;
+using Regard.Backend.Middleware;
 
-namespace RegardBackend
+namespace Regard.Backend
 {
     public class Startup
     {
@@ -55,6 +49,7 @@ namespace RegardBackend
             {
                 opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/octet-stream" });
             });
+            services.AddScoped<MessagingService>();
 
             // Authentication and security
             services.AddIdentity<UserAccount, IdentityRole>()
@@ -132,6 +127,8 @@ namespace RegardBackend
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, DataContext dataContext)
         {
+            app.UseSignalRQueryStringAuth();
+
             //dataContext.Database.Migrate();
             app.UseResponseCompression();
 
@@ -153,7 +150,7 @@ namespace RegardBackend
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapHub<MessageHub>("/api/message_hub");
+                endpoints.MapHub<MessagingHub>("/api/message_hub");
             });
         }
     }

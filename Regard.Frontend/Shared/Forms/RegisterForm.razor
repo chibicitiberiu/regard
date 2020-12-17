@@ -1,8 +1,4 @@
-﻿@using RegardBackend.Common.API.Request;
-@inject AuthenticationService auth
-@inject AppState appState
-
-<EditForm Model="Request"
+﻿<EditForm Model="Request"
           OnValidSubmit="OnSubmit"
           class="form-horizontal">
 
@@ -98,31 +94,3 @@
     </div>
 
 </EditForm>
-
-@code {
-    bool SubmitClicked { get; set; }
-
-    public UserRegister Request { get; } = new UserRegister();
-
-    [Parameter]
-    public RenderFragment ExtraButtons { get; set; }
-
-    [Parameter]
-    public string SubmitText { get; set; } = "Submit";
-
-    [Parameter]
-    public EventCallback Registered { get; set; }
-
-    private string loginMessage = null;
-
-    async Task OnSubmit()
-    {
-        SubmitClicked = true;
-
-        var (response, httpResponse) = await auth.Register(Request);
-        if (httpResponse.IsSuccessStatusCode)
-            await Registered.InvokeAsync(null);
-        else
-            loginMessage = response.Message;
-    }
-}

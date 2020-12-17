@@ -1,4 +1,5 @@
-﻿using RegardBackend.Model;
+﻿using Regard.Model;
+using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;

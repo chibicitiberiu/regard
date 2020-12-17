@@ -1,6 +1,6 @@
 using System;
 
-namespace RegardBackend
+namespace Regard.Backend
 {
     public class WeatherForecast
     {

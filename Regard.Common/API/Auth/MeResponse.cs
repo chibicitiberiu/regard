@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Regard.Common.API
+namespace Regard.Common.API.Auth
 {
-    public class UserDetails
+    public class MeResponse
     {
         public string Username { get; set; }
         public string Email { get; set; }

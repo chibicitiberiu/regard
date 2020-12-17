@@ -4,9 +4,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace RegardBackend.Common.API.Request
+namespace Regard.Common.API.Auth
 {
-    public class UserLogin
+    public class UserLoginRequest
     {
         [Required(AllowEmptyStrings = false, ErrorMessage = "Username is required!")]
         public string Username { get; set; }

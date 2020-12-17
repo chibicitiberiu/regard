@@ -1,4 +1,4 @@
-﻿using RegardBackend.Model;
+﻿using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;

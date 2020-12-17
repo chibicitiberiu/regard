@@ -2,14 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Regard.Backend.Model;
-using RegardBackend.Model;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 
-namespace RegardBackend.DB
+namespace Regard.Backend.DB
 {
     public class DataContext : IdentityDbContext<UserAccount>
     {

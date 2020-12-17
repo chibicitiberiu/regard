@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
+using Regard.Frontend.Services;
 using System;
 using System.Threading.Tasks;
 
@@ -10,12 +11,14 @@ namespace Regard.Services
         readonly AppState appState;
         readonly NavigationManager navigationManager;
         readonly BackendService backend;
+        readonly MessagingService messaging;
 
-        public MainAppController(AppState appState, NavigationManager navigationManager, BackendService backend)
+        public MainAppController(AppState appState, NavigationManager navigationManager, BackendService backend, MessagingService messaging)
         {
             this.appState = appState;
             this.navigationManager = navigationManager;
             this.backend = backend;
+            this.messaging = messaging;
         }
 
         // url, function that evaluates whether the step should be executed
@@ -28,6 +31,8 @@ namespace Regard.Services
 
         public async Task OnInitialize()
         {
+            await messaging.Initialize();
+
             // read server status
             if (appState.ServerStatus == null)
                 appState.ServerStatus = (await backend.SetupServerStatus()).Data;

@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace RegardBackend.Common.API.Request
+namespace Regard.Common.API.Auth
 {
-    public class UserPromote
+    public class UserPromoteRequest
     {
         public string Username { get; set; }
     }

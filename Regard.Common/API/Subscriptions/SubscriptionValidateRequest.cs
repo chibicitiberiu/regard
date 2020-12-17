@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Regard.Common.API.Request
+namespace Regard.Common.API.Subscriptions
 {
-    public class SubscriptionValidate
+    public class SubscriptionValidateRequest
     {
         public string Url { get; set; }
     }

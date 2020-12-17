@@ -1,4 +1,5 @@
-﻿using RegardBackend.Model;
+﻿using Regard.Model;
+using Regard.Backend.Model;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;

@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Regard.Common.API.Response;
+using Regard.Common.API;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -20,9 +20,9 @@ namespace Regard.Backend.Services
             return ApiResponse.Success(message, debug ? debugMessage : null);
         }
 
-        public DataApiResponse<TData> Success<TData>(TData data, string message = null, string debugMessage = null)
+        public ApiResponse<TData> Success<TData>(TData data, string message = null, string debugMessage = null)
         {
-            return DataApiResponse<TData>.Success(data, message, debug ? debugMessage : null);
+            return ApiResponse<TData>.Success(data, message, debug ? debugMessage : null);
         }
 
         public ApiResponse Error(string message = null, string debugMessage = null)
@@ -30,9 +30,9 @@ namespace Regard.Backend.Services
             return ApiResponse.Error(message, debug ? debugMessage : null);
         }
 
-        public DataApiResponse<TData> Error<TData>(string message, string debugMessage = null, TData data = default)
+        public ApiResponse<TData> Error<TData>(string message, string debugMessage = null, TData data = default)
         {
-            return DataApiResponse<TData>.Error(message, debug ? debugMessage : null, data);
+            return ApiResponse<TData>.Error(message, debug ? debugMessage : null, data);
         }
     }
 }

@@ -25,7 +25,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{59FF1A
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{54E2E2E2-9C19-4F56-A174-BC4E09F047BB}"
 	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
 		Jenkinsfile = Jenkinsfile
+		README.md = README.md
 	EndProjectSection
 EndProject
 Global

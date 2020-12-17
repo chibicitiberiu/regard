@@ -1,4 +1,4 @@
-﻿@typeparam TData
+﻿@typeparam Model
 
 <div class="tree-view">
     @foreach (var child in Root.Children)
@@ -9,12 +9,12 @@
 
 
 @code {
-    private RenderFragment BuildTreeItem(TreeViewNode<TData> item)
+    private RenderFragment BuildTreeItem(TreeViewNode<Model> item)
     {
         return __builder =>
         {
             <div class="tree-item">
-                @ItemTemplate(item.Data)
+                @ItemTemplate(item)
                 @if (item.IsExpanded)
                 {
                     <div class="tree-item-children">

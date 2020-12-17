@@ -1,13 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
-using Regard.Common.API;
 using Regard.Common.API.Response;
-using RegardBackend.Model;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,7 +32,7 @@ namespace Regard.Backend.Controllers
             var users = await userManager.GetUsersInRoleAsync(UserRoles.User);
             var admins = await userManager.GetUsersInRoleAsync(UserRoles.Admin);
 
-            return Ok(responseFactory.Success(new ServerStatus()
+            return Ok(responseFactory.Success(new ServerStatusResponse()
             {
                 Initialized = await preferencesManager.Get(Preferences.Server_Initialized),
                 HaveUsers = users.Count > 0,

@@ -4,10 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Regard.Backend.Common.Utils;
 using Regard.Backend.Services;
-using Regard.Common.API;
-using Regard.Common.API.Request;
-using Regard.Common.API.Response;
-using RegardBackend.Model;
+using Regard.Common.API.Subscriptions;
+using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,13 +31,13 @@ namespace Regard.Backend.Controllers
         [HttpPost]
         [Route("validate")]
         [Authorize]
-        public async Task<IActionResult> Validate([FromBody] SubscriptionValidate validate)
+        public async Task<IActionResult> Validate([FromBody] SubscriptionValidateRequest request)
         {
             try
             {
-                var url = new Uri(validate.Url);
+                var url = new Uri(request.Url);
                 var result = await subscriptionManager.TestUrl(url);
-                return Ok(responseFactory.Success(new SubscriptionValidateResult()
+                return Ok(responseFactory.Success(new SubscriptionValidateResponse()
                 {
                     ProviderName = result,
                 }));
@@ -65,15 +63,15 @@ namespace Regard.Backend.Controllers
         [HttpPost]
         [Route("create")]
         [Authorize]
-        public async Task<IActionResult> Create([FromBody] SubscriptionCreate create)
+        public async Task<IActionResult> Create([FromBody] SubscriptionCreateRequest request)
         {
             try
             {
-                var url = new Uri(create.Url);
+                var url = new Uri(request.Url);
                 var user = await userManager.GetUserAsync(User);
 
-                var result = await subscriptionManager.Create(url, user, create.ParentFolderId);
-                return Ok(responseFactory.Success(result.ToResponse()));
+                var result = await subscriptionManager.Create(url, user, request.ParentFolderId);
+                return Ok(responseFactory.Success(result.ToApi()));
             }
             catch (UriFormatException)
             {
@@ -81,18 +79,40 @@ namespace Regard.Backend.Controllers
             }
         }
 
-        [HttpGet]
+        [HttpPost]
         [Route("list")]
         [Authorize]
-        public async Task<IActionResult> List([FromBody] SubscriptionList list)
+        public async Task<IActionResult> List([FromBody] SubscriptionListRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            var subs = subscriptionManager.GetAll(user, list.ParentFolderId)
-                .OrderBy(x => x.Name)
-                .Select(x => x.ToResponse())
-                .ToArray();
 
-            return Ok(responseFactory.Success(subs));
+            var query = subscriptionManager.GetAll(user);
+
+            if (request.Ids != null)
+                query = query.Where(x => request.Ids.Contains(x.Id));
+
+            if (request.ParentFolderIds != null)
+                query = query.Where(x => request.ParentFolderIds.Contains(x.ParentFolderId));
+
+            return Ok(responseFactory.Success(new SubscriptionListResponse
+            {
+                Subscriptions = query
+                    .OrderBy(x => x.Name)
+                    .Select(x => x.ToApi())
+                    .ToArray(),
+            }));
+        }
+
+        [HttpDelete]
+        [Route("delete")]
+        [Authorize]
+        public async Task<IActionResult> Delete([FromBody] SubscriptionDeleteRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+
+            await subscriptionManager.DeleteSubscriptions(user, request.Ids);
+
+            return Ok(responseFactory.Success());
         }
     }
 }

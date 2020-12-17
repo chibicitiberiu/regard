@@ -1,6 +1,6 @@
 ﻿using MoreLinq;
 using Regard.Backend.Providers;
-using RegardBackend.DB;
+using Regard.Backend.DB;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +10,7 @@ namespace Regard.Backend.Services
 {
     public class ProviderManager
     {
-        private readonly DataContext dataContext;
+        //private readonly DataContext dataContext;
         private readonly Dictionary<string, ICompleteProvider> providers = new Dictionary<string, ICompleteProvider>();
         private readonly Dictionary<string, ISubscriptionProvider> subscriptionProviders = new Dictionary<string, ISubscriptionProvider>();
         private readonly Dictionary<string, IVideoProvider> videoProviders = new Dictionary<string, IVideoProvider>();

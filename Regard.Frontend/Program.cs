@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Regard.Services;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using Regard.Frontend.Services;
 
 namespace Regard.Frontend
 {
@@ -21,6 +22,7 @@ namespace Regard.Frontend
             builder.RootComponents.Add<App>("app");
 
             builder.Services.AddSingleton<AppState>();
+            builder.Services.AddSingleton<MessagingService>();
             builder.Services.AddBlazoredLocalStorage();
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
             builder.Services.AddScoped<MainAppController>();
@@ -32,7 +34,7 @@ namespace Regard.Frontend
             // authentication
             builder.Services.AddAuthorizationCore();
             builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStateProvider>();
-            builder.Services.AddScoped<AuthenticationService>();
+            builder.Services.AddSingleton<AuthenticationService>();
 
             var host = builder.Build();
             await host.RunAsync();

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Regard.Common.API.Response
 {
-    public class ServerStatus
+    public class ServerStatusResponse
     {
         /// <summary>
         /// If true, initial setup was completed

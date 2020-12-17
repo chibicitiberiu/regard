@@ -1,4 +1,4 @@
-﻿using RegardBackend.Model;
+﻿using Regard.Backend.Model;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
