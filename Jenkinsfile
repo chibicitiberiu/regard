@@ -17,7 +17,7 @@ pipeline {
         stage('Frontend debug') {
             steps {
                 sh 'dotnet publish Frontend.sln -c Debug -o Frontend/Debug'
-                sh 'chown -R 1000:1000 Backend'
+                sh 'chown -R 1000:1000 Frontend'
                 archiveArtifacts artifacts: 'Frontend/Debug/**/*.*', fingerprint: true, onlyIfSuccessful: true
             }
         }
@@ -33,7 +33,7 @@ pipeline {
         stage('Frontend release') {
             steps {
                 sh 'dotnet publish Frontend.sln -c Release -o Frontend/Release'
-                sh 'chown -R 1000:1000 Backend'
+                sh 'chown -R 1000:1000 Frontend'
                 archiveArtifacts artifacts: 'Frontend/Release/**/*.*', fingerprint: true, onlyIfSuccessful: true
             }
         }
