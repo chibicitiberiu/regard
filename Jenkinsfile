@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker { 
             image 'mcr.microsoft.com/dotnet/sdk' 
-            args '-u root:root'
+            //args '-u root:root'
         }
     }
     stages {
