@@ -2,15 +2,7 @@
 
 <SubscriptionCreateModal @ref="subscriptionCreateModal" />
 
-<Modal @ref="@folderCreateModal">
-    <Title>Create folder</Title>
-    <Body>
-        This is my body
-        <div class="button-group ml-auto">
-            <button class="primary">Create folder</button>
-        </div>
-    </Body>
-</Modal>
+<FolderCreateModal @ref="folderCreateModal" />
 
 <div class="row">
 
@@ -21,17 +13,17 @@
             <div class="button-group">
                 <button type="button" title="Create subscription"
                         @onclick="@CreateSubscription">
-                    <MaterialIcon Icon="playlist_add" />
+                    <Icon Glyph="Icons.SubscriptionNew" />
                 </button>
 
                 <button type="button" title="Create folder"
                         @onclick="@CreateFolder">
-                    <MaterialIcon Icon="create_new_folder" />
+                    <Icon Glyph="Icons.FolderNew" />
                 </button>
 
                 <button type="button" title="Import"
                         @onclick="@Import">
-                    <MaterialIcon Icon="publish" />
+                    <Icon Glyph="Icons.Import" />
                 </button>
             </div>
         </div>

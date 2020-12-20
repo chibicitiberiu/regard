@@ -2,30 +2,21 @@
           OnValidSubmit="OnSubmit"
           class="form-horizontal">
 
-    <FormField Id="login_username"
-               Label="Username:"
-               Required="true">
-        <Field>
-            <InputText @bind-Value="Request.Username"
-                       id="login_username"
-                       class="form-control"
-                       autocomplete="username"
-                       autocapitalize="none">
-            </InputText>
-        </Field>
-    </FormField>
+    <RgInputText Id="login_username"
+                 @bind-Value="Request.Username"
+                 Label="Username:"
+                 Required="true"
+                 ValidationFor="() => Request.Username"
+                 autocapitalize="none" />
 
-    <FormField Id="login_password"
-               Label="Password:"
-               Required="true">
-        <Field>
-            <InputText @bind-Value="Request.Password"
-                       type="password"
-                       id="login_password"
-                       class="form-control"
-                       autocomplete="new-password" />
-        </Field>
-    </FormField>
+    <RgInputText Id="login_password"
+                 @bind-Value="Request.Password"
+                 Label="Password:"
+                 type="password"
+                 Required="true"
+                 ValidationFor="() => Request.Username"
+                 autocapitalize="none" 
+                 autocomplete="new-password" />
 
     <div class="form-group">
         <DataAnnotationsValidator />

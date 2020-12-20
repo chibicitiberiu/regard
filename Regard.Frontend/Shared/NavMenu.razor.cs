@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Web;
+using Regard.Frontend.Shared.Controls;
 using Regard.Utils;
 using System;
 using System.Collections.Generic;
@@ -9,9 +10,6 @@ namespace Regard.Frontend.Shared
 {
     public partial class NavMenu
     {
-        private readonly static string NotificationsGlyph = "notifications";
-        private readonly static string NotificationsNoneGlyph = "notifications_none";
-
         // TODO
         private bool CanRegister { get; set; } = true;
 
@@ -20,11 +18,7 @@ namespace Regard.Frontend.Shared
 
         private bool NotificationsPanelVisible { get; set; } = false;
 
-        private string HaveNotificationsIcon => HaveNotifications ? NotificationsGlyph : NotificationsNoneGlyph;
-
-
         private bool UserPanelVisible { get; set; } = false;
-
 
         private void HideAllPanels()
         {

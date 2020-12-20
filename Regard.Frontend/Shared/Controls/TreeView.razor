@@ -1,10 +1,12 @@
 ﻿@typeparam Model
 
 <div class="tree-view">
-    @foreach (var child in Root.Children)
-    {
-        @BuildTreeItem(child);
-    }
+    <ul class="tree-item-children">
+        @foreach (var child in Root.Children)
+        {
+            @BuildTreeItem(child);
+        }
+    </ul>
 </div>
 
 
@@ -13,18 +15,18 @@
     {
         return __builder =>
         {
-            <div class="tree-item">
-                @ItemTemplate(item)
+            <li class="tree-item @CssUtils.BoolToClass(item.IsSelected, "selected") @CssUtils.BoolToClass(!item.IsEnabled, "disabled")">
+                <a @onclick="() => OnItemClicked(item)">@ItemTemplate(item)</a>
                 @if (item.IsExpanded)
                 {
-                    <div class="tree-item-children">
+                    <ul class="tree-item-children">
                         @foreach (var child in item.Children)
                         {
                             @BuildTreeItem(child)
                         }
-                    </div>
+                    </ul>
                 }
-            </div>
+            </li>
         };
     }
-} 
+}

@@ -9,7 +9,7 @@
                 <li class="nav-item" onclick="">
 
                     <a href="#" class="nav-link" @onclick="@ToggleNotificationsPanel">
-                        <span class="material-icons">@HaveNotificationsIcon</span>
+                        <Icon Glyph="HaveNotifications ? Icons.NotificationsFull : Icons.NotificationsEmpty" />
                     </a>
                     <div class="dropdown dropdown-right @CssUtils.BoolToVisible(NotificationsPanelVisible)"
                          style="--pos-right: 6.2em">
@@ -18,7 +18,7 @@
                 </li>
                 <li class="nav-item">
                     <a href="#" class="nav-link" @onclick="@ToggleUserPanel">
-                        <span class="material-icons">person</span>
+                        <Icon Glyph="Icons.Profile" />
                     </a>
                     <div class="dropdown dropdown-right @CssUtils.BoolToVisible(UserPanelVisible)"
                          style="--pos-right: 3.75em">
@@ -27,7 +27,7 @@
                 </li>
                 <li class="nav-item">
                     <NavLink class="nav-link" href="/settings">
-                        <span class="material-icons">settings</span>
+                        <Icon Glyph="Icons.Settings" />
                     </NavLink>
                 </li>
             </ul>

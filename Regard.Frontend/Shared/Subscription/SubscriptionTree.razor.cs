@@ -22,6 +22,9 @@ namespace Regard.Frontend.Shared.Subscription
         [Inject]
         protected BackendService Backend { get; set; }
 
+        [Parameter]
+        public EventCallback<ISubscriptionItemViewModel> SelectedItemChanged { get; set; }
+
         private TreeView<ISubscriptionItemViewModel> treeView;
 
         private readonly Dictionary<int, TreeViewNode<ISubscriptionItemViewModel>> treeFolders = new Dictionary<int, TreeViewNode<ISubscriptionItemViewModel>>();
@@ -40,8 +43,8 @@ namespace Regard.Frontend.Shared.Subscription
             var (folders, httpResp) = await Backend.SubscriptionFolderList(new SubscriptionFolderListRequest());
             httpResp.EnsureSuccessStatusCode();
 
-            var (subs, httpResp1) = await Backend.SubscriptionList(new SubscriptionListRequest());
-            httpResp1.EnsureSuccessStatusCode();
+            var (subs, httpRespSubs) = await Backend.SubscriptionList(new SubscriptionListRequest());
+            httpRespSubs.EnsureSuccessStatusCode();
 
             BuildTree(folders.Data.Folders, subs.Data.Subscriptions);
         }
@@ -130,6 +133,11 @@ namespace Regard.Frontend.Shared.Subscription
                 parent = treeFolders[e.ParentFolderId.Value];
 
             parent.Children.Add(new TreeViewNode<ISubscriptionItemViewModel>(new SubscriptionViewModel(e)));
+        }
+
+        protected virtual Task OnSelectedItemChanged(TreeViewNode<ISubscriptionItemViewModel> item)
+        {
+            return SelectedItemChanged.InvokeAsync(item.Data);
         }
     }
 }

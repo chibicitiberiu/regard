@@ -1,0 +1,29 @@
+﻿<EditForm Model="Request"
+          OnValidSubmit="OnSubmit">
+
+    <RgInputText Id="foldercreate_name"
+                 @bind-Value="Request.Name"
+                 Label="Name:"
+                 Required="true"
+                 ValidationFor="() => Request.Name"
+                 autocapitalize="none"
+                 autofocus />
+
+    <FolderSelect Id="foldercreate_parent"
+                  @bind-Value="Request.ParentId"
+                  Label="Parent folder:"
+                  Required="true" />
+
+    <div class="form-group row">
+        <div class="col-xs-12 fg-error">
+            @ValidationMessage
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xs-12 row">
+            <button class="primary ml-auto" type="submit" disabled="@(!SubmitEnabled)">Create</button>
+        </div>
+    </div>
+
+</EditForm>

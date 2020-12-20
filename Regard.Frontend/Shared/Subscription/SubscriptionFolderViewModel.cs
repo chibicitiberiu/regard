@@ -1,4 +1,5 @@
 ﻿using Regard.Common.API.Model;
+using Regard.Frontend.Shared.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,10 @@ namespace Regard.Frontend.Shared.Subscription
         public string Name => Folder.Name;
 
         public int? ParentId => Folder.ParentId;
+
+        public string ThumbnailUrl => null;
+
+        public Icons PlaceholderIcon => Icons.Folder;
 
         public SubscriptionFolderViewModel(ApiSubscriptionFolder folder)
         {

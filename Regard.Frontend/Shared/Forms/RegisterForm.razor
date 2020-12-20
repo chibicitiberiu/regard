@@ -2,7 +2,7 @@
           OnValidSubmit="OnSubmit"
           class="form-horizontal">
 
-    <FormField Id="register_username"
+    <RgFieldWrapper Id="register_username"
                Label="Username"
                Required="true">
         <Field>
@@ -14,9 +14,9 @@
             </InputText>
         </Field>
         <HelpText>Required. 150 characters or fewer. Letters, digits and @@/./+/-/_ only.</HelpText>
-    </FormField>
+    </RgFieldWrapper>
 
-    <FormField Id="register_email"
+    <RgFieldWrapper Id="register_email"
                Label="Email address">
         <Field>
             <InputText @bind-Value="Request.Email"
@@ -24,27 +24,27 @@
                        class="form-control" />
         </Field>
         <HelpText>The e-mail address is optional, but it is the only way to recover a lost password.</HelpText>
-    </FormField>
+    </RgFieldWrapper>
 
-    <FormField Id="register_first_name"
+    <RgFieldWrapper Id="register_first_name"
                Label="First name">
         <Field>
             <InputText @bind-Value="Request.FirstName"
                        id="register_first_name"
                        class="form-control" />
         </Field>
-    </FormField>
+    </RgFieldWrapper>
 
-    <FormField Id="register_last_name"
+    <RgFieldWrapper Id="register_last_name"
                Label="Last name">
         <Field>
             <InputText @bind-Value="Request.LastName"
                        id="register_last_name"
                        class="form-control" />
         </Field>
-    </FormField>
+    </RgFieldWrapper>
 
-    <FormField Id="register_password"
+    <RgFieldWrapper Id="register_password"
                Label="Password"
                Required="true">
         <Field>
@@ -62,9 +62,9 @@
                 <li>Your password can’t be entirely numeric.</li>
             </ul>
         </HelpText>
-    </FormField>
+    </RgFieldWrapper>
 
-    <FormField Id="register_password_confirm"
+    <RgFieldWrapper Id="register_password_confirm"
                Label="Password confirmation"
                Required="true">
         <Field>
@@ -75,7 +75,7 @@
                        autocomplete="new-password" />
         </Field>
         <HelpText>Enter the same password as before, for verification.</HelpText>
-    </FormField>
+    </RgFieldWrapper>
 
     <div class="form-group">
         <DataAnnotationsValidator />

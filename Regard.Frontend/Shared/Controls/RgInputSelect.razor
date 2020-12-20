@@ -1,0 +1,36 @@
+﻿@typeparam TModel
+@typeparam TKey
+@inherits InputBase<TKey>
+
+<RgFieldWrapper Id="@Id"
+                Label="@Label"
+                Required="@Required"
+                LabelWidth="@LabelWidth">
+    <Field>
+        <select @attributes="AdditionalAttributes"
+                id="@Id"
+                class="form-control @CssClass"
+                @bind="CurrentValueAsString">
+            @if (ShowDefaultOption)
+            {
+                <option value="__none" hidden disabled></option>
+            }
+            @if (ItemsSource != null)
+            {
+                @foreach (var item in ItemsSource)
+                {
+                    <option value="@KeyFunc(item)">@DisplayTextFunc(item)</option>
+                }
+            }
+        </select>
+    </Field>
+    <HelpText>
+        @HelpText
+    </HelpText>
+    <ValidationText>
+        @if (ValidationFor != null)
+        {
+            <ValidationMessage For="@ValidationFor" />
+        }
+    </ValidationText>
+</RgFieldWrapper>

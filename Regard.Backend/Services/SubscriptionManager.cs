@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Regard.Backend.Services
 {
@@ -90,7 +91,7 @@ namespace Regard.Backend.Services
             bool alreadyExists = dataContext.SubscriptionFolders.AsQueryable()
                 .Where(x => x.UserId == user.Id)
                 .Where(x => x.ParentId == parentId)
-                .Where(x => string.Equals(x.Name, name, StringComparison.CurrentCultureIgnoreCase))
+                .Where(x => x.Name.ToUpper() == name.ToUpper())
                 .Any();
 
             if (!alreadyExists)
@@ -102,6 +103,7 @@ namespace Regard.Backend.Services
                     Name = name
                 };
                 dataContext.SubscriptionFolders.Add(newFolder);
+                await dataContext.SaveChangesAsync();
                 await messaging.NotifySubscriptionFolderCreated(user, newFolder.ToApi());
             }
         }

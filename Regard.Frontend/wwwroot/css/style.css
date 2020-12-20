@@ -434,7 +434,7 @@ body {
 a {
   color: var(--color-fg-secondary); }
 
-input, textarea {
+input, textarea, select {
   padding: .5em .75em;
   background: var(--color-bg-input);
   color: var(--color-fg-window);
@@ -443,7 +443,7 @@ input, textarea {
   opacity: .75;
   transition: opacity .35s;
   line-height: 1em; }
-  input:hover, input:focus, textarea:hover, textarea:focus {
+  input:hover, input:focus, textarea:hover, textarea:focus, select:hover, select:focus {
     opacity: 1;
     outline: none;
     transition: opacity .2s; }

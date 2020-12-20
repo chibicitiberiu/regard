@@ -15,7 +15,7 @@ namespace Regard.Frontend.Pages
 
         SubscriptionCreateModal subscriptionCreateModal { get; set; }
 
-        Modal folderCreateModal { get; set; }
+        FolderCreateModal folderCreateModal { get; set; }
 
         protected override async Task OnInitializedAsync()
         {

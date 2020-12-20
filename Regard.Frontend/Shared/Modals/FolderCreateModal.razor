@@ -1,0 +1,20 @@
+﻿<Modal @ref="Modal">
+    <Title>Create folder</Title>
+    <Body>
+        <FolderCreateForm Submitted="OnSubmitted"/>
+    </Body>
+</Modal>
+
+@code {
+    Modal Modal { get; set; }
+
+    public async Task Show()
+    {
+        await Modal.Show();
+    }
+
+    private async Task OnSubmitted()
+    {
+        await Modal.Close();
+    }
+}
