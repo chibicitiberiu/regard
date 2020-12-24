@@ -150,6 +150,35 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.ToTable("AspNetUserTokens");
                 });
 
+            modelBuilder.Entity("Regard.Backend.Common.Model.Message", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("Content")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Messages");
+                });
+
             modelBuilder.Entity("Regard.Backend.Model.Preference", b =>
                 {
                     b.Property<string>("Key")
@@ -161,6 +190,20 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.HasKey("Key");
 
                     b.ToTable("Preferences");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Model.ProviderConfiguration", b =>
+                {
+                    b.Property<string>("ProviderId")
+                        .HasColumnType("nvarchar(60)")
+                        .HasMaxLength(60);
+
+                    b.Property<string>("Configuration")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ProviderId");
+
+                    b.ToTable("ProviderConfigurations");
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.Subscription", b =>
@@ -181,6 +224,9 @@ namespace Regard.Backend.Migrations.SqlServer
                         .HasMaxLength(2048);
 
                     b.Property<int?>("DownloadMaxCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DownloadMaxSize")
                         .HasColumnType("int");
 
                     b.Property<int?>("DownloadOrder")
@@ -240,6 +286,9 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.Property<int?>("DownloadMaxCount")
                         .HasColumnType("int");
 
+                    b.Property<int?>("DownloadMaxSize")
+                        .HasColumnType("int");
+
                     b.Property<int?>("DownloadOrder")
                         .HasColumnType("int");
 
@@ -266,96 +315,7 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.ToTable("SubscriptionFolders");
                 });
 
-            modelBuilder.Entity("Regard.Backend.Model.UserPreference", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Key", "UserId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserPreferences");
-                });
-
-            modelBuilder.Entity("Regard.Backend.Model.Video", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(1024)")
-                        .HasMaxLength(1024);
-
-                    b.Property<string>("DownloadedPath")
-                        .HasColumnType("nvarchar(260)")
-                        .HasMaxLength(260);
-
-                    b.Property<int?>("DownloadedSize")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsNew")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsWatched")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(250)")
-                        .HasMaxLength(250);
-
-                    b.Property<int>("PlaylistIndex")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ProviderData")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProviderId")
-                        .HasColumnType("nvarchar(60)")
-                        .HasMaxLength(60);
-
-                    b.Property<DateTime>("Published")
-                        .HasColumnType("datetime2");
-
-                    b.Property<float?>("Rating")
-                        .HasColumnType("real");
-
-                    b.Property<int>("SubscriptionId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ThumbnailPath")
-                        .HasColumnType("nvarchar(2048)")
-                        .HasMaxLength(2048);
-
-                    b.Property<string>("UploaderName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("VideoId")
-                        .HasColumnType("nvarchar(60)")
-                        .HasMaxLength(60);
-
-                    b.Property<int?>("Views")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubscriptionId");
-
-                    b.ToTable("Videos");
-                });
-
-            modelBuilder.Entity("RegardBackend.Model.UserAccount", b =>
+            modelBuilder.Entity("Regard.Backend.Model.UserAccount", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -426,6 +386,103 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.ToTable("AspNetUsers");
                 });
 
+            modelBuilder.Entity("Regard.Backend.Model.UserPreference", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Key", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPreferences");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Model.Video", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(1024)")
+                        .HasMaxLength(1024);
+
+                    b.Property<DateTimeOffset>("Discovered")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DownloadedPath")
+                        .HasColumnType("nvarchar(260)")
+                        .HasMaxLength(260);
+
+                    b.Property<int?>("DownloadedSize")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsWatched")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("LastUpdated")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(250)")
+                        .HasMaxLength(250);
+
+                    b.Property<string>("OriginalUrl")
+                        .HasColumnType("nvarchar(2048)")
+                        .HasMaxLength(2048);
+
+                    b.Property<int>("PlaylistIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProviderData")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("Published")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<float?>("Rating")
+                        .HasColumnType("real");
+
+                    b.Property<int>("SubscriptionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubscriptionProviderId")
+                        .HasColumnType("nvarchar(60)")
+                        .HasMaxLength(60);
+
+                    b.Property<string>("ThumbnailPath")
+                        .HasColumnType("nvarchar(2048)")
+                        .HasMaxLength(2048);
+
+                    b.Property<string>("UploaderName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("VideoId")
+                        .HasColumnType("nvarchar(60)")
+                        .HasMaxLength(60);
+
+                    b.Property<string>("VideoProviderId")
+                        .HasColumnType("nvarchar(60)")
+                        .HasMaxLength(60);
+
+                    b.Property<int?>("Views")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.ToTable("Videos");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -437,7 +494,7 @@ namespace Regard.Backend.Migrations.SqlServer
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("RegardBackend.Model.UserAccount", null)
+                    b.HasOne("Regard.Backend.Model.UserAccount", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -446,7 +503,7 @@ namespace Regard.Backend.Migrations.SqlServer
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("RegardBackend.Model.UserAccount", null)
+                    b.HasOne("Regard.Backend.Model.UserAccount", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -461,7 +518,7 @@ namespace Regard.Backend.Migrations.SqlServer
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("RegardBackend.Model.UserAccount", null)
+                    b.HasOne("Regard.Backend.Model.UserAccount", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -470,11 +527,19 @@ namespace Regard.Backend.Migrations.SqlServer
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("RegardBackend.Model.UserAccount", null)
+                    b.HasOne("Regard.Backend.Model.UserAccount", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Regard.Backend.Common.Model.Message", b =>
+                {
+                    b.HasOne("Regard.Backend.Model.UserAccount", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.Subscription", b =>
@@ -483,7 +548,7 @@ namespace Regard.Backend.Migrations.SqlServer
                         .WithMany()
                         .HasForeignKey("ParentFolderId");
 
-                    b.HasOne("RegardBackend.Model.UserAccount", "User")
+                    b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
                 });
@@ -494,14 +559,14 @@ namespace Regard.Backend.Migrations.SqlServer
                         .WithMany()
                         .HasForeignKey("ParentId");
 
-                    b.HasOne("RegardBackend.Model.UserAccount", "User")
+                    b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.UserPreference", b =>
                 {
-                    b.HasOne("RegardBackend.Model.UserAccount", "User")
+                    b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);

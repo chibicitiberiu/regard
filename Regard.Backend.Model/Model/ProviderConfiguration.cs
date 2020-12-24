@@ -10,9 +10,9 @@ namespace Regard.Backend.Model
     public class ProviderConfiguration
     {
         [Key, MaxLength(60)]
-        public string ProviderId;
+        public string ProviderId { get; set; }
 
         [NotNull]
-        public string Configuration;
+        public string Configuration { get; set; }
     }
 }

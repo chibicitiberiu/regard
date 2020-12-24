@@ -10,11 +10,20 @@ namespace Regard.Backend.Model
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         
+        [NotNull, MaxLength(2048)]
+        public string OriginalUrl { get; set; }
+
         /// <summary>
         /// Provider ID
         /// </summary>
         [NotNull, MaxLength(60)]
-        public string ProviderId { get; set; }
+        public string SubscriptionProviderId { get; set; }
+
+        /// <summary>
+        /// Provider ID
+        /// </summary>
+        [NotNull, MaxLength(60)]
+        public string VideoProviderId { get; set; }
 
         /// <summary>
         /// Video ID as defined by the provider
@@ -30,8 +39,6 @@ namespace Regard.Backend.Model
 
         public bool IsWatched { get; set; } = false;
 
-        public bool IsNew { get; set; } = true;
-
         [MaxLength(260)]
         public string DownloadedPath { get; set; }
 
@@ -44,9 +51,12 @@ namespace Regard.Backend.Model
 
         public int PlaylistIndex { get; set; } = 0;
 
-        public DateTime Published { get; set; }
 
-        public DateTime LastUpdated { get; set; }
+        public DateTimeOffset Published { get; set; }
+
+        public DateTimeOffset LastUpdated { get; set; }
+
+        public DateTimeOffset Discovered { get; set; }
 
         [MaxLength(2048)]
         public string ThumbnailPath { get; set; }
@@ -58,5 +68,10 @@ namespace Regard.Backend.Model
         public float? Rating { get; set; }
 
         public string ProviderData { get; set; }
+
+        public override string ToString()
+        {
+            return $"({SubscriptionId}:{Id}:{Name ?? OriginalUrl})";
+        }
     }
 }

@@ -24,7 +24,7 @@ namespace Regard.Backend.Providers.YouTube
 
         public async Task<Channel> FetchChannel(string channelId)
         {
-            var request = service.Channels.List("id");
+            var request = service.Channels.List("id,snippet,contentDetails");
             request.Id = channelId;
 
             var response = await request.ExecuteAsync();
@@ -33,7 +33,7 @@ namespace Regard.Backend.Providers.YouTube
 
         public async Task<Channel> FetchChannelByUserId(string user)
         {
-            var request = service.Channels.List("id");
+            var request = service.Channels.List("id,snippet,contentDetails");
             request.ForUsername = user;
 
             var response = await request.ExecuteAsync();

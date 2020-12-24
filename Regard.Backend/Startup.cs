@@ -19,6 +19,8 @@ using Regard.Backend.Providers.YouTube;
 using Regard.Backend.Services;
 using Regard.Backend.DB;
 using Regard.Backend.Middleware;
+using Regard.Backend.Jobs;
+using Regard.Backend.Common.Providers;
 
 namespace Regard.Backend
 {
@@ -100,27 +102,37 @@ namespace Regard.Backend
             });
 
             // Preferences
-            services.AddScoped<PreferencesManager>();
-            services.AddSingleton<PreferencesCache>();
+            services.AddScoped<IPreferencesManager, PreferencesManager>();
+            services.AddSingleton<IPreferencesCache, PreferencesCache>();
 
             // Scheduler
             services.AddQuartz(q =>
             {
-                // todo: create basic jobs
+                q.UseMicrosoftDependencyInjectionScopedJobFactory();
+                q.UseSimpleTypeLoader();
+                q.UseInMemoryStore();
+                q.UseDefaultThreadPool();
+
+                // Synchronize job
+                q.ScheduleJob<InitJob>(trigger => trigger.StartNow());
             });
             services.AddQuartzServer(opts =>
             {
                 opts.WaitForJobsToComplete = true;
             });
+            services.AddScoped<InitJob>();
+            services.AddScoped<SynchronizeJob>();
+            services.AddScoped<DownloadVideoJob>();
 
             // Providers
-            services.AddSingleton<ISubscriptionProvider, RssSubscriptionProvider>();
-            services.AddSingleton<ICompleteProvider, YouTubeAPIProvider>();
-            services.AddSingleton<ProviderManager>();
+            services.AddSingleton<IProvider, RssSubscriptionProvider>();
+            services.AddSingleton<IProvider, YouTubeAPIProvider>();
+            services.AddSingleton<IProviderManager, ProviderManager>();
 
             services.AddScoped<SubscriptionManager>();
 
             // Others
+            services.AddSingleton<IVideoStorageService, VideoStorageService>();
             services.AddSingleton<ApiResponseFactory>();
         }
 

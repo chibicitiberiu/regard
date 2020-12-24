@@ -15,10 +15,10 @@ namespace Regard.Backend.Controllers
     public class SetupController : ControllerBase
     {
         private readonly UserManager<UserAccount> userManager;
-        private readonly PreferencesManager preferencesManager;
+        private readonly IPreferencesManager preferencesManager;
         private readonly ApiResponseFactory responseFactory;
 
-        public SetupController(UserManager<UserAccount> userManager, PreferencesManager preferencesManager, ApiResponseFactory responseFactory)
+        public SetupController(UserManager<UserAccount> userManager, IPreferencesManager preferencesManager, ApiResponseFactory responseFactory)
         {
             this.userManager = userManager;
             this.preferencesManager = preferencesManager;

@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Regard.Backend.DB;
 
 namespace Regard.Backend.Migrations.SQLite
 {
     [DbContext(typeof(SQLiteDataContext))]
-    partial class SQLiteDataContextModelSnapshot : ModelSnapshot
+    [Migration("20201224130121_IncreaseVideoNameLimit")]
+    partial class IncreaseVideoNameLimit
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -434,6 +436,10 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<string>("ProviderData")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ProviderId")
+                        .HasColumnType("TEXT")
+                        .HasMaxLength(60);
+
                     b.Property<DateTimeOffset>("Published")
                         .HasColumnType("TEXT");
 
@@ -443,10 +449,6 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<int>("SubscriptionId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("SubscriptionProviderId")
-                        .HasColumnType("TEXT")
-                        .HasMaxLength(60);
-
                     b.Property<string>("ThumbnailPath")
                         .HasColumnType("TEXT")
                         .HasMaxLength(2048);
@@ -455,10 +457,6 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasColumnType("TEXT");
 
                     b.Property<string>("VideoId")
-                        .HasColumnType("TEXT")
-                        .HasMaxLength(60);
-
-                    b.Property<string>("VideoProviderId")
                         .HasColumnType("TEXT")
                         .HasMaxLength(60);
 

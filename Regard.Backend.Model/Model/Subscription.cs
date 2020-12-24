@@ -48,12 +48,19 @@ namespace Regard.Backend.Model
         public bool? AutoDownload { get; set; }
         
         public int? DownloadMaxCount { get; set; }
-        
+
+        public int? DownloadMaxSize { get; set; }
+
         public VideoOrder? DownloadOrder { get; set; }
         
         public bool? AutomaticDeleteWatched { get; set; }
 
         [MaxLength(260)]
         public string DownloadPath { get; set; }
+
+        public override string ToString()
+        {
+            return $"({Id}:{Name})";
+        }
     }
 }

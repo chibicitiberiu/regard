@@ -5,12 +5,12 @@ using System.Threading.Tasks;
 
 namespace Regard.Backend.Services
 {
-    public class PreferencesManager
+    public class PreferencesManager : IPreferencesManager
     {
         private readonly DataContext dataContext;
-        private readonly PreferencesCache cache;
+        private readonly IPreferencesCache cache;
 
-        public PreferencesManager(DataContext dataContext, PreferencesCache cache)
+        public PreferencesManager(DataContext dataContext, IPreferencesCache cache)
         {
             this.dataContext = dataContext;
             this.cache = cache;
@@ -23,20 +23,20 @@ namespace Regard.Backend.Services
             // Obtain user setting
             if ((pref.Flags & PreferenceFlags.User) != 0 && user != null)
             {
-                if (cache.CacheGet(pref.Key, out value, user))
+                if (cache.Get(pref.Key, out value, user))
                     return value;
 
                 var dbPref = await dataContext.UserPreferences.FindAsync(pref.Key, user);
                 if (dbPref != null)
                 {
                     value = JsonSerializer.Deserialize<TValue>(dbPref.Value);
-                    cache.CacheSet(pref.Key, value, user);
+                    cache.Set(pref.Key, value, user);
                     return value;
                 }
             }
 
             // Obtain global setting - try from cache
-            if (cache.CacheGet(pref.Key, out value))
+            if (cache.Get(pref.Key, out value))
                 return value;
 
             // Look in database
@@ -44,7 +44,7 @@ namespace Regard.Backend.Services
             if (dbGlobalPref != null)
             {
                 value = JsonSerializer.Deserialize<TValue>(dbGlobalPref.Value);
-                cache.CacheSet(pref.Key, value);
+                cache.Set(pref.Key, value);
                 return value;
             }
 
@@ -58,8 +58,8 @@ namespace Regard.Backend.Services
             if ((pref.Flags & PreferenceFlags.User) == 0)
                 user = null;
 
-            cache.CacheSet(pref.Key, value, user);
-            
+            cache.Set(pref.Key, value, user);
+
             IPreference dbPref;
             if (user == null)
             {

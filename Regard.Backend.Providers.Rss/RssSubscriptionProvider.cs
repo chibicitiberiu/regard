@@ -1,4 +1,5 @@
-﻿using Regard.Backend.Model;
+﻿using Regard.Backend.Common.Providers;
+using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace Regard.Backend.Providers
 {
     public class RssSubscriptionProvider : ISubscriptionProvider
     {
-        public string ProviderId => "RSS";
+        public string Id => "RSS";
 
         public string Name => "RSS";
 
@@ -19,9 +20,10 @@ namespace Regard.Backend.Providers
 
         public Type ConfigurationType => null;
 
-        public void Configure(object config)
+        public Task Configure(object config)
         {
             IsInitialized = true;
+            return Task.CompletedTask;
         }
 
         public void Unconfigure()
@@ -29,7 +31,7 @@ namespace Regard.Backend.Providers
             IsInitialized = false;
         }
 
-        public async Task<bool> CanHandleUrl(Uri uri)
+        public async Task<bool> CanHandleSubscriptionUrl(Uri uri)
         {
             try
             {
@@ -41,12 +43,13 @@ namespace Regard.Backend.Providers
                 return false;
             }
         }
+
         public async Task<Subscription> CreateSubscription(Uri uri)
         {
             var feed = await FetchFeed(uri);
             return new Subscription()
             {
-                SubscriptionProviderId = ProviderId,
+                SubscriptionProviderId = Id,
                 SubscriptionId = uri.AbsoluteUri,
                 Name = feed.Title.Text,
                 Description = feed.Description.Text,
@@ -54,15 +57,22 @@ namespace Regard.Backend.Providers
             };
         }
 
-        public async IAsyncEnumerable<Uri> FetchVideos(Subscription subscription)
+        public async IAsyncEnumerable<Video> FetchVideos(Subscription subscription)
         {
             var feed = await FetchFeed(new Uri(subscription.SubscriptionId));
 
-            foreach (var link in feed.Links)
-                yield return link.Uri;
+            foreach (var link in feed.Items)
+                yield return new Video()
+                {
+                    OriginalUrl = link.Links.First().Uri.ToString(),
+                    SubscriptionProviderId = link.Id,
+                    Name = link.Title.Text,
+                    Published = (link.PublishDate == new DateTimeOffset()) ? link.LastUpdatedTime : link.PublishDate,
+                    LastUpdated = link.LastUpdatedTime
+                };
         }
 
-        async Task<SyndicationFeed> FetchFeed(Uri uri)
+        private async Task<SyndicationFeed> FetchFeed(Uri uri)
         {
             var httpClient = new HttpClient();
             var response = await httpClient.GetAsync(uri);

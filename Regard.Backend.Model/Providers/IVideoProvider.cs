@@ -5,24 +5,12 @@ using System.Linq;
 using System.Security.Policy;
 using System.Threading.Tasks;
 
-namespace Regard.Backend.Providers
+namespace Regard.Backend.Common.Providers
 {
-    public interface IVideoProvider
+    public interface IVideoProvider : IProvider
     {
-        string ProviderId { get; }
+        Task<bool> CanHandleVideo(Video video);
 
-        bool IsInitialized { get; }
-
-        Type ConfigurationType { get; }
-
-        void Configure(object config);
-
-        void Unconfigure();
-
-        Task<bool> CanHandleUrl(Uri uri);
-
-        IAsyncEnumerable<Video> FetchVideos(IEnumerable<Uri> urls);
-
-        Task UpdateMetadata(IEnumerable<Video> videos, bool updateStatistics);
+        Task UpdateMetadata(IEnumerable<Video> videos, bool updateMetadata, bool updateStatistics);
     }
 }

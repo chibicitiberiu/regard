@@ -7,6 +7,12 @@ namespace Regard.Model
 {
     public enum VideoOrder
     {
+        Newest,
+        Oldest,
+        Playlist,
+        ReversePlaylist,
+        Popularity,
+        Rating,
         Name,
     }
 }

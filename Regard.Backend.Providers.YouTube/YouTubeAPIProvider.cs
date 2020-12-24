@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore.Internal;
 using MoreLinq;
+using Regard.Backend.Common.Providers;
 using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
@@ -11,9 +12,9 @@ using YtChannel = Google.Apis.YouTube.v3.Data.Channel;
 
 namespace Regard.Backend.Providers.YouTube
 {
-    public class YouTubeAPIProvider : ICompleteProvider
+    public class YouTubeAPIProvider : ISubscriptionProvider, IVideoProvider
     {
-        public string ProviderId => "YtAPI";
+        public string Id => "YtAPI";
 
         public string Name => "YouTube API";
 
@@ -23,7 +24,7 @@ namespace Regard.Backend.Providers.YouTube
 
         private readonly YouTubeAPIConfiguration configuration = new YouTubeAPIConfiguration();
 
-        public void Configure(object config)
+        public Task Configure(object config)
         {
             if (config is YouTubeAPIConfiguration ytapiConfig)
             {
@@ -32,8 +33,12 @@ namespace Regard.Backend.Providers.YouTube
 
                 this.configuration.ApiKey = ytapiConfig.ApiKey;
             }
+            else
+            {
+                throw new ArgumentException("Provider must be set up!");
+            }
 
-            throw new ArgumentException("Wrong data type");
+            return Task.CompletedTask;
         }
 
         public void Unconfigure()
@@ -64,11 +69,14 @@ namespace Regard.Backend.Providers.YouTube
             }
         }
 
-        public Task<bool> CanHandleVideoUrl(Uri uri)
+        public Task<bool> CanHandleVideo(Video video)
         {
+            if (video.VideoProviderId == Id)
+                return Task.FromResult(true);
+
             try
             {
-                var parseResult = YouTubeUrlHelper.ParseUrl(uri);
+                var parseResult = YouTubeUrlHelper.ParseUrl(new Uri(video.OriginalUrl));
                 return Task.FromResult(parseResult.Type == YouTubeUrlType.Video);
             }
             catch (ArgumentException)
@@ -85,7 +93,7 @@ namespace Regard.Backend.Providers.YouTube
             Subscription sub = new Subscription
             {
                 SubscriptionId = uri.AbsoluteUri,
-                SubscriptionProviderId = ProviderId,
+                SubscriptionProviderId = Id,
             };
 
             YtChannel channel = null;
@@ -125,7 +133,11 @@ namespace Regard.Backend.Providers.YouTube
             {
                 sub.Name = channel.Snippet.Title;
                 sub.Description = channel.Snippet.Description;
-                sub.ThumbnailPath = channel.Snippet.Thumbnails.Maxres.Url;
+                sub.ThumbnailPath = channel.Snippet.Thumbnails.Maxres?.Url 
+                    ?? channel.Snippet.Thumbnails.High?.Url
+                    ?? channel.Snippet.Thumbnails.Standard?.Url
+                    ?? channel.Snippet.Thumbnails.Medium?.Url
+                    ?? channel.Snippet.Thumbnails.Default__?.Url; 
                 sub.ProviderData = channel.ContentDetails.RelatedPlaylists.Uploads;
             }
 
@@ -146,7 +158,8 @@ namespace Regard.Backend.Providers.YouTube
                         .Reverse()
                         .Select((x, i) => new Video()
                         {
-                            ProviderId = this.ProviderId,
+                            SubscriptionProviderId = this.Id,
+                            VideoProviderId = this.Id,
                             VideoId = x.Snippet.ResourceId.VideoId,
                             Name = x.Snippet.Title,
                             Description = x.Snippet.Description,
@@ -162,7 +175,8 @@ namespace Regard.Backend.Providers.YouTube
                     return api.GetPlaylistVideos(subscription.ProviderData)
                         .Select((x, i) => new Video()
                         {
-                            ProviderId = this.ProviderId,
+                            SubscriptionProviderId = this.Id,
+                            VideoProviderId = this.Id,
                             VideoId = x.Snippet.ResourceId.VideoId,
                             Name = x.Snippet.Title,
                             Description = x.Snippet.Description,
@@ -178,7 +192,8 @@ namespace Regard.Backend.Providers.YouTube
                     return api.GetSearchResults(parseResult.Query, "video")
                         .Select((x, i) => new Video()
                         {
-                            ProviderId = this.ProviderId,
+                            SubscriptionProviderId = this.Id,
+                            VideoProviderId = this.Id,
                             VideoId = x.Id.VideoId,
                             Name = x.Snippet.Title,
                             Description = x.Snippet.Description,
@@ -195,32 +210,9 @@ namespace Regard.Backend.Providers.YouTube
             }
         }
 
-        public async IAsyncEnumerable<Video> FetchVideos(IEnumerable<Uri> urls)
+        public IAsyncEnumerable<Uri> FetchVideoUrls(Subscription subscription)
         {
-            var api = new YouTubeAPIProxy(configuration.ApiKey);
-
-            var videoIdBatches = urls.Select(YouTubeUrlHelper.ParseUrl)
-                .Where(x => x.Type == YouTubeUrlType.Video)
-                .Select(x => x.VideoId)
-                .Batch(50);
-
-            foreach (var batch in videoIdBatches)
-            {
-                await foreach (var x in api.GetVideos(batch, "id", "snippet"))
-                {
-                    yield return new Video()
-                    {
-                        ProviderId = this.ProviderId,
-                        VideoId = x.Id,
-                        Name = x.Snippet.Title,
-                        Description = x.Snippet.Description,
-                        Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
-                        LastUpdated = DateTime.Now,
-                        ThumbnailPath = x.Snippet.Thumbnails.Maxres.Url,
-                        UploaderName = x.Snippet.ChannelTitle
-                    };
-                }
-            }
+            throw new InvalidOperationException("Operation not supported!");
         }
 
         public async Task UpdateMetadata(IEnumerable<Video> videos, bool updateMetadata, bool updateStatistics)

@@ -4,31 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Regard.Backend.Providers
+namespace Regard.Backend.Common.Providers
 {
-    public interface ISubscriptionProvider
+    public interface ISubscriptionProvider : IProvider
     {
-        /// <summary>
-        /// Provider ID
-        /// </summary>
-        string ProviderId { get; }
+        Task<bool> CanHandleSubscriptionUrl(Uri uri);
 
-        /// <summary>
-        /// User friendly name
-        /// </summary>
-        string Name { get; }
-
-        bool IsInitialized { get; }
-
-        Type ConfigurationType { get; }
-
-        void Configure(object config);
-
-        void Unconfigure();
-
-        Task<bool> CanHandleUrl(Uri uri);
-
-        IAsyncEnumerable<Uri> FetchVideos(Subscription subscription);
+        IAsyncEnumerable<Video> FetchVideos(Subscription subscription);
 
         Task<Subscription> CreateSubscription(Uri uri);
     }

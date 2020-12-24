@@ -9,44 +9,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Regard.Backend.Common.Providers;
+using Regard.Model;
 
 namespace Regard.Backend.Services
 {
     public class SubscriptionManager 
     {
         private readonly DataContext dataContext;
-        private readonly Dictionary<string, ICompleteProvider> providers = new Dictionary<string, ICompleteProvider>();
-        private readonly Dictionary<string, ISubscriptionProvider> subscriptionProviders = new Dictionary<string, ISubscriptionProvider>();
-        private readonly Dictionary<string, IVideoProvider> videoProviders = new Dictionary<string, IVideoProvider>();
+        private readonly IPreferencesManager preferencesManager;
+        private readonly IProviderManager providerManager;
         private readonly MessagingService messaging;
 
         public SubscriptionManager(DataContext dataContext,
-            IEnumerable<ICompleteProvider> completeProviders,
-            IEnumerable<ISubscriptionProvider> subscriptionProviders,
-            IEnumerable<IVideoProvider> videoProviders,
-            MessagingService messaging)
+                                   IPreferencesManager preferencesManager,
+                                   IProviderManager providerManager,
+                                   MessagingService messaging)
         {
             this.dataContext = dataContext;
-            completeProviders.ForEach(x => this.providers.Add(x.ProviderId, x));
-            subscriptionProviders.ForEach(x => this.subscriptionProviders.Add(x.ProviderId, x));
-            videoProviders.ForEach(x => this.videoProviders.Add(x.ProviderId, x));
+            this.preferencesManager = preferencesManager;
+            this.providerManager = providerManager;
             this.messaging = messaging;
         }
 
         public async Task<string> TestUrl(Uri uri)
         {
-            foreach (var provider in providers.Values)
-            {
-                if (await provider.CanHandleSubscriptionUrl(uri))
-                    return provider.ProviderId;
-            }
-            foreach (var provider in subscriptionProviders.Values)
-            {
-                if (await provider.CanHandleUrl(uri))
-                    return provider.ProviderId;
-            }
+            var provider = await providerManager.FindFromSubscriptionUrl(uri).FirstOrDefaultAsync();
 
-            throw new ArgumentException("Unsupported service or URL format!");
+            if (provider == null)
+                throw new ArgumentException("Unsupported service or URL format!");
+            
+            return provider.Id;
         }
 
         public async Task<Subscription> Create(Uri uri, UserAccount userAccount, int? parentFolderId)
@@ -61,21 +54,11 @@ namespace Regard.Backend.Services
             }
 
             // Find subscription provider and create subscription
-            Subscription sub = await providers.Values
-                .ToAsyncEnumerable()
-                .WhereAwait(async x => await x.CanHandleSubscriptionUrl(uri))
-                .SelectAwait(async x => await x.CreateSubscription(uri))
-                .FirstOrDefaultAsync();
-            
-            if (sub == null)
-            {
-                sub = await subscriptionProviders.Values
-                    .ToAsyncEnumerable()
-                    .WhereAwait(async x => await x.CanHandleUrl(uri))
-                    .SelectAwait(async x => await x.CreateSubscription(uri))
-                    .FirstOrDefaultAsync();
-            }
-            
+            var provider = await providerManager.FindFromSubscriptionUrl(uri).FirstOrDefaultAsync();
+            if (provider == null)
+                throw new Exception("Could not find a subscription provider that can handle this URL!");
+
+            Subscription sub = await provider.CreateSubscription(uri);
             sub.User = userAccount;
             sub.ParentFolder = parent;
             dataContext.Subscriptions.Add(sub);
@@ -131,6 +114,76 @@ namespace Regard.Backend.Services
         {
             return dataContext.SubscriptionFolders.AsQueryable()
                 .Where(x => x.UserId == userAccount.Id);
+        }
+
+        private async Task<T> GetOption<T>(Subscription sub,
+                                           Func<Subscription, T?> optGetter,
+                                           Func<SubscriptionFolder, T?> folderOptGetter,
+                                           PreferenceDefinition<T> preference) where T : struct
+        {
+            // Get from subscription
+            T? value = optGetter(sub);
+            if (value.HasValue)
+                return value.Value;
+
+            // Get from subscription folder
+            var folder = sub.ParentFolder;
+            while (folder != null)
+            {
+                value = folderOptGetter(folder);
+                if (value.HasValue)
+                    return value.Value;
+            }
+
+            // Get from preference
+            return await preferencesManager.Get(preference);
+        }
+
+        private async Task<T> GetOption<T>(Subscription sub,
+                                           Func<Subscription, T> optGetter,
+                                           Func<SubscriptionFolder, T> folderOptGetter,
+                                           PreferenceDefinition<T> preference) where T : class
+        {
+            // Get from subscription
+            T value = optGetter(sub);
+            if (value != null)
+                return value;
+
+            // Get from subscription folder
+            var folder = sub.ParentFolder;
+            while (folder != null)
+            {
+                value = folderOptGetter(folder);
+                if (value != null)
+                    return value;
+            }
+
+            // Get from preference
+            return await preferencesManager.Get(preference);
+        }
+
+        public Task<bool> GetOption_AutoDownload(Subscription subscription)
+        {
+            return GetOption(subscription,
+                sub => sub.AutoDownload,
+                folder => folder.AutoDownload,
+                Preferences.Download_AutoDownload);
+        }
+
+        public Task<VideoOrder> GetOption_DownloadOrder(Subscription subscription)
+        {
+            return GetOption(subscription,
+                sub => sub.DownloadOrder,
+                folder => folder.DownloadOrder,
+                Preferences.Download_Order);
+        }
+
+        public Task<int> GetOption_DownloadMaxCount(Subscription subscription)
+        {
+            return GetOption(subscription,
+                sub => sub.DownloadMaxCount,
+                folder => folder.DownloadMaxCount,
+                Preferences.Download_DefaultMaxCount);
         }
     }
 }
