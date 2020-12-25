@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Regard.Common\Regard.Common.csproj" />
+    <ProjectReference Include="..\YoutubeDLWrapper\YoutubeDLWrapper.csproj" />
   </ItemGroup>
 
 </Project>

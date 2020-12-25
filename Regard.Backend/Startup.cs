@@ -21,6 +21,7 @@ using Regard.Backend.DB;
 using Regard.Backend.Middleware;
 using Regard.Backend.Jobs;
 using Regard.Backend.Common.Providers;
+using Regard.Backend.Common.Services;
 
 namespace Regard.Backend
 {
@@ -123,6 +124,7 @@ namespace Regard.Backend
             services.AddScoped<InitJob>();
             services.AddScoped<SynchronizeJob>();
             services.AddScoped<DownloadVideoJob>();
+            services.AddScoped<YoutubeDLUpdateJob>();
 
             // Providers
             services.AddSingleton<IProvider, RssSubscriptionProvider>();
@@ -133,6 +135,7 @@ namespace Regard.Backend
 
             // Others
             services.AddSingleton<IVideoStorageService, VideoStorageService>();
+            services.AddSingleton<IYoutubeDlService, YoutubeDLService>();
             services.AddSingleton<ApiResponseFactory>();
         }
 

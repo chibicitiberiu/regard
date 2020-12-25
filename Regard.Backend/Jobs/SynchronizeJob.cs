@@ -33,6 +33,11 @@ namespace Regard.Backend.Jobs
         /// </summary>
         public int? SubscriptionId { get; set; }
 
+        // Don't retry, since synchronization job runs pretty frequently anyway
+        protected override int RetryCount => 0;
+
+        protected override TimeSpan RetryInterval => TimeSpan.Zero;
+
         public SynchronizeJob(ILogger<SynchronizeJob> log,
                               DataContext dataContext,
                               IPreferencesManager preferencesManager,
@@ -167,41 +172,6 @@ namespace Regard.Backend.Jobs
         private void MergeVideoInfo(Video existingVideo, Video fetchedVideo)
         {
             // TODO: merge data, if any extra details
-        }
-
-        private async Task CheckVideo(Subscription sub, Video video)
-        {
-            Video existingVideo = FindMatchingVideo(sub, video);
-
-            if (existingVideo == null)
-            {
-                var nextIndex = dataContext.Videos.AsQueryable()
-                    .Select(x => (int?)x.PlaylistIndex)
-                    .Max();
-
-                video.Subscription = sub;
-                video.PlaylistIndex = (nextIndex ?? -1) + 1;
-                video.IsWatched = false;
-                video.Discovered = DateTimeOffset.UtcNow;
-
-                // Cleanup video information
-                if (video.Name != null)
-                {
-                    video.Name = video.Name.Trim();
-                    int? maxLen = video.GetPropertyMaxLength("Name");
-                    if (maxLen.HasValue)
-                        video.Name = video.Name.Truncate(maxLen.Value);
-                }
-                
-                // TODO: allow providers to set playlist indices
-
-                dataContext.Videos.Add(video);
-                await dataContext.SaveChangesAsync();
-            }
-            else
-            {
-                // TODO: merge data, if any extra details
-            }
         }
 
         private Video FindMatchingVideo(Subscription sub, Video video)

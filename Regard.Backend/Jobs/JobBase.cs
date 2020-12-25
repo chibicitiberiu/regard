@@ -13,6 +13,12 @@ namespace Regard.Backend.Jobs
         protected readonly ILogger log;
         protected readonly DataContext dataContext;
 
+        public int Attempt { get; set; } = 0;
+
+        protected abstract int RetryCount { get; }
+
+        protected abstract TimeSpan RetryInterval { get; }
+
         public JobBase(ILogger log, DataContext dataContext)
         {
             this.log = log;
@@ -28,7 +34,23 @@ namespace Regard.Backend.Jobs
             catch (Exception ex)
             {
                 log.LogError(ex, "{0} failed with exception!", GetType().Name);
+                if (Attempt < RetryCount)
+                    await ScheduleRetry(context);
             }
+        }
+
+        private async Task ScheduleRetry(IJobExecutionContext context)
+        {
+            var retryJob = context.JobDetail.GetJobBuilder()
+                .WithIdentity($"{context.JobDetail.Key.Name}-{Attempt + 1}", context.JobDetail.Key.Group)
+                .UsingJobData("Attempt", Attempt + 1)
+                .Build();
+
+            var retryTrigger = TriggerBuilder.Create()
+                .StartAt(DateTimeOffset.Now.Add(RetryInterval))
+                .Build();
+
+            await context.Scheduler.ScheduleJob(retryJob, retryTrigger);
         }
 
         protected abstract Task ExecuteJob(IJobExecutionContext context);

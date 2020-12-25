@@ -10,6 +10,10 @@ namespace Regard.Backend.Jobs
 {
     public class DownloadVideoJob : JobBase
     {
+        protected override int RetryCount => 0;
+
+        protected override TimeSpan RetryInterval => TimeSpan.Zero;
+
         public DownloadVideoJob(ILogger<DownloadVideoJob> logger, DataContext dataContext) : base(logger, dataContext)
         {
         }
