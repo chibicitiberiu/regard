@@ -67,8 +67,8 @@ namespace Regard.Backend.Providers.YouTube
 
         public async IAsyncEnumerable<PlaylistItem> GetPlaylistVideos(string listId)
         {
-            var request = service.PlaylistItems.List("id");
-            request.Id = listId;
+            var request = service.PlaylistItems.List("id,snippet");
+            request.PlaylistId = listId;
 
             do
             {

@@ -131,9 +131,10 @@ namespace Regard.Backend
             services.AddSingleton<IProvider, YouTubeAPIProvider>();
             services.AddSingleton<IProviderManager, ProviderManager>();
 
-            services.AddScoped<SubscriptionManager>();
-
             // Others
+            services.AddScoped<SubscriptionManager>();
+            services.AddScoped<VideoManager>();
+
             services.AddSingleton<IVideoStorageService, VideoStorageService>();
             services.AddSingleton<IYoutubeDlService, YoutubeDLService>();
             services.AddSingleton<ApiResponseFactory>();

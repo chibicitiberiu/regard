@@ -31,6 +31,28 @@ namespace Regard.Backend.Common.Utils
             };
         }
 
+        public static ApiVideo ToApi(this Video @this)
+        {
+            return new ApiVideo()
+            {
+                Id = @this.Id,
+                Name = @this.Name,
+                Description = @this.Description,
+                IsWatched = @this.IsWatched,
+                IsNew = (DateTime.Now - @this.Published).TotalDays < 7,
+                DownloadedStreamUrl = null, // TODO
+                DownloadedSize = @this.DownloadedSize,
+                SubscriptionId = @this.SubscriptionId,
+                PlaylistIndex = @this.PlaylistIndex,
+                Published = @this.Published,
+                LastUpdated = @this.LastUpdated,
+                ThumbnailUrl = @this.ThumbnailPath, // TODO
+                UploaderName = @this.UploaderName,
+                Views = @this.Views,
+                Rating = @this.Rating
+            };
+        }
+
         public static IQueryable<Video> OrderBy(this IQueryable<Video> @this, VideoOrder? videoOrder)
         {
             if (!videoOrder.HasValue)

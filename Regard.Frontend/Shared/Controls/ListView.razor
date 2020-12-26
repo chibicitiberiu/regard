@@ -1,5 +1,15 @@
-﻿<h3>ListView</h3>
+﻿@typeparam Model
 
-@code {
-
-}
+<div class="list-view" @attributes="AdditionalAttributes">
+    <ul class="list-view-items">
+        @if (ItemsSource != null)
+        {
+            @foreach (var item in ItemsSource)
+            {
+                <li class="list-view-item">
+                    @ItemTemplate(item)
+                </li>
+            }
+        }
+    </ul>
+</div>

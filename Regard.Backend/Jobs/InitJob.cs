@@ -53,7 +53,7 @@ namespace Regard.Backend.Jobs
                     .Build(),
                 TriggerBuilder.Create()
                     //.WithCronSchedule(configuration["SynchronizationSchedule"])
-                    .StartAt(DateTimeOffset.Now.AddSeconds(60))
+                    .StartAt(DateTimeOffset.Now.AddSeconds(5))
                     .Build());
 
             await context.Scheduler.ScheduleJob(

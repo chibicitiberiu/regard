@@ -168,8 +168,9 @@ namespace Regard.Backend.Providers.YouTube
                             Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
                             LastUpdated = DateTime.Now,
                             ThumbnailPath = x.Snippet.Thumbnails.Maxres.Url,
-                            UploaderName = x.Snippet.ChannelTitle
-                        });
+                            UploaderName = x.Snippet.ChannelTitle,
+                            OriginalUrl = $"https://www.youtube.com/watch?v={x.Snippet.ResourceId.VideoId}"
+                        }); ;
 
                 case YouTubeUrlType.Playlist:
                     return api.GetPlaylistVideos(subscription.ProviderData)
@@ -185,7 +186,8 @@ namespace Regard.Backend.Providers.YouTube
                             Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
                             LastUpdated = DateTime.Now,
                             ThumbnailPath = x.Snippet.Thumbnails.Maxres.Url,
-                            UploaderName = x.Snippet.ChannelTitle
+                            UploaderName = x.Snippet.ChannelTitle,
+                            OriginalUrl = $"https://www.youtube.com/watch?v={x.Snippet.ResourceId.VideoId}"
                         });
 
                 case YouTubeUrlType.Search:
@@ -202,7 +204,8 @@ namespace Regard.Backend.Providers.YouTube
                             Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
                             LastUpdated = DateTime.Now,
                             ThumbnailPath = x.Snippet.Thumbnails.Maxres.Url,
-                            UploaderName = x.Snippet.ChannelTitle
+                            UploaderName = x.Snippet.ChannelTitle,
+                            OriginalUrl = $"https://www.youtube.com/watch?v={x.Id.VideoId}"
                         });
 
                 default:

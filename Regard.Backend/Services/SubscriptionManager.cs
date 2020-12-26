@@ -97,6 +97,16 @@ namespace Regard.Backend.Services
                 .Where(x => x.UserId == userAccount.Id);
         }
 
+        public SubscriptionFolder FindFolder(int id)
+        {
+            return dataContext.SubscriptionFolders.Find(id);
+        }
+
+        public IQueryable<Subscription> GetSubscriptionsRecursive(SubscriptionFolder root)
+        {
+            return dataContext.GetSubscriptionsRecursive(root);
+        }
+
         public async Task DeleteSubscriptions(UserAccount userAccount, int[] ids)
         {
             var itemsToDelete = dataContext.Subscriptions.AsQueryable()

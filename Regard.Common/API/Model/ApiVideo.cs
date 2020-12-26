@@ -24,9 +24,9 @@ namespace Regard.Common.API.Model
 
         public int PlaylistIndex { get; set; }
 
-        public DateTime Published { get; set; }
+        public DateTimeOffset Published { get; set; }
 
-        public DateTime LastUpdated { get; set; }
+        public DateTimeOffset LastUpdated { get; set; }
 
         public string ThumbnailUrl { get; set; }
         

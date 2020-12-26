@@ -1,0 +1,7 @@
+﻿<ListView Model="VideoViewModel"
+          ItemsSource="videos">
+    <ItemTemplate Context="item">
+        <img src="@item.ThumbnailUrl" />
+        <h3>@item.Name</h3>
+    </ItemTemplate>
+</ListView>

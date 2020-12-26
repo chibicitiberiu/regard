@@ -9,9 +9,9 @@ namespace Regard.Common.API.Subscriptions
     {
         public int[] Ids { get; set; }
 
-        public int[] SubscriptionIds { get; set; }
+        public int? SubscriptionId { get; set; }
 
-        public int[] SubscriptionFolderIds { get; set; }
+        public int? SubscriptionFolderId { get; set; }
 
         public VideoOrder Order { get; set; }
 

@@ -157,5 +157,12 @@ namespace Regard.Services
             => Post("api/subscriptionfolder/delete", data);
 
         #endregion
+
+        #region Videos
+
+        public Task<(ApiResponse<VideoListResponse>, HttpResponseMessage)> VideoList(VideoListRequest data)
+            => Post<VideoListRequest, VideoListResponse>("api/video/list", data);
+
+        #endregion
     }
 }
