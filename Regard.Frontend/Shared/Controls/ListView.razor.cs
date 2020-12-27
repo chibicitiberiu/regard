@@ -31,6 +31,9 @@ namespace Regard.Frontend.Shared.Controls
         public RenderFragment<Model> ItemTemplate { get; set; }
 
         [Parameter]
+        public string Class { get; set; }
+
+        [Parameter(CaptureUnmatchedValues = true)]
         public IReadOnlyDictionary<string, object> AdditionalAttributes { get; set; }
 
         private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)

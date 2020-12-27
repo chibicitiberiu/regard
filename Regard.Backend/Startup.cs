@@ -22,6 +22,7 @@ using Regard.Backend.Middleware;
 using Regard.Backend.Jobs;
 using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Services;
+using Regard.Backend.Providers.Rss;
 
 namespace Regard.Backend
 {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Components;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,7 +17,13 @@ namespace Regard.Frontend.Shared.Controls
         NotificationsFull,
         NotificationsEmpty,
         Profile,
-        Settings
+        Settings,
+        ChevronDown,
+        Sort,
+        Watched,
+        NotWatched,
+        Downloaded,
+        NotDownloaded,
     }
 
     public partial class Icon
@@ -33,7 +40,22 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.NotificationsEmpty, "notifications_none" },
             { Icons.Profile, "person" },
             { Icons.Settings, "settings" },
+            { Icons.ChevronDown, "expand_more" },
+            { Icons.Sort, "sort" },
+            { Icons.Watched, "visibility" },
+            { Icons.NotWatched, "visibility_off" },
+            { Icons.Downloaded, "get_app" },
+            { Icons.NotDownloaded, "visibility_off" },
         };
+
+        [Parameter(CaptureUnmatchedValues = true)]
+        public IReadOnlyDictionary<string, object> AdditionalAttributes { get; set; }
+
+        [Parameter]
+        public string Class { get; set; }
+
+        [Parameter]
+        public Icons Glyph { get; set; }
 
         private string Map(Icons icon)
         {

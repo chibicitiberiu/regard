@@ -1,0 +1,33 @@
+﻿.video-gallery {
+    .list-view-items {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: stretch;
+    }
+
+    .list-view-item {
+        align-self: flex-start;
+        display: inline-block;
+        padding: 1rem;
+        margin-bottom: .5rem;
+        width: 18rem;
+
+        a {
+            text-decoration: none;
+        }
+
+        h3 {
+            font-size: 14pt;
+            font-weight: normal;
+            margin-top: .5em;
+            margin-bottom: .25em;
+        }
+
+        img {
+            width: 18rem;
+            height: (18rem * 10 / 16);
+            object-fit: cover;
+        }
+    }
+}

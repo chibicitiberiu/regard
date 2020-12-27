@@ -15,8 +15,13 @@
     {
         return __builder =>
         {
-            <li class="tree-item @CssUtils.BoolToClass(item.IsSelected, "selected") @CssUtils.BoolToClass(!item.IsEnabled, "disabled")">
-                <a @onclick="() => OnItemClicked(item)">@ItemTemplate(item)</a>
+            <li class="tree-item @item.CssClasses">
+                <div class="tree-item-row">
+                    <a href="#" class="tree-item-expand-button @CssUtils.BoolToClass(item.Children.Count == 0, "v-hidden")" @onclick="() => OnExpandToggle(item)">
+                        <Icon Glyph="Icons.ChevronDown" Class="tree-item-expand-icon" />
+                    </a>
+                    <a href="#" class="tree-item-content" @onclick="() => OnItemClicked(item)">@ItemTemplate(item)</a>
+                </div>
                 @if (item.IsExpanded)
                 {
                     <ul class="tree-item-children">

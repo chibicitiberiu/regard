@@ -8,7 +8,7 @@ using System.ServiceModel.Syndication;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace Regard.Backend.Providers
+namespace Regard.Backend.Providers.Rss
 {
     public class RssSubscriptionProvider : ISubscriptionProvider
     {
@@ -62,14 +62,19 @@ namespace Regard.Backend.Providers
             var feed = await FetchFeed(new Uri(subscription.SubscriptionId));
 
             foreach (var link in feed.Items)
+            {
+                var uri = link.Links.First().Uri;
+                uri = await LinkProcessors.Process(uri);
+
                 yield return new Video()
                 {
-                    OriginalUrl = link.Links.First().Uri.ToString(),
+                    OriginalUrl = uri.ToString(),
                     SubscriptionProviderId = link.Id,
                     Name = link.Title.Text,
                     Published = (link.PublishDate == new DateTimeOffset()) ? link.LastUpdatedTime : link.PublishDate,
                     LastUpdated = link.LastUpdatedTime
                 };
+            }
         }
 
         private async Task<SyndicationFeed> FetchFeed(Uri uri)

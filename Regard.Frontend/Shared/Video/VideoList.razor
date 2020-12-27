@@ -1,7 +1,18 @@
 ﻿<ListView Model="VideoViewModel"
-          ItemsSource="videos">
+          ItemsSource="videos"
+          Class="video-gallery">
     <ItemTemplate Context="item">
-        <img src="@item.ThumbnailUrl" />
-        <h3>@item.Name</h3>
+        <a href="#">
+            <img src="@item.ThumbnailUrl" />
+            <h3>@item.Name</h3>
+            <small class="text-muted">
+                @if (item.ApiVideo.Views.HasValue)
+                {
+                    <span>@item.ApiVideo.Views.Value.ToMetric(decimals: 1) views</span>
+                    <span>&nbsp;&#x2022;&nbsp;</span>
+                }
+                <span>@item.ApiVideo.Published.ToLocalTime().Humanize()</span>
+            </small>
+        </a>
     </ItemTemplate>
 </ListView>

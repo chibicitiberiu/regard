@@ -1,0 +1,61 @@
+﻿.tree-view {
+    > .tree-item-children {
+        padding-left: 0;
+    }
+}
+
+.tree-item-children {
+    display: flex;
+    flex-direction: column;
+    align-content: stretch;
+    padding-left: 2em;
+}
+
+.tree-item {
+    list-style: none;
+    vertical-align: middle;
+
+    .tree-item-expand-icon {
+        transition: transform linear .15s;
+    }
+
+    > .tree-item-row {
+        transition: background-color linear 0.25s, opacity 0.25s, text-shadow 0.25s;
+        padding: .4em .75em;
+        margin: .1em 0;
+        border: 0;
+        border-radius: var(--border-radius-btn);
+
+        &:hover {
+            color: var(--color-fg-secondary);
+            background-color: var(--color-bg-secondary);
+            transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s;
+        }
+    }
+
+    a {
+        display: inline-block;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    &.collapsed .tree-item-expand-icon {
+        transform: rotate(-90deg);
+        transition: transform linear .15s;
+    }
+
+    &.selected > .tree-item-row {
+        color: var(--color-bg-secondary);
+        background: var(--color-fg-secondary);
+        box-shadow: 0 0 .5em var(--color-fg-secondary);
+        transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s;
+    }
+
+    .tree-item-icon {
+        display: inline-block;
+        img {
+            width: 1.5em;
+            height: 1.5em;
+        }
+    }
+}

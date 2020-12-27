@@ -402,7 +402,7 @@ namespace Regard.Backend.Migrations.SQLite
 
                     b.Property<string>("Description")
                         .HasColumnType("TEXT")
-                        .HasMaxLength(1024);
+                        .HasMaxLength(4096);
 
                     b.Property<DateTimeOffset>("Discovered")
                         .HasColumnType("TEXT");

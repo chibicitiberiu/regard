@@ -34,7 +34,7 @@ namespace Regard.Backend.Model
         [NotNull, MaxLength(250)]
         public string Name { get; set; }
 
-        [MaxLength(1024)]
+        [MaxLength(4096)]
         public string Description { get; set; }
 
         public bool IsWatched { get; set; } = false;

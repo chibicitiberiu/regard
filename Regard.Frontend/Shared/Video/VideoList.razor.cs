@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using Humanizer;
+using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
 using Regard.Services;
@@ -24,6 +25,20 @@ namespace Regard.Frontend.Shared.Video
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
+            await Populate();
+        }
+
+        public async Task SetSelectedSubscription(ApiSubscription subscription)
+        {
+            selectedSubscription = subscription;
+            selectedFolder = null;
+            await Populate();
+        }
+
+        public async Task SetSelectedFolder(ApiSubscriptionFolder folder)
+        {
+            selectedSubscription = null;
+            selectedFolder = folder;
             await Populate();
         }
 

@@ -29,7 +29,7 @@ namespace Regard.Frontend.Shared.Controls
                     if (selectedItem != null)
                         selectedItem.IsSelected = true;
 
-                    SelectedItemChanged.InvokeAsync(selectedItem).Wait();
+                    SelectedItemChanged.InvokeAsync(selectedItem);
                 }
             }
         }
@@ -57,6 +57,11 @@ namespace Regard.Frontend.Shared.Controls
         private void OnTreePropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             StateHasChanged();
+        }
+
+        private async Task OnExpandToggle(TreeViewNode<Model> item)
+        {
+            item.IsExpanded = !item.IsExpanded;
         }
 
         private async Task OnItemClicked(TreeViewNode<Model> item)

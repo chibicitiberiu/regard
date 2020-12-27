@@ -2,14 +2,16 @@
           Model="ISubscriptionItemViewModel" 
           SelectedItemChanged="OnSelectedItemChanged">
     <ItemTemplate Context="item">
-        @if(item.Data.ThumbnailUrl != null)
-        {
-            <img src="@item.Data.ThumbnailUrl" />
-        }
-        else
-        {
-            <Icon Glyph="item.Data.PlaceholderIcon" />
-        }
+        <div class="tree-item-icon">
+            @if (item.Data.ThumbnailUrl != null)
+            {
+                <img src="@item.Data.ThumbnailUrl" />
+            }
+            else
+            {
+                <Icon Glyph="item.Data.PlaceholderIcon" />
+            }
+        </div>
         @item.Data.Name
     </ItemTemplate>
 </TreeView>

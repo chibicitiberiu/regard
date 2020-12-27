@@ -143,7 +143,13 @@ namespace Regard.Backend.Providers.YouTube
 
             return sub;
         }
-
+        /*
+         x.Snippet.Thumbnails.Maxres?.Url 
+                    ?? x.Snippet.Thumbnails.High?.Url
+                    ?? x.Snippet.Thumbnails.Standard?.Url
+                    ?? x.Snippet.Thumbnails.Medium?.Url
+                    ?? x.Snippet.Thumbnails.Default__?.Url
+         */
         public IAsyncEnumerable<Video> FetchVideos(Subscription subscription)
         {
             var parseResult = YouTubeUrlHelper.ParseUrl(new Uri(subscription.SubscriptionId));
@@ -167,7 +173,11 @@ namespace Regard.Backend.Providers.YouTube
                             PlaylistIndex = i,
                             Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
                             LastUpdated = DateTime.Now,
-                            ThumbnailPath = x.Snippet.Thumbnails.Maxres.Url,
+                            ThumbnailPath = x.Snippet.Thumbnails.Maxres?.Url
+                                ?? x.Snippet.Thumbnails.High?.Url
+                                ?? x.Snippet.Thumbnails.Standard?.Url
+                                ?? x.Snippet.Thumbnails.Medium?.Url
+                                ?? x.Snippet.Thumbnails.Default__?.Url, 
                             UploaderName = x.Snippet.ChannelTitle,
                             OriginalUrl = $"https://www.youtube.com/watch?v={x.Snippet.ResourceId.VideoId}"
                         }); ;
@@ -185,7 +195,11 @@ namespace Regard.Backend.Providers.YouTube
                             PlaylistIndex = Convert.ToInt32(x.Snippet.Position ?? i),
                             Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
                             LastUpdated = DateTime.Now,
-                            ThumbnailPath = x.Snippet.Thumbnails.Maxres.Url,
+                            ThumbnailPath = x.Snippet.Thumbnails.Maxres?.Url
+                                ?? x.Snippet.Thumbnails.High?.Url
+                                ?? x.Snippet.Thumbnails.Standard?.Url
+                                ?? x.Snippet.Thumbnails.Medium?.Url
+                                ?? x.Snippet.Thumbnails.Default__?.Url,
                             UploaderName = x.Snippet.ChannelTitle,
                             OriginalUrl = $"https://www.youtube.com/watch?v={x.Snippet.ResourceId.VideoId}"
                         });
@@ -203,7 +217,11 @@ namespace Regard.Backend.Providers.YouTube
                             PlaylistIndex = i,
                             Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
                             LastUpdated = DateTime.Now,
-                            ThumbnailPath = x.Snippet.Thumbnails.Maxres.Url,
+                            ThumbnailPath = x.Snippet.Thumbnails.Maxres?.Url
+                                ?? x.Snippet.Thumbnails.High?.Url
+                                ?? x.Snippet.Thumbnails.Standard?.Url
+                                ?? x.Snippet.Thumbnails.Medium?.Url
+                                ?? x.Snippet.Thumbnails.Default__?.Url,
                             UploaderName = x.Snippet.ChannelTitle,
                             OriginalUrl = $"https://www.youtube.com/watch?v={x.Id.VideoId}"
                         });
@@ -224,7 +242,7 @@ namespace Regard.Backend.Providers.YouTube
 
             List<string> parts = new List<string>
             {
-                "id"
+                "id,snippet"
             };
             if (updateMetadata)
                 parts.Add("snippet");
@@ -233,12 +251,34 @@ namespace Regard.Backend.Providers.YouTube
 
             foreach (var batch in videos.Batch(50))
             {
-                var batchArray = batch.ToArray();
+                var batchList = batch.ToList();
                 int idx = 0;
 
-                await foreach (var ytVideo in api.GetVideos(batchArray.Select(x => x.VideoId), parts))
+                // Some videos might not have ANY metadata added, so first we should preprocess them
+                for (int i = 0; i < batchList.Count; i++)
                 {
-                    var video = batchArray.First(x => x.VideoId == ytVideo.Id);
+                    var video = batchList[i];
+                    if (video.VideoId == null)
+                    {
+                        var parseResult = YouTubeUrlHelper.ParseUrl(new Uri(video.OriginalUrl));
+                        if (parseResult.Type == YouTubeUrlType.Video)
+                        {
+                            video.VideoId = parseResult.VideoId;
+                            video.VideoProviderId = Id;
+                        }
+                        else
+                        {
+                            // remove from batch, video doesn't seem to be valid
+                            // TODO: log
+                            batchList.RemoveAt(i--);
+                        }
+                    }
+                }
+
+
+                await foreach (var ytVideo in api.GetVideos(batchList.Select(x => x.VideoId), parts))
+                {
+                    var video = batchList.First(x => x.VideoId == ytVideo.Id);
 
                     if (updateMetadata)
                     {
@@ -246,7 +286,11 @@ namespace Regard.Backend.Providers.YouTube
                         video.Description = ytVideo.Snippet.Description;
                         video.Published = DateTime.Parse(ytVideo.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind);
                         video.LastUpdated = DateTime.Now;
-                        video.ThumbnailPath = ytVideo.Snippet.Thumbnails.Maxres.Url;
+                        video.ThumbnailPath = ytVideo.Snippet.Thumbnails.Maxres?.Url
+                                ?? ytVideo.Snippet.Thumbnails.High?.Url
+                                ?? ytVideo.Snippet.Thumbnails.Standard?.Url
+                                ?? ytVideo.Snippet.Thumbnails.Medium?.Url
+                                ?? ytVideo.Snippet.Thumbnails.Default__?.Url;
                         video.UploaderName = ytVideo.Snippet.ChannelTitle;
                     }
                     if (updateStatistics)
@@ -255,7 +299,11 @@ namespace Regard.Backend.Providers.YouTube
                             video.Views = Convert.ToInt32(ytVideo.Statistics.ViewCount.Value);
 
                         if (ytVideo.Statistics.LikeCount.HasValue && ytVideo.Statistics.DislikeCount.HasValue)
-                            video.Rating = Convert.ToSingle(ytVideo.Statistics.LikeCount.Value) / Convert.ToSingle(ytVideo.Statistics.DislikeCount.Value);
+                        {
+                            ulong total = ytVideo.Statistics.LikeCount.Value + ytVideo.Statistics.DislikeCount.Value;
+                            if (total > 0)
+                                video.Rating = Convert.ToSingle(ytVideo.Statistics.LikeCount.Value) / Convert.ToSingle(total);
+                        }
                     }
                     ++idx;
                 }

@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Regard.Frontend.Shared.Controls
@@ -57,6 +58,20 @@ namespace Regard.Frontend.Shared.Controls
         {
             get => isExpanded;
             set => SetField(ref isExpanded, value);
+        }
+
+        public string CssClasses
+        { 
+            get
+            {
+                var str = new StringBuilder();
+                if (IsSelected)
+                    str.Append("selected ");
+                if (!IsEnabled)
+                    str.Append("disabled ");
+                str.Append(IsExpanded ? "expanded " : "collapsed ");
+                return str.ToString();
+            }
         }
 
         /// <summary>
