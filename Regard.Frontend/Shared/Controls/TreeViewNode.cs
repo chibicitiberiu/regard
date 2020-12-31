@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Components;
+using Regard.Common.Utils;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -10,13 +12,8 @@ using System.Threading.Tasks;
 
 namespace Regard.Frontend.Shared.Controls
 {
-    public class TreeViewNode<Model> : INotifyPropertyChanged
+    public class TreeViewNode<Model> : NotifyPropertyChangedBase
     {
-        /// <summary>
-        /// Event called when a property value of this node changes
-        /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
-
         /// <summary>
         /// Event called when a property value of either this node or any child changes
         /// </summary>
@@ -27,19 +24,44 @@ namespace Regard.Frontend.Shared.Controls
         /// </summary>
         public event NotifyCollectionChangedEventHandler TreeChanged;
 
-        private bool isEnabled = true;
+        private TreeViewNode<Model> parent = null;
         private bool isSelected = false;
         private bool isExpanded = true;
         private Model data = default;
-        private TreeViewNode<Model> parent = null;
 
         /// <summary>
-        /// Gets or sets a value indicating if this tree item is enabled
+        /// Gets the collection of children
         /// </summary>
-        public bool IsEnabled 
+        public ObservableCollection<TreeViewNode<Model>> Children { get; } = new ObservableCollection<TreeViewNode<Model>>();
+
+        /// <summary>
+        /// Gets or sets the parent tree node
+        /// </summary>
+        public TreeViewNode<Model> Parent
         {
-            get => isEnabled;
-            set => SetField(ref isEnabled, value);
+            get => parent;
+            set => SetField(ref parent, value);
+        }
+
+        /// <summary>
+        /// Gets the current depth in the tree
+        /// </summary>
+        public int Level { get => (parent != null) ? (parent.Level + 1) : 0; }
+
+        /// <summary>
+        /// Gets or sets the associated data
+        /// </summary>
+        public Model Data
+        {
+            get => data;
+            set 
+            {
+                if (data is INotifyPropertyChanged oldData)
+                    oldData.PropertyChanged -= OnDataPropertyChanged;
+                SetField(ref data, value);
+                if (data is INotifyPropertyChanged newData)
+                    newData.PropertyChanged += OnDataPropertyChanged;
+            }
         }
 
         /// <summary>
@@ -67,40 +89,10 @@ namespace Regard.Frontend.Shared.Controls
                 var str = new StringBuilder();
                 if (IsSelected)
                     str.Append("selected ");
-                if (!IsEnabled)
-                    str.Append("disabled ");
                 str.Append(IsExpanded ? "expanded " : "collapsed ");
                 return str.ToString();
             }
         }
-
-        /// <summary>
-        /// Gets or sets the associated data
-        /// </summary>
-        public Model Data 
-        { 
-            get => data;
-            set => SetField(ref data, value);
-        }
-
-        /// <summary>
-        /// Gets or sets the parent tree node
-        /// </summary>
-        public TreeViewNode<Model> Parent
-        {
-            get => parent;
-            set => SetField(ref parent, value);
-        }
-
-        /// <summary>
-        /// Gets the current depth in the tree
-        /// </summary>
-        public int Level { get => (parent != null) ? (parent.Level + 1) : 0; }
-
-        /// <summary>
-        /// Gets the collection of children
-        /// </summary>
-        public ObservableCollection<TreeViewNode<Model>> Children { get; } = new ObservableCollection<TreeViewNode<Model>>();
 
         public TreeViewNode()
         {
@@ -117,31 +109,10 @@ namespace Regard.Frontend.Shared.Controls
             parent.Children.Add(this);
         }
 
-        /// <summary>
-        /// Sets backing field of property and calls NotifyPropertyChanged
-        /// </summary>
-        /// <typeparam name="T">Field datatype</typeparam>
-        /// <param name="field">Backing field</param>
-        /// <param name="value">New value</param>
-        /// <param name="propertyName">Name of property, filled automatically when called from setter</param>
-        protected void SetField<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        protected override void NotifyPropertyChanged(string propertyName)
         {
-            if (!EqualityComparer<T>.Default.Equals(field, value))
-            {
-                field = value;
-                NotifyPropertyChanged(propertyName);
-            }
-        }
-
-        /// <summary>
-        /// Notify property changed
-        /// </summary>
-        /// <param name="propertyName">Property name</param>
-        protected void NotifyPropertyChanged(string propertyName)
-        {
-            var e = new PropertyChangedEventArgs(propertyName);
-            PropertyChanged?.Invoke(this, e);
-            ChildPropertyChanged?.Invoke(this, e);
+            base.NotifyPropertyChanged(propertyName);
+            ChildPropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         private void OnChildrenCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -166,6 +137,11 @@ namespace Regard.Frontend.Shared.Controls
             }
 
             TreeChanged?.Invoke(sender, e);
+        }
+
+        private void OnDataPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            ChildPropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Data." + e.PropertyName));
         }
     }
 }

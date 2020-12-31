@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components.Web;
+﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Regard.Frontend.Shared.Controls;
 using Regard.Utils;
 using System;
@@ -10,6 +11,9 @@ namespace Regard.Frontend.Shared
 {
     public partial class NavMenu
     {
+        private ElementReference notificationsLink;
+        private ElementReference userLink;
+
         // TODO
         private bool CanRegister { get; set; } = true;
 

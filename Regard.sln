@@ -30,11 +30,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoutubeDLWrapper.Tests", "YoutubeDLWrapper.Tests\YoutubeDLWrapper.Tests.csproj", "{D33006EF-20DE-469D-BC16-44BF6000F073}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YoutubeDLWrapper.Tests", "YoutubeDLWrapper.Tests\YoutubeDLWrapper.Tests.csproj", "{D33006EF-20DE-469D-BC16-44BF6000F073}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoutubeDLWrapper", "YoutubeDLWrapper\YoutubeDLWrapper.csproj", "{E0E489D1-281C-4A60-A51F-2E63D0302AAE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YoutubeDLWrapper", "YoutubeDLWrapper\YoutubeDLWrapper.csproj", "{E0E489D1-281C-4A60-A51F-2E63D0302AAE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Regard.Backend.Tests", "Regard.Backend.Tests\Regard.Backend.Tests.csproj", "{32314599-55C0-444B-9BE2-E250B1CDDFF2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Regard.Backend.Tests", "Regard.Backend.Tests\Regard.Backend.Tests.csproj", "{32314599-55C0-444B-9BE2-E250B1CDDFF2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

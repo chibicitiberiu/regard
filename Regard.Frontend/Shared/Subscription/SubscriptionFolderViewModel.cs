@@ -7,17 +7,17 @@ using System.Threading.Tasks;
 
 namespace Regard.Frontend.Shared.Subscription
 {
-    public class SubscriptionFolderViewModel : ISubscriptionItemViewModel
+    public class SubscriptionFolderViewModel : SubscriptionItemViewModelBase
     {
         public ApiSubscriptionFolder Folder { get; private set; }
 
-        public string Name => Folder.Name;
+        public override string Name => Folder.Name;
 
-        public int? ParentId => Folder.ParentId;
+        public override int? ParentId => Folder.ParentId;
 
-        public string ThumbnailUrl => null;
+        public override string ThumbnailUrl => null;
 
-        public Icons PlaceholderIcon => Icons.Folder;
+        public override Icons PlaceholderIcon => Icons.Folder;
 
         public SubscriptionFolderViewModel(ApiSubscriptionFolder folder)
         {

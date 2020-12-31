@@ -20,7 +20,6 @@ namespace Regard.Frontend
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
-
             builder.Services.AddSingleton<AppState>();
             builder.Services.AddSingleton<MessagingService>();
             builder.Services.AddBlazoredLocalStorage();
@@ -35,6 +34,8 @@ namespace Regard.Frontend
             builder.Services.AddAuthorizationCore();
             builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStateProvider>();
             builder.Services.AddSingleton<AuthenticationService>();
+
+            builder.Services.AddTransient<Popper.Popper>();
 
             var host = builder.Build();
             await host.RunAsync();

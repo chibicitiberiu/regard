@@ -17,9 +17,21 @@
 
     .tree-item-expand-icon {
         transition: transform linear .15s;
+        margin: .25em;
+        margin-left: -.25em;
     }
 
-    > .tree-item-row {
+    &.collapsed .tree-item-expand-icon {
+        transform: rotate(-90deg);
+        transition: transform linear .15s;
+    }
+
+    > .tree-item-content {
+        display: flex;
+        flex-direction: row;
+        flex-grow: 1;
+        align-items: center;
+
         transition: background-color linear 0.25s, opacity 0.25s, text-shadow 0.25s;
         padding: .4em .75em;
         margin: .1em 0;
@@ -33,29 +45,33 @@
         }
     }
 
-    a {
-        display: inline-block;
-        text-decoration: none;
-        color: inherit;
-    }
-
-    &.collapsed .tree-item-expand-icon {
-        transform: rotate(-90deg);
-        transition: transform linear .15s;
-    }
-
-    &.selected > .tree-item-row {
+    &.selected > .tree-item-content {
         color: var(--color-bg-secondary);
         background: var(--color-fg-secondary);
         box-shadow: 0 0 .5em var(--color-fg-secondary);
         transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s;
     }
 
-    .tree-item-icon {
+    a {
         display: inline-block;
-        img {
-            width: 1.5em;
-            height: 1.5em;
-        }
+        text-decoration: none;
+        color: inherit;
     }
+}
+
+.tree-subscription-icon {
+    display: inline-block;
+    font-size: 16pt;
+    img {
+        width: 1.5em;
+        height: 1.5em;
+    }
+    margin-right: .4em;
+}
+.tree-subscription-name {
+    flex-grow: 1;
+}
+
+.tree-subscription-menu {
+
 }

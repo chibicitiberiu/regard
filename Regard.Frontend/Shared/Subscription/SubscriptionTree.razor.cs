@@ -4,6 +4,7 @@ using Regard.Common.API.Subscriptions;
 using Regard.Frontend.Services;
 using Regard.Frontend.Shared.Controls;
 using Regard.Services;
+using Regard.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,11 +24,11 @@ namespace Regard.Frontend.Shared.Subscription
         protected BackendService Backend { get; set; }
 
         [Parameter]
-        public EventCallback<ISubscriptionItemViewModel> SelectedItemChanged { get; set; }
+        public EventCallback<SubscriptionItemViewModelBase> SelectedItemChanged { get; set; }
 
-        private TreeView<ISubscriptionItemViewModel> treeView;
+        private TreeView<SubscriptionItemViewModelBase> treeView;
 
-        private readonly Dictionary<int, TreeViewNode<ISubscriptionItemViewModel>> treeFolders = new Dictionary<int, TreeViewNode<ISubscriptionItemViewModel>>();
+        private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeFolders = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
 
         protected override async Task OnInitializedAsync()
         {
@@ -57,7 +58,7 @@ namespace Regard.Frontend.Shared.Subscription
             foreach (var folder in folders)
             {
                 var vmFolder = new SubscriptionFolderViewModel(folder);
-                var tvFolder = new TreeViewNode<ISubscriptionItemViewModel>(vmFolder);
+                var tvFolder = new TreeViewNode<SubscriptionItemViewModelBase>(vmFolder);
                 treeFolders.Add(folder.Id, tvFolder);
             }
 
@@ -76,7 +77,7 @@ namespace Regard.Frontend.Shared.Subscription
             foreach (var sub in subscriptions)
             {
                 var vmSub = new SubscriptionViewModel(sub);
-                var tvSub = new TreeViewNode<ISubscriptionItemViewModel>(vmSub);
+                var tvSub = new TreeViewNode<SubscriptionItemViewModelBase>(vmSub);
 
                 var parent = treeView.Root;
                 if (sub.ParentFolderId.HasValue)
@@ -104,7 +105,7 @@ namespace Regard.Frontend.Shared.Subscription
             if (e.ParentId)
                 parent = treeFolders[e.ParentId.Value.Value];
 
-            parent.Children.Add(new TreeViewNode<ISubscriptionItemViewModel>(new SubscriptionFolderViewModel(e)));
+            parent.Children.Add(new TreeViewNode<SubscriptionItemViewModelBase>(new SubscriptionFolderViewModel(e)));
         }
 
         private void Messaging_SubscriptionUpdated(object sender, ApiSubscription e)
@@ -132,12 +133,42 @@ namespace Regard.Frontend.Shared.Subscription
             if (e.ParentFolderId.HasValue)
                 parent = treeFolders[e.ParentFolderId.Value];
 
-            parent.Children.Add(new TreeViewNode<ISubscriptionItemViewModel>(new SubscriptionViewModel(e)));
+            parent.Children.Add(new TreeViewNode<SubscriptionItemViewModelBase>(new SubscriptionViewModel(e)));
         }
 
-        protected virtual Task OnSelectedItemChanged(TreeViewNode<ISubscriptionItemViewModel> item)
+        protected virtual async Task OnSelectedItemChanged(TreeViewNode<SubscriptionItemViewModelBase> item)
         {
-            return SelectedItemChanged.InvokeAsync(item.Data);
+            await SelectedItemChanged.InvokeAsync(item.Data);
+        }
+
+        protected virtual void OnExpandToggle(TreeViewNode<SubscriptionItemViewModelBase> item)
+        {
+            item.IsExpanded = !item.IsExpanded;
+        }
+
+        private string GetItemCssClass(TreeViewNode<SubscriptionItemViewModelBase> item)
+        {
+            return $"tree-subscription-menu {CssUtils.BoolToClass(!item.IsSelected, "v-hidden")}";
+        }
+
+        protected virtual void OnShowMenu(TreeViewNode<SubscriptionItemViewModelBase> item)
+        {
+            item.Data.IsContextMenuVisible = true;
+        }
+
+        protected virtual void OnEditItem(TreeViewNode<SubscriptionItemViewModelBase> item)
+        {
+            Console.WriteLine($"TODO: edit item {item.Data.Name}");
+        }
+
+        protected virtual void OnDeleteItem(TreeViewNode<SubscriptionItemViewModelBase> item)
+        {
+            Console.WriteLine($"TODO: delete item {item.Data.Name}");
+        }
+
+        protected virtual void OnRefreshItem(TreeViewNode<SubscriptionItemViewModelBase> item)
+        {
+            Console.WriteLine($"TODO: refresh item {item.Data.Name}");
         }
     }
 }

@@ -59,18 +59,10 @@ namespace Regard.Frontend.Shared.Controls
             StateHasChanged();
         }
 
-        private async Task OnExpandToggle(TreeViewNode<Model> item)
-        {
-            item.IsExpanded = !item.IsExpanded;
-        }
-
         private async Task OnItemClicked(TreeViewNode<Model> item)
         {
-            if (item.IsEnabled)
-            {
-                await ItemClicked.InvokeAsync(item);
-                SelectedItem = item;
-            }
+            await ItemClicked.InvokeAsync(item);
+            SelectedItem = item;
         }
     }
 }

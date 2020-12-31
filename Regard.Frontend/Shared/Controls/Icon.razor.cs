@@ -18,12 +18,13 @@ namespace Regard.Frontend.Shared.Controls
         NotificationsEmpty,
         Profile,
         Settings,
+        Menu,
         ChevronDown,
         Sort,
         Watched,
         NotWatched,
         Downloaded,
-        NotDownloaded,
+        NotDownloaded
     }
 
     public partial class Icon
@@ -40,12 +41,13 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.NotificationsEmpty, "notifications_none" },
             { Icons.Profile, "person" },
             { Icons.Settings, "settings" },
+            { Icons.Menu, "more_vert" },
             { Icons.ChevronDown, "expand_more" },
             { Icons.Sort, "sort" },
             { Icons.Watched, "visibility" },
             { Icons.NotWatched, "visibility_off" },
-            { Icons.Downloaded, "get_app" },
-            { Icons.NotDownloaded, "visibility_off" },
+            { Icons.Downloaded, "cloud_download" },
+            { Icons.NotDownloaded, "cloud_off" },
         };
 
         [Parameter(CaptureUnmatchedValues = true)]

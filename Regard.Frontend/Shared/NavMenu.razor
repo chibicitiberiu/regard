@@ -8,22 +8,26 @@
             <ul class="navbar-nav navbar-nav-right">
                 <li class="nav-item" onclick="">
 
-                    <a href="#" class="nav-link" @onclick="@ToggleNotificationsPanel">
+                    <a @ref="notificationsLink" href="#" class="nav-link" @onclick="@ToggleNotificationsPanel" @onclick:preventDefault="true">
                         <Icon Glyph="HaveNotifications ? Icons.NotificationsFull : Icons.NotificationsEmpty" />
                     </a>
-                    <div class="dropdown dropdown-right @CssUtils.BoolToVisible(NotificationsPanelVisible)"
-                         style="--pos-right: 6.2em">
+                    <DropDownPanel @bind-IsVisible="NotificationsPanelVisible"
+                                   AttachTo="notificationsLink"
+                                   Placement="Popper.Placement.Bottom"
+                                   Offset="15">
                         Notifications panel
-                    </div>
+                    </DropDownPanel>
                 </li>
                 <li class="nav-item">
-                    <a href="#" class="nav-link" @onclick="@ToggleUserPanel">
+                    <a @ref="userLink" href="#" class="nav-link" @onclick="@ToggleUserPanel" @onclick:preventDefault="true">
                         <Icon Glyph="Icons.Profile" />
                     </a>
-                    <div class="dropdown dropdown-right @CssUtils.BoolToVisible(UserPanelVisible)"
-                         style="--pos-right: 3.75em">
-                        User panel
-                    </div>
+                    <DropDownPanel @bind-IsVisible="UserPanelVisible"
+                                   AttachTo="userLink"
+                                   Placement="Popper.Placement.Bottom"
+                                   Offset="15">
+                        This will be the user panel
+                    </DropDownPanel>
                 </li>
                 <li class="nav-item">
                     <NavLink class="nav-link" href="/settings">

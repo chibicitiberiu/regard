@@ -42,7 +42,6 @@
 
   <ItemGroup>
     <Folder Include="Styles\" />
-    <Folder Include="wwwroot\js\" />
   </ItemGroup>
 
 </Project>

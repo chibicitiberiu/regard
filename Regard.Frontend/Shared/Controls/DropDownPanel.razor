@@ -1,5 +1,10 @@
-﻿<h3>DropDownPanel</h3>
-
-@code {
-
+﻿@if (IsVisible || isVisibleDelay)
+{
+    <div @ref="theDiv" class="popper-dropdown @CssUtils.BoolToClass(IsVisible && isVisibleDelay, "popper-dropdown-show") @Class">
+        @ChildContent
+        @if (ShowArrow)
+        {
+            <div class="popper-arrow" data-popper-arrow></div>
+        }
+    </div>
 }

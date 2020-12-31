@@ -1,0 +1,50 @@
+﻿<DropDownPanel AttachTo="AttachTo"
+               Placement="Popper.Placement.BottomEnd"
+               ShowArrow="false"
+               Offset="Offset"
+               Class="menu"
+               @bind-IsVisible="IsVisible">
+    <ul class="menu-items">
+        <CascadingValue Value="this">
+            @ChildContent
+        </CascadingValue>
+    </ul>
+</DropDownPanel>
+
+@code {
+    private bool isVisible;
+
+    [Parameter]
+    public ElementReference AttachTo { get; set; }
+
+    [Parameter]
+    public double Offset { get; set; } = 10;
+
+    [Parameter]
+    public string Class { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public bool IsVisible
+    {
+        get => isVisible;
+        set
+        {
+            if (isVisible != value)
+            {
+                isVisible = value;
+                IsVisibleChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    public void Dismiss()
+    {
+        IsVisible = false;
+    }
+}

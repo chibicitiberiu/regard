@@ -1,5 +1,6 @@
-﻿<Modal @ref="modal" 
-       IsCloseable="false" 
+﻿@inject MainAppController mainAppCtrl
+<Modal @ref="modal"
+       IsCloseable="false"
        IsInitialVisible="true">
     <Title>@tabView?.SelectedPage?.Title</Title>
     <Body>
@@ -7,13 +8,13 @@
             <TabPage>
                 <Title>Login</Title>
                 <Content>
-                    <LoginForm />
+                    <LoginForm LoggedIn="OnLoggedIn" />
                 </Content>
             </TabPage>
             <TabPage>
                 <Title>Register</Title>
                 <Content>
-                    <RegisterForm />
+                    <RegisterForm Registered="OnLoggedIn" />
                 </Content>
             </TabPage>
         </TabView>
@@ -33,5 +34,10 @@
     private void OnTabChanged()
     {
         StateHasChanged();
+    }
+
+    private void OnLoggedIn()
+    {
+        mainAppCtrl.NavigateToFromUrl();
     }
 }

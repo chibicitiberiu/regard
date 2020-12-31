@@ -41,7 +41,7 @@ namespace Regard.Frontend.Pages
         {
         }
 
-        private async Task OnSelectedItemChanged(ISubscriptionItemViewModel selectedItem)
+        private async Task OnSelectedItemChanged(SubscriptionItemViewModelBase selectedItem)
         {
             if (selectedItem is SubscriptionViewModel subscriptionViewModel)
                 await videoList.SetSelectedSubscription(subscriptionViewModel.Subscription);

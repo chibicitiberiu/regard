@@ -52,3 +52,76 @@
     border-color: transparent transparent var(--color-bg-window) transparent;
     z-index: 9998;
 }
+
+.popper-dropdown {
+    position: absolute;
+    min-width: 10rem;
+    padding: .5rem 1rem;
+    margin: .125rem;
+    background-color: var(--color-bg-window);
+    background-clip: padding-box;
+    border-radius: var(--border-radius-btn);
+    // transition
+    visibility: collapse;
+    opacity: 0;
+    transition: visibility 0s linear .15s,
+        opacity .15s ease-in;
+
+    &[data-popper-placement^='top'] > .popper-arrow {
+        bottom: -4px;
+    }
+    &[data-popper-placement^='bottom'] > .popper-arrow {
+        top: -4px;
+    }
+    &[data-popper-placement^='left'] > .popper-arrow {
+        left: -4px;
+    }
+    &[data-popper-placement^='right'] > .popper-arrow {
+        right: -4px;
+    }
+}
+
+.popper-dropdown-show {
+    visibility: visible;
+    opacity: 1;
+    transition: visibility 0s, 
+        opacity .25s ease-out;
+}
+
+.popper-arrow, .popper-arrow::before {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    z-index: -1;
+}
+
+.popper-arrow::before {
+    content: '';
+    background: var(--color-bg-window);
+    transform: rotate(45deg);
+}
+
+.menu {
+    padding: 0;
+}
+
+.menu-items {
+    list-style: none;
+    padding: 0;
+}
+
+.menu-item {
+    transition: background-color linear 0.25s, opacity 0.25s, text-shadow 0.25s;
+    padding: .5em 1em;
+    margin: .1em 0;
+    border: 0;
+    border-radius: var(--border-radius-btn);
+    color: var(--color-fg);
+    cursor: pointer;
+
+    &:hover {
+        color: var(--color-fg-secondary);
+        background-color: var(--color-bg-secondary);
+        transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s;
+    }
+}
