@@ -56,6 +56,12 @@ namespace Regard.Backend.Jobs
         {
             this.context = context;
             this.scheduler = new RegardScheduler(context.Scheduler);
+            
+            if (context.MergedJobDataMap.ContainsKey("SubscriptionId"))
+                this.SubscriptionId =  context.MergedJobDataMap.GetInt("SubscriptionId");
+            
+            if (context.MergedJobDataMap.ContainsKey("FolderId"))
+                this.FolderId = context.MergedJobDataMap.GetInt("FolderId");
 
             if (SubscriptionId.HasValue)
             {
@@ -186,6 +192,13 @@ namespace Regard.Backend.Jobs
                 existingVideo = dataContext.Videos.AsQueryable()
                     .Where(x => x.SubscriptionId == sub.Id)
                     .Where(x => x.SubscriptionProviderId == video.SubscriptionProviderId)
+                    .FirstOrDefault();
+            }
+            else if (video.VideoId != null)
+            {
+                existingVideo = dataContext.Videos.AsQueryable()
+                    .Where(x => x.SubscriptionId == sub.Id)
+                    .Where(x => x.VideoId == video.VideoId)
                     .FirstOrDefault();
             }
             if (existingVideo == null)

@@ -47,7 +47,11 @@ namespace Regard.Frontend.Shared.Subscription
             Messaging.SubscriptionFolderCreated += Messaging_SubscriptionFolderCreated;
             Messaging.SubscriptionFoldersDeleted += Messaging_SubscriptionFoldersDeleted;
             Messaging.SubscriptionFolderUpdated += Messaging_SubscriptionFolderUpdated;
+            await Repopulate();
+        }
 
+        public async Task Repopulate()
+        {
             var (folders, httpResp) = await Backend.SubscriptionFolderList(new SubscriptionFolderListRequest());
             httpResp.EnsureSuccessStatusCode();
 
@@ -60,6 +64,7 @@ namespace Regard.Frontend.Shared.Subscription
         private void BuildTree(ApiSubscriptionFolder[] folders, ApiSubscription[] subscriptions)
         {
             treeFolders.Clear();
+            treeView.Root.Children.Clear();
 
             // Create and add nodes to dictionary
             foreach (var folder in folders)
@@ -228,9 +233,13 @@ namespace Regard.Frontend.Shared.Subscription
             }
         }
 
-        protected virtual void OnRefreshItem(TreeViewNode<SubscriptionItemViewModelBase> item)
+        protected virtual async Task OnSynchronizeItem(TreeViewNode<SubscriptionItemViewModelBase> item)
         {
-            Console.WriteLine($"TODO: refresh item {item.Data.Name}");
+            if (item.Data is SubscriptionFolderViewModel folderVm)
+                await Backend.SubscriptionFolderSynchronize(new SubscriptionFolderSynchronizeRequest() { Id = folderVm.Folder.Id });
+
+            if (item.Data is SubscriptionViewModel subVm)
+                await Backend.SubscriptionSynchronize(new SubscriptionSynchronizeRequest() { Id = subVm.Subscription.Id });
         }
     }
 }

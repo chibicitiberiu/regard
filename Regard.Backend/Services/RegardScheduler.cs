@@ -41,6 +41,55 @@ namespace Regard.Backend.Services
                     .Build());
         }
 
+        public async Task ScheduleGlobalSynchronizeNow()
+        {
+            await GetQuartz();
+
+            var job = JobBuilder.Create<SynchronizeJob>()
+                    .WithIdentity("Global synchronize now")
+                    .Build();
+
+            var trigger = TriggerBuilder.Create()
+                    .StartNow()
+                    .Build();
+
+            if (!await quartz.CheckExists(job.Key))
+                await quartz.ScheduleJob(job, trigger);
+        }
+
+        public async Task ScheduleSynchronizeSubscription(int subscriptionId)
+        {
+            await GetQuartz();
+
+            var job = JobBuilder.Create<SynchronizeJob>()
+                    .WithIdentity($"Synchronize subscription {subscriptionId}")
+                    .UsingJobData("SubscriptionId", subscriptionId)
+                    .Build();
+            var trigger = TriggerBuilder.Create()
+                    .StartNow()
+                    .Build();
+
+            if (!await quartz.CheckExists(job.Key))
+                await quartz.ScheduleJob(job, trigger);
+        }
+
+        public async Task ScheduleSynchronizeFolder(int folderId)
+        {
+            await GetQuartz();
+
+            var job = JobBuilder.Create<SynchronizeJob>()
+                    .WithIdentity($"Synchronize folder {folderId}")
+                    .UsingJobData("FolderId", folderId)
+                    .Build();
+
+            var trigger = TriggerBuilder.Create()
+                    .StartNow()
+                    .Build();
+
+            if (!await quartz.CheckExists(job.Key))
+                await quartz.ScheduleJob(job, trigger);
+        }
+
         public async Task ScheduleYoutubeDLUpdate(DateTimeOffset start, TimeSpan interval)
         {
             await GetQuartz();
@@ -75,14 +124,17 @@ namespace Regard.Backend.Services
         {
             await GetQuartz();
 
-            await quartz.ScheduleJob(
-                JobBuilder.Create<DownloadVideoJob>()
+            var job = JobBuilder.Create<DownloadVideoJob>()
                     .WithIdentity($"Download video {videoId}")
                     .UsingJobData("VideoId", videoId)
-                    .Build(),
-                TriggerBuilder.Create()
+                    .Build();
+
+            var trigger = TriggerBuilder.Create()
                     .StartNow()
-                    .Build());
+                    .Build();
+
+            if (!await quartz.CheckExists(job.Key))
+                await quartz.ScheduleJob(job, trigger);
         }
 
         public async Task ScheduleDeleteFiles(int[] videoIds)

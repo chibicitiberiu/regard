@@ -26,9 +26,20 @@
                     <Icon Glyph="Icons.Import" />
                 </button>
             </div>
+
+            <div class="button-group">
+                <button type="button" title="Refresh"
+                        @onclick="@Refresh">
+                    <Icon Glyph="Icons.Refresh" />
+                </button>
+                <button type="button" title="Synchronize now"
+                        @onclick="@Refresh">
+                    <Icon Glyph="Icons.Synchronize" />
+                </button>
+            </div>
         </div>
 
-        <SubscriptionTree SelectedItemChanged="OnSelectedItemChanged"/>
+        <SubscriptionTree @ref="subscriptionTree" SelectedItemChanged="OnSelectedItemChanged"/>
 
     </div>
 

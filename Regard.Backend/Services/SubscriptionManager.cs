@@ -68,6 +68,9 @@ namespace Regard.Backend.Services
             await dataContext.SaveChangesAsync();
             await messaging.NotifySubscriptionCreated(userAccount, sub.ToApi());
 
+            // Start a sync job
+            await scheduler.ScheduleSynchronizeSubscription(sub.Id);
+
             return sub;
         }
 
@@ -129,9 +132,11 @@ namespace Regard.Backend.Services
 
         public async Task DeleteSubscriptionsInternal(UserAccount userAccount, IQueryable<Subscription> subs)
         {
+            var deletedIds = subs.Select(x => x.Id).ToArray();
+
             dataContext.Subscriptions.RemoveRange(subs);
             await dataContext.SaveChangesAsync();
-            await messaging.NotifySubscriptionsDeleted(userAccount, subs.Select(x => x.Id).ToArray());
+            await messaging.NotifySubscriptionsDeleted(userAccount, deletedIds);
         }
 
         public async Task DeleteSubscriptionFolders(UserAccount userAccount, int[] ids, bool recursive, bool deleteFiles)
@@ -172,6 +177,11 @@ namespace Regard.Backend.Services
                         });
                 }
 
+                // Delete folders
+                var foldersToDelete = dataContext.SubscriptionFolders.AsQueryable()
+                    .Where(x => ids.Contains(x.Id));
+
+                dataContext.SubscriptionFolders.RemoveRange(foldersToDelete);
                 await dataContext.SaveChangesAsync();
                 await messaging.NotifySubscriptionsFoldersDeleted(userAccount, ids);
             }
@@ -270,6 +280,21 @@ namespace Regard.Backend.Services
                 sub => sub.DownloadMaxCount,
                 folder => folder.DownloadMaxCount,
                 Preferences.Download_DefaultMaxCount);
+        }
+
+        public async Task SynchronizeSubscription(int subscriptionId)
+        {
+            await scheduler.ScheduleSynchronizeSubscription(subscriptionId);
+        }
+
+        public async Task SynchronizeFolder(int folderId)
+        {
+            await scheduler.ScheduleSynchronizeFolder(folderId);
+        }
+
+        public async Task SynchronizeAll()
+        {
+            await scheduler.ScheduleGlobalSynchronizeNow();
         }
     }
 }

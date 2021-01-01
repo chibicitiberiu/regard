@@ -41,8 +41,14 @@ namespace Regard.Frontend.Shared.Video
             selectedFolder = folder;
             await Populate();
         }
+        public async Task DeselectAll()
+        {
+            selectedFolder = null;
+            selectedSubscription = null;
+            await Populate();
+        }
 
-        private async Task Populate()
+        public async Task Populate()
         {
             var (resp, httpResp) = await Backend.VideoList(new VideoListRequest()
             {

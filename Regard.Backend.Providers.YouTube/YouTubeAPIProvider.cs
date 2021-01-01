@@ -164,7 +164,7 @@ namespace Regard.Backend.Providers.YouTube
                         .Reverse()
                         .Select((x, i) => new Video()
                         {
-                            SubscriptionProviderId = this.Id,
+                            SubscriptionProviderId = x.Snippet.ResourceId.VideoId,
                             VideoProviderId = this.Id,
                             VideoId = x.Snippet.ResourceId.VideoId,
                             Name = x.Snippet.Title,
@@ -186,7 +186,7 @@ namespace Regard.Backend.Providers.YouTube
                     return api.GetPlaylistVideos(subscription.ProviderData)
                         .Select((x, i) => new Video()
                         {
-                            SubscriptionProviderId = this.Id,
+                            SubscriptionProviderId = x.Snippet.ResourceId.VideoId,
                             VideoProviderId = this.Id,
                             VideoId = x.Snippet.ResourceId.VideoId,
                             Name = x.Snippet.Title,
@@ -208,7 +208,7 @@ namespace Regard.Backend.Providers.YouTube
                     return api.GetSearchResults(parseResult.Query, "video")
                         .Select((x, i) => new Video()
                         {
-                            SubscriptionProviderId = this.Id,
+                            SubscriptionProviderId = x.Id.VideoId,
                             VideoProviderId = this.Id,
                             VideoId = x.Id.VideoId,
                             Name = x.Snippet.Title,

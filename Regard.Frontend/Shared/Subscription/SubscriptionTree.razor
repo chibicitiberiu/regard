@@ -26,7 +26,7 @@
         </a>
         <Menu AttachTo="item.Data.ContextMenuLinkReference" @bind-IsVisible="item.Data.IsContextMenuVisible">
             <MenuItem Click="() => OnEditItem(item)">Edit</MenuItem>
-            <MenuItem Click="() => OnRefreshItem(item)">Refresh</MenuItem>
+            <MenuItem Click="() => OnSynchronizeItem(item)">Synchronize</MenuItem>
             <MenuItem Click="() => OnDeleteItem(item)">Delete</MenuItem>
         </Menu>
     </ItemTemplate>

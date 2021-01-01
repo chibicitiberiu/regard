@@ -70,5 +70,14 @@ namespace Regard.Backend.Controllers
             await subscriptionManager.DeleteSubscriptionFolders(user, request.Ids, request.Recursive, request.DeleteDownloadedFiles);
             return Ok(responseFactory.Success());
         }
+
+        [HttpPost]
+        [Route("synchronize")]
+        [Authorize]
+        public async Task<IActionResult> Synchronize([FromBody] SubscriptionFolderSynchronizeRequest request)
+        {
+            await subscriptionManager.SynchronizeFolder(request.Id);
+            return Ok(responseFactory.Success());
+        }
     }
 }

@@ -14,7 +14,7 @@ namespace Regard.Backend.Model
         public string OriginalUrl { get; set; }
 
         /// <summary>
-        /// Provider ID
+        /// Video ID as defined by the subscription provider
         /// </summary>
         [NotNull, MaxLength(60)]
         public string SubscriptionProviderId { get; set; }
@@ -26,7 +26,7 @@ namespace Regard.Backend.Model
         public string VideoProviderId { get; set; }
 
         /// <summary>
-        /// Video ID as defined by the provider
+        /// Video ID as defined by the video provider
         /// </summary>
         [NotNull, MaxLength(60)]
         public string VideoId { get; set; }

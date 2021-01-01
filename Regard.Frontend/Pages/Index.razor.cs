@@ -13,18 +13,20 @@ namespace Regard.Frontend.Pages
     public partial class Index
     {
         [Inject]
-        MainAppController appCtrl { get; set; }
+        MainAppController ApplicationController { get; set; }
 
-        SubscriptionCreateModal subscriptionCreateModal { get; set; }
+        [Inject]
+        BackendService Backend { get; set; }
 
-        FolderCreateModal folderCreateModal { get; set; }
-
-        private VideoList videoList;
+        SubscriptionCreateModal subscriptionCreateModal;
+        FolderCreateModal folderCreateModal;
+        VideoList videoList;
+        SubscriptionTree subscriptionTree;
 
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
-            await appCtrl.OnInitialize();
+            await ApplicationController.OnInitialize();
         }
 
         private async Task CreateSubscription()
@@ -41,10 +43,22 @@ namespace Regard.Frontend.Pages
         {
         }
 
+        private async Task Refresh()
+        {
+            await subscriptionTree.Repopulate();
+            await videoList.Populate();
+        }
+
+        private async Task SynchronizeAll()
+        {
+            await Backend.SubscriptionSynchronizeAll();
+        }
+
         private async Task OnSelectedItemChanged(SubscriptionItemViewModelBase selectedItem)
         {
             if (selectedItem is SubscriptionViewModel subscriptionViewModel)
                 await videoList.SetSelectedSubscription(subscriptionViewModel.Subscription);
+
             else if (selectedItem is SubscriptionFolderViewModel folderViewModel)
                 await videoList.SetSelectedFolder(folderViewModel.Folder);
         }

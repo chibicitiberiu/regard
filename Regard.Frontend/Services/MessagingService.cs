@@ -71,7 +71,7 @@ namespace Regard.Frontend.Services
             hubConnection.On<int[]>("NotifySubscriptionsDeleted", NotifySubscriptionsDeleted);
             hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderCreated", NotifySubscriptionFolderCreated);
             hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderUpdated", NotifySubscriptionFolderUpdated);
-            hubConnection.On<int[]>("NotifySubscriptionFolderDeleted", NotifySubscriptionFoldersDeleted);
+            hubConnection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
 
             await hubConnection.StartAsync();
         }

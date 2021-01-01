@@ -109,9 +109,25 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> Delete([FromBody] SubscriptionDeleteRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-
             await subscriptionManager.DeleteSubscriptions(user, request.Ids, request.DeleteDownloadedFiles);
+            return Ok(responseFactory.Success());
+        }
 
+        [HttpPost]
+        [Route("synchronize")]
+        [Authorize]
+        public async Task<IActionResult> Synchronize([FromBody] SubscriptionSynchronizeRequest request)
+        {
+            await subscriptionManager.SynchronizeSubscription(request.Id);
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("synchronize_all")]
+        [Authorize]
+        public async Task<IActionResult> SynchronizeAll()
+        {
+            await subscriptionManager.SynchronizeAll();
             return Ok(responseFactory.Success());
         }
     }

@@ -143,6 +143,12 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionDelete(SubscriptionDeleteRequest data)
             => Post("api/subscription/delete", data);
 
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionSynchronize(SubscriptionSynchronizeRequest data)
+            => Post("api/subscription/synchronize", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionSynchronizeAll()
+            => Post("api/subscription/synchronize_all", EmptyRequest);
+
         #endregion
 
         #region Subscription folders
@@ -155,6 +161,9 @@ namespace Regard.Services
 
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderDelete(SubscriptionFolderDeleteRequest data)
             => Post("api/subscriptionfolder/delete", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderSynchronize(SubscriptionFolderSynchronizeRequest data)
+            => Post("api/subscriptionfolder/synchronize", data);
 
         #endregion
 
