@@ -56,6 +56,10 @@ body {
     font-family: var(--font-family-sans-serif);
 }
 
+em, strong {
+    display: inline;
+}
+
 .content {
     padding: 1em;
 }

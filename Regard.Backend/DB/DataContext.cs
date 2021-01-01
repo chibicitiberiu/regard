@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+
 using Microsoft.Extensions.Configuration;
 using MoreLinq;
 using Regard.Backend.Common.Model;
@@ -58,6 +59,48 @@ namespace Regard.Backend.DB
                 .HasForeignKey(x => x.UserId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Video>()
+                .HasOne(x => x.Subscription)
+                .WithMany()
+                .HasForeignKey(x => x.SubscriptionId)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Subscription>()
+                .HasOne(x => x.ParentFolder)
+                .WithMany()
+                .HasForeignKey(x => x.ParentFolderId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Subscription>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // cannot have OnDelete=SetNull here, because it may cause cycles
+            modelBuilder.Entity<SubscriptionFolder>()
+                .HasOne(x => x.Parent)
+                .WithMany()
+                .HasForeignKey(x => x.ParentId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SubscriptionFolder>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            base.OnConfiguring(optionsBuilder);
+            optionsBuilder.UseLazyLoadingProxies();
         }
 
         public IQueryable<Subscription> GetSubscriptionsRecursive(SubscriptionFolder root)
@@ -85,6 +128,31 @@ namespace Regard.Backend.DB
             // Get subscriptions
             return Subscriptions.AsQueryable()
                 .Where(x => x.ParentFolderId.HasValue && folderIds.Contains(x.ParentFolderId.Value));
+        }
+
+        public IEnumerable<SubscriptionFolder> GetFoldersRecursive(SubscriptionFolder root)
+        {
+            var folderIds = new HashSet<int>();
+
+            var queue = new Queue<SubscriptionFolder>();
+            queue.Enqueue(root);
+
+            // Build set of subfolders
+            while (queue.TryDequeue(out SubscriptionFolder current))
+            {
+                if (folderIds.Contains(current.Id))
+                {
+                    Debug.Fail($"Folder cycle detected for id {current.Id}!!!");
+                    continue;
+                }
+                folderIds.Add(current.Id);
+
+                yield return current;
+
+                SubscriptionFolders.AsQueryable()
+                    .Where(f => f.ParentId == current.Id)
+                    .ForEach(queue.Enqueue);
+            }
         }
     }
 }

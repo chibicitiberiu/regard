@@ -19,10 +19,10 @@ namespace Regard.Frontend.Services
 
         public event EventHandler<ApiSubscription> SubscriptionCreated;
         public event EventHandler<ApiSubscription> SubscriptionUpdated;
-        public event EventHandler<ApiSubscription> SubscriptionDeleted;
+        public event EventHandler<int[]> SubscriptionsDeleted;
         public event EventHandler<ApiSubscriptionFolder> SubscriptionFolderCreated;
         public event EventHandler<ApiSubscriptionFolder> SubscriptionFolderUpdated;
-        public event EventHandler<ApiSubscriptionFolder> SubscriptionFolderDeleted;
+        public event EventHandler<int[]> SubscriptionFoldersDeleted;
 
         public MessagingService(IConfiguration configuration, AuthenticationService authService)
         {
@@ -34,7 +34,8 @@ namespace Regard.Frontend.Services
         private async void AuthService_AuthenticationStateChanged(object sender, EventArgs e)
         {
             // Reinitialize with new token
-            await hubConnection.DisposeAsync();
+            if (hubConnection != null)
+                await hubConnection.DisposeAsync();
             hubConnection = null;
             await Initialize();
         }
@@ -67,10 +68,10 @@ namespace Regard.Frontend.Services
             hubConnection.On<string>("ShowToast", ShowToast);
             hubConnection.On<ApiSubscription>("NotifySubscriptionCreated", NotifySubscriptionCreated);
             hubConnection.On<ApiSubscription>("NotifySubscriptionUpdated", NotifySubscriptionUpdated);
-            hubConnection.On<ApiSubscription>("NotifySubscriptionDeleted", NotifySubscriptionDeleted);
+            hubConnection.On<int[]>("NotifySubscriptionsDeleted", NotifySubscriptionsDeleted);
             hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderCreated", NotifySubscriptionFolderCreated);
             hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderUpdated", NotifySubscriptionFolderUpdated);
-            hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderDeleted", NotifySubscriptionFolderDeleted);
+            hubConnection.On<int[]>("NotifySubscriptionFolderDeleted", NotifySubscriptionFoldersDeleted);
 
             await hubConnection.StartAsync();
         }
@@ -105,9 +106,9 @@ namespace Regard.Frontend.Services
             SubscriptionUpdated?.Invoke(this, subscription);
         }
 
-        private void NotifySubscriptionDeleted(ApiSubscription subscription)
+        private void NotifySubscriptionsDeleted(int[] ids)
         {
-            SubscriptionDeleted?.Invoke(this, subscription);
+            SubscriptionsDeleted?.Invoke(this, ids);
         }
 
         private void NotifySubscriptionFolderCreated(ApiSubscriptionFolder folder)
@@ -120,9 +121,9 @@ namespace Regard.Frontend.Services
             SubscriptionFolderUpdated?.Invoke(this, folder);
         }
 
-        private void NotifySubscriptionFolderDeleted(ApiSubscriptionFolder folder)
+        private void NotifySubscriptionFoldersDeleted(int[] ids)
         {
-            SubscriptionFolderDeleted?.Invoke(this, folder);
+            SubscriptionFoldersDeleted?.Invoke(this, ids);
         }
     }
 }

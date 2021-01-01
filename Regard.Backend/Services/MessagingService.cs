@@ -25,15 +25,29 @@ namespace Regard.Backend.Services
         {
             await ForUser(userAccount).NotifySubscriptionCreated(subscription);
         }
-
-        public async Task NotifySubscriptionDeleted(UserAccount userAccount, ApiSubscription subscription)
+        public async Task NotifySubscriptionUpdated(UserAccount userAccount, ApiSubscription subscription)
         {
-            await ForUser(userAccount).NotifySubscriptionDeleted(subscription);
+            await ForUser(userAccount).NotifySubscriptionUpdated(subscription);
+        }
+
+        public async Task NotifySubscriptionsDeleted(UserAccount userAccount, int[] subscriptionIds)
+        {
+            await ForUser(userAccount).NotifySubscriptionsDeleted(subscriptionIds);
         }
 
         public async Task NotifySubscriptionFolderCreated(UserAccount userAccount, ApiSubscriptionFolder newFolder)
         {
             await ForUser(userAccount).NotifySubscriptionFolderCreated(newFolder);
+        }
+
+        public async Task NotifySubscriptionFolderUpdated(UserAccount userAccount, ApiSubscriptionFolder folder)
+        {
+            await ForUser(userAccount).NotifySubscriptionFolderUpdated(folder);
+        }
+
+        public async Task NotifySubscriptionsFoldersDeleted(UserAccount userAccount, int[] folderIds)
+        {
+            await ForUser(userAccount).NotifySubscriptionFoldersDeleted(folderIds);
         }
     }
 }

@@ -60,5 +60,15 @@ namespace Regard.Backend.Controllers
                     .ToArray()
             }));
         }
+
+        [HttpPost]
+        [Route("delete")]
+        [Authorize]
+        public async Task<IActionResult> Delete([FromBody] SubscriptionFolderDeleteRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            await subscriptionManager.DeleteSubscriptionFolders(user, request.Ids, request.Recursive, request.DeleteDownloadedFiles);
+            return Ok(responseFactory.Success());
+        }
     }
 }

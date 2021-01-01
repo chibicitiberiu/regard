@@ -389,6 +389,9 @@ body {
   color: var(--color-fg);
   font-family: var(--font-family-sans-serif); }
 
+em, strong {
+  display: inline; }
+
 .content {
   padding: 1em; }
 
@@ -729,6 +732,7 @@ form {
   border-radius: var(--border-radius-window);
   box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.4);
   min-width: 20em;
+  max-width: 50em;
   min-height: 10em;
   max-height: 100%;
   display: flex;
@@ -759,7 +763,7 @@ form {
 
 .modal-body {
   margin-bottom: auto;
-  padding: 0.75em;
+  padding: .75em 1.25em;
   display: flex;
   flex-direction: column;
   overflow-y: auto; }

@@ -45,7 +45,7 @@ namespace Regard.Frontend.Shared.Forms
 
             // Subscribe to changes
             Messaging.SubscriptionFolderCreated += Messaging_SubscriptionFolderCreated;
-            Messaging.SubscriptionFolderDeleted += Messaging_SubscriptionFolderDeleted;
+            Messaging.SubscriptionFoldersDeleted += Messaging_SubscriptionFolderDeleted;
             Messaging.SubscriptionFolderUpdated += Messaging_SubscriptionFolderUpdated;
 
             // Populate folder list
@@ -113,12 +113,15 @@ namespace Regard.Frontend.Shared.Forms
             // TODO
         }
 
-        private void Messaging_SubscriptionFolderDeleted(object sender, ApiSubscriptionFolder e)
+        private void Messaging_SubscriptionFolderDeleted(object sender, int[] folderIds)
         {
-            if (FoldersDict.TryGetValue(e.Id, out FolderSelectViewModel vmFolder))
+            foreach (var id in folderIds)
             {
-                FoldersDict.Remove(e.Id);
-                Folders.Remove(vmFolder);
+                if (FoldersDict.TryGetValue(id, out FolderSelectViewModel vmFolder))
+                {
+                    FoldersDict.Remove(id);
+                    Folders.Remove(vmFolder);
+                }
             }
         }
 
@@ -135,7 +138,7 @@ namespace Regard.Frontend.Shared.Forms
         public void Dispose()
         {
             Messaging.SubscriptionFolderCreated -= Messaging_SubscriptionFolderCreated;
-            Messaging.SubscriptionFolderDeleted -= Messaging_SubscriptionFolderDeleted;
+            Messaging.SubscriptionFoldersDeleted -= Messaging_SubscriptionFolderDeleted;
             Messaging.SubscriptionFolderUpdated -= Messaging_SubscriptionFolderUpdated;
         }
     }

@@ -103,14 +103,14 @@ namespace Regard.Backend.Controllers
             }));
         }
 
-        [HttpDelete]
+        [HttpPost]
         [Route("delete")]
         [Authorize]
         public async Task<IActionResult> Delete([FromBody] SubscriptionDeleteRequest request)
         {
             var user = await userManager.GetUserAsync(User);
 
-            await subscriptionManager.DeleteSubscriptions(user, request.Ids);
+            await subscriptionManager.DeleteSubscriptions(user, request.Ids, request.DeleteDownloadedFiles);
 
             return Ok(responseFactory.Success());
         }

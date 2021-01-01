@@ -42,11 +42,13 @@ namespace Regard.Frontend.Shared.Controls
         /// <summary>
         /// Event triggered when the modal is shown
         /// </summary>
+        [Parameter]
         public EventCallback Shown { get; set; }
 
         /// <summary>
         /// Event triggered after the modal is closed
         /// </summary>
+        [Parameter]
         public EventCallback Closed { get; set; }
 
         private bool clickOriginatedInside = false;

@@ -251,6 +251,7 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasMaxLength(2048);
 
                     b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -295,6 +296,7 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -535,22 +537,28 @@ namespace Regard.Backend.Migrations.SQLite
                 {
                     b.HasOne("Regard.Backend.Model.SubscriptionFolder", "ParentFolder")
                         .WithMany()
-                        .HasForeignKey("ParentFolderId");
+                        .HasForeignKey("ParentFolderId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.SubscriptionFolder", b =>
                 {
                     b.HasOne("Regard.Backend.Model.SubscriptionFolder", "Parent")
                         .WithMany()
-                        .HasForeignKey("ParentId");
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.UserPreference", b =>

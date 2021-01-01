@@ -31,14 +31,14 @@ namespace Regard.Backend.Model
 
         public int? ParentFolderId { get; set; }
 
-        public SubscriptionFolder ParentFolder { get; set; }
+        public virtual SubscriptionFolder ParentFolder { get; set; }
 
         [MaxLength(2048)]
         public string ThumbnailPath { get; set; }
 
         public string UserId { get; set; }
 
-        public UserAccount User { get; set; }
+        public virtual UserAccount User { get; set; }
         
         public string ProviderData { get; set; }
 

@@ -7,5 +7,7 @@ namespace Regard.Common.API.Subscriptions
     public class SubscriptionDeleteRequest
     {
         public int[] Ids { get; set; }
+
+        public bool DeleteDownloadedFiles { get; set; }
     }
 }

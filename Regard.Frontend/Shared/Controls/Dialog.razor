@@ -1,0 +1,21 @@
+﻿<Modal @ref="modal" 
+       IsCloseable="true" 
+       IsInitialVisible="false"
+       Closed="OnClosed">
+    <Title>@Caption</Title>
+    <Body>
+        @Text
+        @ChildContent
+
+        <div class="col-xs-12 row end-xs">
+            @if (PrimaryButtonCaption != null)
+            {
+                <button class="primary" type="button" @onclick="OnPrimaryClicked">@PrimaryButtonCaption</button>
+            }
+            @if (SecondaryButtonCaption != null)
+            {
+                <button class="secondary" type="button" @onclick="OnSecondaryClicked">@SecondaryButtonCaption</button>
+            }
+        </div>
+    </Body>
+</Modal>

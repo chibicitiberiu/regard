@@ -47,24 +47,9 @@ namespace Regard.Backend.Jobs
             await ytdlService.Initialize();
 
             // Create basic jobs
-            await context.Scheduler.ScheduleJob(
-                JobBuilder.Create<SynchronizeJob>()
-                    .WithIdentity("Global synchronization")
-                    .Build(),
-                TriggerBuilder.Create()
-                    //.WithCronSchedule(configuration["SynchronizationSchedule"])
-                    .StartAt(DateTimeOffset.Now.AddSeconds(5))
-                    .Build());
-
-            await context.Scheduler.ScheduleJob(
-                JobBuilder.Create<YoutubeDLUpdateJob>()
-                    .WithIdentity("YoutubeDL update")
-                    .Build(),
-                TriggerBuilder.Create()
-                    .WithSimpleSchedule(sched => sched.WithInterval(TimeSpan.FromDays(1)).RepeatForever())
-                    .StartAt(DateTimeOffset.Now.AddSeconds(10))
-                    .Build());
-
+            var scheduler = new RegardScheduler(context.Scheduler);
+            await scheduler.ScheduleGlobalSynchronize(configuration["SynchronizationSchedule"]);
+            await scheduler.ScheduleYoutubeDLUpdate(DateTimeOffset.Now.AddSeconds(10), TimeSpan.FromDays(1));
             log.LogInformation("Initialization tasks completed!");
         }
     }

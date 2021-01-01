@@ -122,10 +122,14 @@ namespace Regard.Backend
             {
                 opts.WaitForJobsToComplete = true;
             });
+            services.AddScoped<RegardScheduler>();
             services.AddScoped<InitJob>();
             services.AddScoped<SynchronizeJob>();
             services.AddScoped<DownloadVideoJob>();
             services.AddScoped<YoutubeDLUpdateJob>();
+            services.AddScoped<DeleteFilesJob>();
+            services.AddScoped<DeleteSubscriptionFilesJob>();
+            services.AddScoped<DeleteSubscriptionFolderFilesJob>();
 
             // Providers
             services.AddSingleton<IProvider, RssSubscriptionProvider>();

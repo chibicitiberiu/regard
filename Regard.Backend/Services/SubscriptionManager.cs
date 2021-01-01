@@ -20,16 +20,19 @@ namespace Regard.Backend.Services
         private readonly IPreferencesManager preferencesManager;
         private readonly IProviderManager providerManager;
         private readonly MessagingService messaging;
+        private readonly RegardScheduler scheduler;
 
         public SubscriptionManager(DataContext dataContext,
                                    IPreferencesManager preferencesManager,
                                    IProviderManager providerManager,
-                                   MessagingService messaging)
+                                   MessagingService messaging,
+                                   RegardScheduler scheduler)
         {
             this.dataContext = dataContext;
             this.preferencesManager = preferencesManager;
             this.providerManager = providerManager;
             this.messaging = messaging;
+            this.scheduler = scheduler;
         }
 
         public async Task<string> TestUrl(Uri uri)
@@ -107,17 +110,90 @@ namespace Regard.Backend.Services
             return dataContext.GetSubscriptionsRecursive(root);
         }
 
-        public async Task DeleteSubscriptions(UserAccount userAccount, int[] ids)
+        public async Task DeleteSubscriptions(UserAccount userAccount, int[] ids, bool deleteFiles)
+        {
+            if (deleteFiles)
+                await scheduler.ScheduleDeleteSubscriptionFiles(ids, true);
+            else
+                await DeleteSubscriptionsInternal(userAccount, ids);
+        }
+
+        public async Task DeleteSubscriptionsInternal(UserAccount userAccount, int[] ids)
         {
             var itemsToDelete = dataContext.Subscriptions.AsQueryable()
+                                .Where(x => x.UserId == userAccount.Id)
+                                .Where(x => ids.Contains(x.Id));
+
+            await DeleteSubscriptionsInternal(userAccount, itemsToDelete);
+        }
+
+        public async Task DeleteSubscriptionsInternal(UserAccount userAccount, IQueryable<Subscription> subs)
+        {
+            dataContext.Subscriptions.RemoveRange(subs);
+            await dataContext.SaveChangesAsync();
+            await messaging.NotifySubscriptionsDeleted(userAccount, subs.Select(x => x.Id).ToArray());
+        }
+
+        public async Task DeleteSubscriptionFolders(UserAccount userAccount, int[] ids, bool recursive, bool deleteFiles)
+        {
+            if (recursive)
+            {
+                if (deleteFiles)
+                    await scheduler.ScheduleDeleteSubscriptionFolderFiles(ids, true);
+                else
+                    await DeleteSubscriptionFoldersInternal(userAccount, ids);
+            }
+            else
+            {
+                // Reparent subscriptions and folders (move them to the parent)
+                var folders = dataContext.SubscriptionFolders.AsQueryable()
+                    .Where(x => x.UserId == userAccount.Id)
+                    .Where(x => ids.Contains(x.Id))
+                    .ToArray();
+
+                foreach (var folder in folders)
+                {
+                    await dataContext.SubscriptionFolders.AsQueryable()
+                        .Where(x => x.ParentId.HasValue && x.ParentId.Value == folder.Id)
+                        .ToAsyncEnumerable()
+                        .ForEachAwaitAsync(async x => 
+                        {
+                            x.ParentId = folder.ParentId;
+                            await messaging.NotifySubscriptionFolderUpdated(userAccount, x.ToApi());
+                        });
+
+                    await dataContext.Subscriptions.AsQueryable()
+                        .Where(x => x.ParentFolderId.HasValue && x.ParentFolderId.Value == folder.Id)
+                        .ToAsyncEnumerable()
+                        .ForEachAwaitAsync(async x =>
+                        {
+                            x.ParentFolderId = folder.ParentId;
+                            await messaging.NotifySubscriptionUpdated(userAccount, x.ToApi());
+                        });
+                }
+
+                await dataContext.SaveChangesAsync();
+                await messaging.NotifySubscriptionsFoldersDeleted(userAccount, ids);
+            }
+        }
+
+        public async Task DeleteSubscriptionFoldersInternal(UserAccount userAccount, int[] ids)
+        {
+            var folders = dataContext.SubscriptionFolders.AsQueryable()
                 .Where(x => x.UserId == userAccount.Id)
-                .Where(x => ids.Contains(x.Id));
+                .Where(x => ids.Contains(x.Id))
+                .ToArray();
 
-            // TODO: delete videos, also delete videos from disk
-            foreach (var item in itemsToDelete)
-                await messaging.NotifySubscriptionDeleted(userAccount, item.ToApi());
+            foreach (var folder in folders)
+            {
+                var subsToDelete = dataContext.GetSubscriptionsRecursive(folder);
+                await DeleteSubscriptionsInternal(userAccount, subsToDelete);
+            }
 
-            dataContext.Subscriptions.RemoveRange(itemsToDelete);
+            var foldersToDelete = folders.SelectMany(dataContext.GetFoldersRecursive).ToArray();
+            dataContext.SubscriptionFolders.RemoveRange(foldersToDelete);
+            await dataContext.SaveChangesAsync();
+            await messaging.NotifySubscriptionsFoldersDeleted(userAccount, foldersToDelete.Select(x => x.Id).ToArray());
         }
 
         public IQueryable<SubscriptionFolder> GetAllFolders(UserAccount userAccount)

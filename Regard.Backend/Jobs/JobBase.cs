@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Quartz;
 using Regard.Backend.DB;
+using Regard.Backend.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,16 +42,8 @@ namespace Regard.Backend.Jobs
 
         private async Task ScheduleRetry(IJobExecutionContext context)
         {
-            var retryJob = context.JobDetail.GetJobBuilder()
-                .WithIdentity($"{context.JobDetail.Key.Name}-{Attempt + 1}", context.JobDetail.Key.Group)
-                .UsingJobData("Attempt", Attempt + 1)
-                .Build();
-
-            var retryTrigger = TriggerBuilder.Create()
-                .StartAt(DateTimeOffset.Now.Add(RetryInterval))
-                .Build();
-
-            await context.Scheduler.ScheduleJob(retryJob, retryTrigger);
+            var scheduler = new RegardScheduler(context.Scheduler);
+            await scheduler.ScheduleJobRetry(context.JobDetail, Attempt + 1, RetryInterval);
         }
 
         protected abstract Task ExecuteJob(IJobExecutionContext context);

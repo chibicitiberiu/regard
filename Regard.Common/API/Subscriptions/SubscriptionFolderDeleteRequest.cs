@@ -8,6 +8,8 @@ namespace Regard.Common.API.Subscriptions
     {
         public int[] Ids { get; set; }
 
-        public bool KeepSubscriptions { get; set; } = false;
+        public bool Recursive { get; set; } = false;
+
+        public bool DeleteDownloadedFiles { get; set; } = false;
     }
 }

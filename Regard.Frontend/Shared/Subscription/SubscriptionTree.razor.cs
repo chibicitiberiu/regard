@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using Humanizer;
+using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
 using Regard.Frontend.Services;
@@ -14,6 +15,15 @@ namespace Regard.Frontend.Shared.Subscription
 {
     public partial class SubscriptionTree
     {
+        private TreeView<SubscriptionItemViewModelBase> treeView;
+        private Dialog deleteDialog;
+        private bool deleteDownloadedFiles = false;
+        private bool deleteRecursive = false;
+        private bool deleteFolder = false;
+        private string deleteItemName = "";
+
+        private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeFolders = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
+
         [Inject]
         protected AppState AppState { get; set; }
 
@@ -26,9 +36,6 @@ namespace Regard.Frontend.Shared.Subscription
         [Parameter]
         public EventCallback<SubscriptionItemViewModelBase> SelectedItemChanged { get; set; }
 
-        private TreeView<SubscriptionItemViewModelBase> treeView;
-
-        private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeFolders = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
 
         protected override async Task OnInitializedAsync()
         {
@@ -36,9 +43,9 @@ namespace Regard.Frontend.Shared.Subscription
 
             Messaging.SubscriptionCreated += Messaging_SubscriptionCreated;
             Messaging.SubscriptionUpdated += Messaging_SubscriptionUpdated;
-            Messaging.SubscriptionDeleted += Messaging_SubscriptionDeleted;
+            Messaging.SubscriptionsDeleted += Messaging_SubscriptionsDeleted;
             Messaging.SubscriptionFolderCreated += Messaging_SubscriptionFolderCreated;
-            Messaging.SubscriptionFolderDeleted += Messaging_SubscriptionFolderDeleted;
+            Messaging.SubscriptionFoldersDeleted += Messaging_SubscriptionFoldersDeleted;
             Messaging.SubscriptionFolderUpdated += Messaging_SubscriptionFolderUpdated;
 
             var (folders, httpResp) = await Backend.SubscriptionFolderList(new SubscriptionFolderListRequest());
@@ -92,9 +99,18 @@ namespace Regard.Frontend.Shared.Subscription
             Console.WriteLine($"Folder updated: {e.Id} {e.Name}");
         }
 
-        private void Messaging_SubscriptionFolderDeleted(object sender, ApiSubscriptionFolder e)
+        private void Messaging_SubscriptionFoldersDeleted(object sender, int[] folderIds)
         {
-            Console.WriteLine($"Folder deleted: {e.Id} {e.Name}");
+            Console.WriteLine($"Folders deleted: {folderIds.Humanize(", ")}");
+
+            foreach (var folderId in folderIds)
+            {
+                if (treeFolders.TryGetValue(folderId, out var folderNode))
+                {
+                    folderNode.Parent.Children.Remove(folderNode);
+                    treeFolders.Remove(folderId);
+                }
+            }
         }
 
         private void Messaging_SubscriptionFolderCreated(object sender, ApiSubscriptionFolder e)
@@ -113,16 +129,28 @@ namespace Regard.Frontend.Shared.Subscription
             Console.WriteLine($"Sub updated: {e.Id} {e.Name}");
         }
 
-        private void Messaging_SubscriptionDeleted(object sender, ApiSubscription e)
+        private void Messaging_SubscriptionsDeleted(object sender, int[] subIds)
         {
-            Console.WriteLine($"Sub deleted: {e.Id} {e.Name}");
+            Console.WriteLine($"Subs deleted: {subIds.Humanize(", ")}");
 
-            var parent = treeView.Root;
-            if (e.ParentFolderId.HasValue)
-                parent = treeFolders[e.ParentFolderId.Value];
+            // Search recursively for the subIds
+            int foundCount = 0;
+            var queue = new Queue<TreeViewNode<SubscriptionItemViewModelBase>>();
+            queue.Enqueue(treeView.Root);
 
-            var itemToDelete = parent.Children.First(x => x.Data is SubscriptionViewModel vmSub && vmSub.Subscription.Id == e.Id);
-            parent.Children.Remove(itemToDelete);
+            while (queue.Count > 0 && foundCount < subIds.Length)
+            {
+                var current = queue.Dequeue();
+                if (current.Data is SubscriptionViewModel subVm 
+                    && subIds.Contains(subVm.Subscription.Id))
+                {
+                    current.Parent.Children.Remove(current);
+                    foundCount++;
+                }
+
+                foreach (var child in current.Children)
+                    queue.Enqueue(child);
+            }
         }
 
         private void Messaging_SubscriptionCreated(object sender, ApiSubscription e)
@@ -161,9 +189,43 @@ namespace Regard.Frontend.Shared.Subscription
             Console.WriteLine($"TODO: edit item {item.Data.Name}");
         }
 
-        protected virtual void OnDeleteItem(TreeViewNode<SubscriptionItemViewModelBase> item)
+        protected async Task OnDeleteItem(TreeViewNode<SubscriptionItemViewModelBase> item)
         {
-            Console.WriteLine($"TODO: delete item {item.Data.Name}");
+            deleteRecursive = false;
+            deleteDownloadedFiles = false;
+            deleteItemName = item.Data.Name;
+
+            if (item.Data is SubscriptionFolderViewModel folderVm)
+            {
+                deleteFolder = true;
+                await deleteDialog.ShowDialog(async result =>
+                {
+                    if (result == DialogResult.Primary)
+                    {
+                        await Backend.SubscriptionFolderDelete(new SubscriptionFolderDeleteRequest()
+                        {
+                            Ids = new[] { folderVm.Folder.Id },
+                            Recursive = deleteRecursive,
+                            DeleteDownloadedFiles = deleteDownloadedFiles
+                        });
+                    }
+                });
+            }
+            else if (item.Data is SubscriptionViewModel subVm)
+            {
+                deleteFolder = false;
+                await deleteDialog.ShowDialog(async result =>
+                {
+                    if (result == DialogResult.Primary)
+                    {
+                        await Backend.SubscriptionDelete(new SubscriptionDeleteRequest()
+                        {
+                            Ids = new[] { subVm.Subscription.Id },
+                            DeleteDownloadedFiles = deleteDownloadedFiles
+                        });
+                    }
+                });
+            }
         }
 
         protected virtual void OnRefreshItem(TreeViewNode<SubscriptionItemViewModelBase> item)

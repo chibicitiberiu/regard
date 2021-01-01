@@ -15,12 +15,12 @@ namespace Regard.Common
 
         Task NotifySubscriptionUpdated(ApiSubscription subscription);
 
-        Task NotifySubscriptionDeleted(ApiSubscription subscription);
+        Task NotifySubscriptionsDeleted(int[] ids);
 
         Task NotifySubscriptionFolderCreated(ApiSubscriptionFolder folder);
 
         Task NotifySubscriptionFolderUpdated(ApiSubscriptionFolder folder);
 
-        Task NotifySubscriptionFolderDeleted(ApiSubscriptionFolder folder);
+        Task NotifySubscriptionFoldersDeleted(int[] ids);
     }
 }

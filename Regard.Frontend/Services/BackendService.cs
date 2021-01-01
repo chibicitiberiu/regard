@@ -153,7 +153,7 @@ namespace Regard.Services
         public Task<(ApiResponse<SubscriptionFolderListResponse>, HttpResponseMessage)> SubscriptionFolderList(SubscriptionFolderListRequest data)
             => Post<SubscriptionFolderListRequest, SubscriptionFolderListResponse>("api/subscriptionfolder/list", data);
 
-        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionDelete(SubscriptionFolderDeleteRequest data)
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderDelete(SubscriptionFolderDeleteRequest data)
             => Post("api/subscriptionfolder/delete", data);
 
         #endregion

@@ -1,6 +1,4 @@
-﻿$modal-padding: .75em;
-
-.modal {
+﻿.modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -29,6 +27,7 @@
     border-radius: var(--border-radius-window);
     box-shadow: 1px 1px 10px rgba(0, 0, 0, .4);
     min-width: 20em;
+    max-width: 50em;
     min-height: 10em;
     max-height: 100%;
     display: flex;
@@ -69,7 +68,7 @@
 
 .modal-body {
     margin-bottom: auto;
-    padding: $modal-padding;
+    padding: .75em 1.25em;
     display: flex;
     flex-direction: column;
     overflow-y: auto;

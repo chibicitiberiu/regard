@@ -22,6 +22,7 @@ namespace Regard.Backend.Jobs
         private readonly IVideoStorageService videoStorageService;
         private readonly SubscriptionManager subscriptionManager;
         private IJobExecutionContext context;
+        private RegardScheduler scheduler;
 
         /// <summary>
         /// If set, synchronization will only be done for the subscriptions in the given folder (and all its subfolders).
@@ -54,6 +55,7 @@ namespace Regard.Backend.Jobs
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
             this.context = context;
+            this.scheduler = new RegardScheduler(context.Scheduler);
 
             if (SubscriptionId.HasValue)
             {
@@ -269,15 +271,7 @@ namespace Regard.Backend.Jobs
             
             foreach (var video in downloadList)
             {
-                await context.Scheduler.ScheduleJob(
-                    JobBuilder.Create<DownloadVideoJob>()
-                        .WithIdentity($"Download video {video.Id}")
-                        .UsingJobData("VideoId", video.Id)
-                        .Build(),
-                    TriggerBuilder.Create()
-                        .StartNow()
-                        .Build());
-
+                await scheduler.ScheduleDownloadVideo(video.Id);
                 log.LogInformation("Scheduled video for download: {0}.", video);
             }
         }
