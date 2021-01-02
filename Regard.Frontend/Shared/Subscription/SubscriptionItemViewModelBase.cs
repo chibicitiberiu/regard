@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Regard.Frontend.Shared.Subscription
 {
-    public abstract class SubscriptionItemViewModelBase : NotifyPropertyChangedBase
+    public abstract class SubscriptionItemViewModelBase : NotifyPropertyChangedBase, ISortedTreeViewNodeModel<string>
     {
         private bool isContextMenuVisible = false;
 
@@ -27,5 +27,7 @@ namespace Regard.Frontend.Shared.Subscription
         }
 
         public ElementReference ContextMenuLinkReference { get; set; }
+
+        public abstract string SortKey { get; }
     }
 }

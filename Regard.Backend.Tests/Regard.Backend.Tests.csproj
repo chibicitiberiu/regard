@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Regard.Backend.Providers.Rss\Regard.Backend.Providers.Rss.csproj" />
+    <ProjectReference Include="..\Regard.Common\Regard.Common.csproj" />
   </ItemGroup>
 
 </Project>

@@ -70,7 +70,7 @@ namespace Regard.Frontend.Shared.Subscription
             foreach (var folder in folders)
             {
                 var vmFolder = new SubscriptionFolderViewModel(folder);
-                var tvFolder = new TreeViewNode<SubscriptionItemViewModelBase>(vmFolder);
+                var tvFolder = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(vmFolder);
                 treeFolders.Add(folder.Id, tvFolder);
             }
 
@@ -89,7 +89,7 @@ namespace Regard.Frontend.Shared.Subscription
             foreach (var sub in subscriptions)
             {
                 var vmSub = new SubscriptionViewModel(sub);
-                var tvSub = new TreeViewNode<SubscriptionItemViewModelBase>(vmSub);
+                var tvSub = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(vmSub);
 
                 var parent = treeView.Root;
                 if (sub.ParentFolderId.HasValue)
@@ -136,7 +136,9 @@ namespace Regard.Frontend.Shared.Subscription
             if (e.ParentId)
                 parent = treeFolders[e.ParentId.Value.Value];
 
-            parent.Children.Add(new TreeViewNode<SubscriptionItemViewModelBase>(new SubscriptionFolderViewModel(e)));
+            var vm = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(new SubscriptionFolderViewModel(e));
+            parent.Children.Add(vm);
+            treeFolders.Add(e.Id, vm);
         }
 
         private void Messaging_SubscriptionUpdated(object sender, ApiSubscription e)
@@ -179,7 +181,7 @@ namespace Regard.Frontend.Shared.Subscription
             if (e.ParentFolderId.HasValue)
                 parent = treeFolders[e.ParentFolderId.Value];
 
-            parent.Children.Add(new TreeViewNode<SubscriptionItemViewModelBase>(new SubscriptionViewModel(e)));
+            parent.Children.Add(new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(new SubscriptionViewModel(e)));
         }
 
         protected virtual async Task OnSelectedItemChanged(TreeViewNode<SubscriptionItemViewModelBase> item)

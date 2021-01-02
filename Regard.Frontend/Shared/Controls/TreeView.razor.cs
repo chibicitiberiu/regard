@@ -12,7 +12,7 @@ namespace Regard.Frontend.Shared.Controls
     {
         private TreeViewNode<Model> selectedItem = null;
 
-        public TreeViewNode<Model> Root { get; } = new TreeViewNode<Model>();
+        public virtual TreeViewNode<Model> Root { get; } = new TreeViewNode<Model>();
 
         public TreeViewNode<Model> SelectedItem 
         {

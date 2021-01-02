@@ -32,7 +32,7 @@ namespace Regard.Frontend.Shared.Controls
         /// <summary>
         /// Gets the collection of children
         /// </summary>
-        public ObservableCollection<TreeViewNode<Model>> Children { get; } = new ObservableCollection<TreeViewNode<Model>>();
+        public virtual ObservableCollection<TreeViewNode<Model>> Children { get; } = new ObservableCollection<TreeViewNode<Model>>();
 
         /// <summary>
         /// Gets or sets the parent tree node

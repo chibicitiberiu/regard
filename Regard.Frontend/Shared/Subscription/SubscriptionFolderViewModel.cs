@@ -19,6 +19,8 @@ namespace Regard.Frontend.Shared.Subscription
 
         public override Icons PlaceholderIcon => Icons.Folder;
 
+        public override string SortKey => "0" + Name;
+
         public SubscriptionFolderViewModel(ApiSubscriptionFolder folder)
         {
             Folder = folder;

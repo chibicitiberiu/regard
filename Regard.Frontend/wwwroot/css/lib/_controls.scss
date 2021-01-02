@@ -137,10 +137,25 @@ button, .button, input[type=button], input[type=submit] {
     }
 }
 
-.button-undecorated {
+.button-transparent {
     padding: .125em .25em;
     margin: 1px $button-horiz-margin;
     background-color: transparent;
+}
+
+.button-undecorated {
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    background: none;
+    box-shadow: none;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        color: inherit;
+        background: none;
+        box-shadow: none;
+    }
 }
 
 form {

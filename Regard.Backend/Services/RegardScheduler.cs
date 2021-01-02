@@ -23,6 +23,7 @@ namespace Regard.Backend.Services
 
         public RegardScheduler(ILogger<RegardScheduler> log, ISchedulerFactory schedulerFactory)
         {
+            this.log = log;
             this.schedulerFactory = schedulerFactory;
         }
 

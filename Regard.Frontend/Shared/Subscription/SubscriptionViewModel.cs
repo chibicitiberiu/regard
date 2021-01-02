@@ -19,6 +19,8 @@ namespace Regard.Frontend.Shared.Subscription
 
         public override Icons PlaceholderIcon => Icons.Subscription;
 
+        public override string SortKey => "1" + Name;
+
         public SubscriptionViewModel(ApiSubscription subscription)
         {
             Subscription = subscription;

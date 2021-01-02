@@ -1,11 +1,12 @@
-﻿<TreeView @ref="treeView"
-          Model="SubscriptionItemViewModelBase"
-          SelectedItemChanged="OnSelectedItemChanged">
+﻿<SortedTreeView @ref="treeView"
+                Model="SubscriptionItemViewModelBase"
+                TSortKey="string"
+                SelectedItemChanged="OnSelectedItemChanged">
     <ItemTemplate Context="item">
-        <a href="#" class="tree-item-expand-button @CssUtils.BoolToClass(item.Children.Count == 0, "v-hidden")"
-           @onclick="() => OnExpandToggle(item)" @onclick:stopPropagation="true">
+        <button class="button-undecorated tree-item-expand-button @CssUtils.BoolToClass(item.Children.Count == 0, "v-hidden")"
+                @onclick="() => OnExpandToggle(item)" @onclick:stopPropagation="true">
             <Icon Glyph="Icons.ChevronDown" Class="tree-item-expand-icon" />
-        </a>
+        </button>
         <div class="tree-subscription-icon">
             @if (item.Data.ThumbnailUrl != null)
             {
@@ -19,18 +20,18 @@
         <div class="tree-subscription-name">
             @item.Data.Name
         </div>
-        <a @ref="item.Data.ContextMenuLinkReference" href="#"
-           class="tree-subscription-menu @CssUtils.BoolToClass(!item.IsSelected, "v-hidden")"
-           @onclick="() => OnShowMenu(item)" @onclick:stopPropagation="true">
+        <button @ref="item.Data.ContextMenuLinkReference"
+                class="button-undecorated tree-subscription-menu @CssUtils.BoolToClass(!item.IsSelected, "v-hidden")"
+                @onclick="() => OnShowMenu(item)" @onclick:stopPropagation="true">
             <Icon Glyph="Icons.Menu" />
-        </a>
+        </button>
         <Menu AttachTo="item.Data.ContextMenuLinkReference" @bind-IsVisible="item.Data.IsContextMenuVisible">
             <MenuItem Click="() => OnEditItem(item)">Edit</MenuItem>
             <MenuItem Click="() => OnSynchronizeItem(item)">Synchronize</MenuItem>
             <MenuItem Click="() => OnDeleteItem(item)">Delete</MenuItem>
         </Menu>
     </ItemTemplate>
-</TreeView>
+</SortedTreeView>
 
 <Dialog @ref="deleteDialog"
         PrimaryButtonCaption="Delete"
