@@ -870,7 +870,9 @@ form {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  align-items: stretch; }
+  align-items: stretch;
+  padding-left: 0;
+  margin-left: -.75rem; }
 
 .video-gallery .list-view-item {
   display: flex;

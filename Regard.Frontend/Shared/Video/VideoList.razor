@@ -41,10 +41,10 @@
                     </a>
                 </div>
                 <div class="video-menu">
-                    <a @ref="item.MenuLink" href="#" class="video-menu-link"
-                       @onclick="() => OnShowContextMenu(item)">
+                    <button @ref="item.MenuLink" class="button-undecorated video-menu-link"
+                            @onclick="() => OnShowContextMenu(item)">
                         <Icon Glyph="Icons.Menu" />
-                    </a>
+                    </button>
                     <Menu AttachTo="item.MenuLink" @bind-IsVisible="item.IsContextMenuVisible">
                         @if (item.ApiVideo.IsWatched)
                         {
