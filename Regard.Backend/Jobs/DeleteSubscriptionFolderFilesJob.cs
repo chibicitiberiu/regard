@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Humanizer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Regard.Backend.DB;
@@ -40,6 +41,12 @@ namespace Regard.Backend.Jobs
 
                 await subscriptionManager.DeleteSubscriptionFoldersInternal(firstFolder.User, SubscriptionFolderIds);
             }
+        }
+
+        protected override void LogBegin()
+        {
+            log.LogInformation("Delete files job started for folders {0}, will {1}delete folders.",
+                SubscriptionFolderIds.Humanize(), DeleteFolders? "" : "not ");
         }
 
         protected override void AddAdditionalVideos()

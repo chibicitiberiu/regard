@@ -55,7 +55,7 @@ namespace Regard.Backend.Jobs
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
             this.context = context;
-            this.scheduler = new RegardScheduler(context.Scheduler);
+            this.scheduler = new RegardScheduler(log, context.Scheduler);
             
             if (context.MergedJobDataMap.ContainsKey("SubscriptionId"))
                 this.SubscriptionId =  context.MergedJobDataMap.GetInt("SubscriptionId");
@@ -224,12 +224,16 @@ namespace Regard.Backend.Jobs
 
             foreach (var video in deletedVideos)
             {
+                log.LogInformation("Video file for {0} was deleted. Will clean up.", video);
                 await videoStorageService.Delete(video);
                 video.DownloadedPath = null;
                 video.DownloadedSize = null;
 
                 if (await preferencesManager.Get(Preferences.Videos_MarkDeletedAsWatched))
+                {
                     video.IsWatched = true;
+                    log.LogInformation("Deleted video {0} marked as watched.", video);
+                }
 
                 await dataContext.SaveChangesAsync();
             }
@@ -265,7 +269,7 @@ namespace Regard.Backend.Jobs
                 int canDownload = Math.Max(globalLimit - globalDownloadedCount, 0);
                 downloadList = downloadList.Take(canDownload);
 
-                log.LogInformation("Global limit is set, can only download up to {0} videos.", canDownload);
+                log.LogTrace("Global limit is set, can only download up to {0} videos.", canDownload);
             }
 
             if (limit > 0)
@@ -279,14 +283,11 @@ namespace Regard.Backend.Jobs
                 int canDownload = Math.Max(limit - downloadedCount, 0);
                 downloadList.Take(canDownload);
 
-                log.LogInformation("Limit is set, can only download up to {0} videos.", canDownload);
+                log.LogTrace("Limit is set, can only download up to {0} videos.", canDownload);
             }
             
             foreach (var video in downloadList)
-            {
                 await scheduler.ScheduleDownloadVideo(video.Id);
-                log.LogInformation("Scheduled video for download: {0}.", video);
-            }
         }
     }
 }

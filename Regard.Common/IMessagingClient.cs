@@ -22,5 +22,7 @@ namespace Regard.Common
         Task NotifySubscriptionFolderUpdated(ApiSubscriptionFolder folder);
 
         Task NotifySubscriptionFoldersDeleted(int[] ids);
+
+        Task NotifyVideoUpdated(ApiVideo video);
     }
 }

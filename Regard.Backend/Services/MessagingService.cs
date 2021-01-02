@@ -49,5 +49,10 @@ namespace Regard.Backend.Services
         {
             await ForUser(userAccount).NotifySubscriptionFoldersDeleted(folderIds);
         }
+
+        public async Task NotifyVideoUpdated(UserAccount userAccount, ApiVideo video)
+        {
+            await ForUser(userAccount).NotifyVideoUpdated(video);
+        }
     }
 }

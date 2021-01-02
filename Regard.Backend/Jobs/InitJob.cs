@@ -47,7 +47,7 @@ namespace Regard.Backend.Jobs
             await ytdlService.Initialize();
 
             // Create basic jobs
-            var scheduler = new RegardScheduler(context.Scheduler);
+            var scheduler = new RegardScheduler(log, context.Scheduler);
             await scheduler.ScheduleGlobalSynchronize(configuration["SynchronizationSchedule"]);
             await scheduler.ScheduleYoutubeDLUpdate(DateTimeOffset.Now.AddSeconds(10), TimeSpan.FromDays(1));
             log.LogInformation("Initialization tasks completed!");

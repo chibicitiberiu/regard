@@ -40,7 +40,7 @@ namespace Regard.Backend.Common.Utils
                 Description = @this.Description,
                 IsWatched = @this.IsWatched,
                 IsNew = (DateTime.Now - @this.Published).TotalDays < 7,
-                DownloadedStreamUrl = null, // TODO
+                DownloadedStreamUrl = @this.DownloadedPath, // TODO
                 DownloadedSize = @this.DownloadedSize,
                 SubscriptionId = @this.SubscriptionId,
                 PlaylistIndex = @this.PlaylistIndex,

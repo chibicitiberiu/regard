@@ -2,17 +2,69 @@
           ItemsSource="videos"
           Class="video-gallery">
     <ItemTemplate Context="item">
-        <a href="#">
-            <img src="@item.ThumbnailUrl" />
-            <h3>@item.Name</h3>
-            <small class="text-muted">
-                @if (item.ApiVideo.Views.HasValue)
-                {
-                    <span>@item.ApiVideo.Views.Value.ToMetric(decimals: 1) views</span>
-                    <span>&nbsp;&#x2022;&nbsp;</span>
-                }
-                <span>@item.ApiVideo.Published.ToLocalTime().Humanize()</span>
-            </small>
-        </a>
+        <div class="video @CssUtils.BoolToClass(item.ApiVideo.IsWatched, "video-watched")">
+            <div class="video-image">
+                <a class="video-image-wrapper" href="#">
+                    <img src="@item.ThumbnailUrl" />
+                    <div class="video-badges">
+                        @if (item.ApiVideo.IsWatched)
+                        {
+                            <Icon Glyph="Icons.Watched" Class="video-badge" title="Watched"/>
+                        }
+                        @if (!string.IsNullOrEmpty(item.ApiVideo.DownloadedStreamUrl))
+                        {
+                            <Icon Glyph="Icons.Downloaded" Class="video-badge" title="Downloaded" />
+                        }
+                    </div>
+                    <div class="video-badges-bottom">
+                        <span class="video-badge video-badge-duration">5:00</span>
+                    </div>
+                </a>
+            </div>
+            <div class="video-body">
+                <div class="video-text">
+                    <a href="#">
+                        <h3>@item.Name</h3>
+                        <small class="text-muted">
+                            @if (item.ApiVideo.UploaderName != null)
+                            {
+                                <span>@item.ApiVideo.UploaderName</span>
+                                <span>&nbsp;&#x2022;&nbsp;</span>
+                            }
+                            @if (item.ApiVideo.Views.HasValue)
+                            {
+                                <span>@item.ApiVideo.Views.Value.ToMetric(decimals: 1) views</span>
+                                <span>&nbsp;&#x2022;&nbsp;</span>
+                            }
+                            <span>@item.ApiVideo.Published.ToLocalTime().Humanize()</span>
+                        </small>
+                    </a>
+                </div>
+                <div class="video-menu">
+                    <a @ref="item.MenuLink" href="#" class="video-menu-link"
+                       @onclick="() => OnShowContextMenu(item)">
+                        <Icon Glyph="Icons.Menu" />
+                    </a>
+                    <Menu AttachTo="item.MenuLink" @bind-IsVisible="item.IsContextMenuVisible">
+                        @if (item.ApiVideo.IsWatched)
+                        {
+                            <MenuItem Click="() => OnVideoMarkNotWatched(item)">Mark not watched</MenuItem>
+                        }
+                        else 
+                        { 
+                            <MenuItem Click="() => OnVideoMarkWatched(item)">Mark watched</MenuItem>
+                        }
+                        @if (string.IsNullOrEmpty(item.ApiVideo.DownloadedStreamUrl))
+                        {
+                            <MenuItem Click="() => OnVideoDownload(item)">Download</MenuItem>
+                        }
+                        else 
+                        {
+                            <MenuItem Click="() => OnVideoDeleteFiles(item)">Delete downloaded files</MenuItem>
+                        }
+                    </Menu>
+                </div>
+            </div>
+        </div>
     </ItemTemplate>
 </ListView>

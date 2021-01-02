@@ -615,7 +615,8 @@ form {
   border-radius: var(--border-radius-btn);
   visibility: collapse;
   opacity: 0;
-  transition: visibility 0s linear .15s, opacity .15s ease-in; }
+  transition: visibility 0s linear .15s, opacity .15s ease-in;
+  z-index: 100; }
   .popper-dropdown[data-popper-placement^='top'] > .popper-arrow {
     bottom: -4px; }
   .popper-dropdown[data-popper-placement^='bottom'] > .popper-arrow {
@@ -860,22 +861,83 @@ form {
   align-items: stretch; }
 
 .video-gallery .list-view-item {
-  align-self: flex-start;
-  display: inline-block;
+  display: flex;
+  flex-direction: row;
+  align-content: stretch;
+  margin-bottom: .5rem; }
+
+.video {
+  width: 18rem;
   padding: 1rem;
-  margin-bottom: .5rem;
-  width: 18rem; }
-  .video-gallery .list-view-item a {
+  display: flex;
+  flex-direction: column;
+  align-content: stretch;
+  transition: background-color linear 0.25s, opacity 0.25s, text-shadow 0.25s;
+  border: 0;
+  border-radius: var(--border-radius-btn); }
+  .video:hover {
+    color: var(--color-fg-secondary);
+    background-color: var(--color-bg-secondary);
+    transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s; }
+    .video:hover .video-menu-link {
+      visibility: visible; }
+  .video .video-menu-link {
+    visibility: collapse; }
+  .video a {
     text-decoration: none; }
-  .video-gallery .list-view-item h3 {
+  .video h3 {
     font-size: 14pt;
     font-weight: normal;
     margin-top: .5em;
     margin-bottom: .25em; }
-  .video-gallery .list-view-item img {
+  .video img {
     width: 18rem;
     height: 11.25rem;
     object-fit: cover; }
+
+.video-watched img {
+  opacity: .5; }
+
+.video-watched .video-text {
+  opacity: .6; }
+
+.video-body {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: row; }
+
+.video-text {
+  flex-grow: 1; }
+
+.video-menu {
+  margin-right: -.65em;
+  margin-bottom: -.45em;
+  align-self: flex-end; }
+
+.video-image-wrapper {
+  position: relative;
+  display: block;
+  width: 100%; }
+
+.video-badges {
+  position: absolute;
+  top: .75em;
+  right: .75em;
+  display: flex;
+  flex-direction: row; }
+
+.video-badges-bottom {
+  position: absolute;
+  bottom: .75em;
+  right: .75em;
+  display: flex;
+  flex-direction: row; }
+
+.video-badge {
+  color: white;
+  opacity: .8;
+  margin: 0 .25em;
+  text-shadow: 1px 1px 3px black; }
 
 :root {
   --color-fg: #dddddd;
@@ -1084,32 +1146,40 @@ form {
   cursor: pointer;
   /* Add a pointer on hover */ }
 
-.video-badges {
-  position: absolute;
-  top: .6em;
-  left: 0;
-  width: 6.2em; }
-  .video-badges .video-badge {
-    width: 100%;
-    margin: 0 0 .6em 0;
-    padding: 0 0 0 .5em;
-    line-height: 1.65em;
-    background-color: #9af;
-    box-shadow: 0.2em 0 0.6em 0 rgba(0, 0, 0, 0.4);
-    border-radius: 0 3px 3px 0;
-    color: white;
-    text-align: center;
-    font-family: Noto Sans, Helvetica, Arial, sans-serif;
-    font-weight: 500;
-    font-size: 8pt;
-    text-transform: uppercase; }
-    .video-badges .video-badge.video-badge-new {
-      background-color: var(--color-bg-primary); }
-    .video-badges .video-badge.video-badge-downloaded {
-      background-color: #59b352; }
-    .video-badges .video-badge.video-badge-watched {
-      background-color: #444; }
+/*.video-badges {
+    position: absolute;
+    top: .6em;
+    left: 0;
+    width: 6.2em;
 
+    .video-badge {
+        width: 100%;
+        margin: 0 0 .6em 0;
+        padding: 0 0 0 .5em;
+        line-height: 1.65em;
+        background-color: #9af;
+        box-shadow: .2em 0 .6em 0 rgba(0,0,0,0.4);
+        border-radius: 0 3px 3px 0;
+        color: white;
+        text-align: center;
+        font-family: Noto Sans, Helvetica, Arial, sans-serif;
+        font-weight: 500;
+        font-size: 8pt;
+        text-transform: uppercase;
+
+        &.video-badge-new {
+            background-color: var(--color-bg-primary);
+        }
+
+        &.video-badge-downloaded {
+            background-color: #59b352;
+        }
+
+        &.video-badge-watched {
+            background-color: #444;
+        }
+    }
+}*/
 .alert-card {
   max-width: 35rem;
   margin: 2rem 0; }

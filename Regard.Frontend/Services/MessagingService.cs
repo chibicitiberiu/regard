@@ -23,6 +23,7 @@ namespace Regard.Frontend.Services
         public event EventHandler<ApiSubscriptionFolder> SubscriptionFolderCreated;
         public event EventHandler<ApiSubscriptionFolder> SubscriptionFolderUpdated;
         public event EventHandler<int[]> SubscriptionFoldersDeleted;
+        public event EventHandler<ApiVideo> VideoUpdated;
 
         public MessagingService(IConfiguration configuration, AuthenticationService authService)
         {
@@ -72,6 +73,7 @@ namespace Regard.Frontend.Services
             hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderCreated", NotifySubscriptionFolderCreated);
             hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderUpdated", NotifySubscriptionFolderUpdated);
             hubConnection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
+            hubConnection.On<ApiVideo>("NotifyVideoUpdated", NotifyVideoUpdated);
 
             await hubConnection.StartAsync();
         }
@@ -124,6 +126,11 @@ namespace Regard.Frontend.Services
         private void NotifySubscriptionFoldersDeleted(int[] ids)
         {
             SubscriptionFoldersDeleted?.Invoke(this, ids);
+        }
+
+        private void NotifyVideoUpdated(ApiVideo video)
+        {
+            VideoUpdated?.Invoke(this, video);
         }
     }
 }

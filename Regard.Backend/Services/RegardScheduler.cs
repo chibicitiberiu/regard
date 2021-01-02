@@ -1,4 +1,6 @@
-﻿using Quartz;
+﻿using Humanizer;
+using Microsoft.Extensions.Logging;
+using Quartz;
 using Regard.Backend.Jobs;
 using System;
 using System.Collections.Generic;
@@ -9,15 +11,17 @@ namespace Regard.Backend.Services
 {
     public class RegardScheduler
     {
+        private ILogger log;
         private IScheduler quartz;
         private readonly ISchedulerFactory schedulerFactory;
 
-        public RegardScheduler(IScheduler quartz)
+        public RegardScheduler(ILogger log, IScheduler quartz)
         {
+            this.log = log;
             this.quartz = quartz;
         }
 
-        public RegardScheduler(ISchedulerFactory schedulerFactory)
+        public RegardScheduler(ILogger<RegardScheduler> log, ISchedulerFactory schedulerFactory)
         {
             this.schedulerFactory = schedulerFactory;
         }
@@ -39,6 +43,8 @@ namespace Regard.Backend.Services
                 TriggerBuilder.Create()
                     .WithCronSchedule(cronSchedule)
                     .Build());
+
+            log.LogInformation("Scheduled global synchronization job (schedule {0}).", cronSchedule);
         }
 
         public async Task ScheduleGlobalSynchronizeNow()
@@ -54,7 +60,11 @@ namespace Regard.Backend.Services
                     .Build();
 
             if (!await quartz.CheckExists(job.Key))
+            {
                 await quartz.ScheduleJob(job, trigger);
+                log.LogInformation("Scheduled global synchronization job.");
+            }
+            else log.LogInformation("Did not schedule global synchronization job - already scheduled.");
         }
 
         public async Task ScheduleSynchronizeSubscription(int subscriptionId)
@@ -70,7 +80,11 @@ namespace Regard.Backend.Services
                     .Build();
 
             if (!await quartz.CheckExists(job.Key))
+            {
                 await quartz.ScheduleJob(job, trigger);
+                log.LogInformation("Scheduled synchronization job for subscription {0}.", subscriptionId);
+            }
+            else log.LogInformation("Did not schedule synchronization job for subscription {0} - already scheduled.", subscriptionId);
         }
 
         public async Task ScheduleSynchronizeFolder(int folderId)
@@ -87,7 +101,11 @@ namespace Regard.Backend.Services
                     .Build();
 
             if (!await quartz.CheckExists(job.Key))
+            {
                 await quartz.ScheduleJob(job, trigger);
+                log.LogInformation("Scheduled synchronization job for folder {0}.", folderId);
+            }
+            else log.LogInformation("Did not Schedulee synchronization job for folder {0} - already scheduled.", folderId);
         }
 
         public async Task ScheduleYoutubeDLUpdate(DateTimeOffset start, TimeSpan interval)
@@ -102,6 +120,8 @@ namespace Regard.Backend.Services
                     .WithSimpleSchedule(sched => sched.WithInterval(interval).RepeatForever())
                     .StartAt(start)
                     .Build());
+
+            log.LogInformation("Scheduled youtube-dl update job, interval {0} starting at {1}.", interval, start);
         }
 
         public async Task ScheduleJobRetry(IJobDetail jobDetail, int attempt, TimeSpan retryInterval)
@@ -118,6 +138,8 @@ namespace Regard.Backend.Services
                 .Build();
 
             await quartz.ScheduleJob(retryJob, retryTrigger);
+
+            log.LogInformation($"Scheduled attempt #{attempt} for job {jobDetail.Key.Name}, which will be done in {retryInterval}.");
         }
 
         public async Task ScheduleDownloadVideo(int videoId)
@@ -134,7 +156,11 @@ namespace Regard.Backend.Services
                     .Build();
 
             if (!await quartz.CheckExists(job.Key))
+            {
                 await quartz.ScheduleJob(job, trigger);
+                log.LogInformation("Scheduled download job for video {0}.", videoId);
+            }
+            else log.LogInformation("Did not schedule download job for video {0} - already scheduled.", videoId);
         }
 
         public async Task ScheduleDeleteFiles(int[] videoIds)
@@ -154,6 +180,8 @@ namespace Regard.Backend.Services
                 TriggerBuilder.Create()
                     .StartNow()
                     .Build());
+
+            log.LogInformation("Scheduled delete files job for videos {0}.", videoIds.Humanize());
         }
 
         public async Task ScheduleDeleteSubscriptionFiles(int[] subscriptionIds, bool deleteSubscriptions)
@@ -174,7 +202,11 @@ namespace Regard.Backend.Services
                 TriggerBuilder.Create()
                     .StartNow()
                     .Build());
+
+            log.LogInformation("Scheduled delete files job for subscriptions {0}, will {1}delete subscriptions.", 
+                subscriptionIds.Humanize(), deleteSubscriptions ? "" : "not ");
         }
+
         public async Task ScheduleDeleteSubscriptionFolderFiles(int[] subscriptionFolderIds, bool deleteFolders)
         {
             await GetQuartz();
@@ -193,6 +225,9 @@ namespace Regard.Backend.Services
                 TriggerBuilder.Create()
                     .StartNow()
                     .Build());
+
+            log.LogInformation("Scheduled delete files job for folders {0}, will {1}delete folders.",
+                subscriptionFolderIds.Humanize(), deleteFolders ? "" : "not ");
         }
     }
 }

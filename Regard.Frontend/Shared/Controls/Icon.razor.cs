@@ -46,7 +46,7 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.Menu, "more_vert" },
             { Icons.ChevronDown, "expand_more" },
             { Icons.Sort, "sort" },
-            { Icons.Watched, "visibility" },
+            { Icons.Watched, "done" },
             { Icons.NotWatched, "visibility_off" },
             { Icons.Downloaded, "cloud_download" },
             { Icons.NotDownloaded, "cloud_off" },

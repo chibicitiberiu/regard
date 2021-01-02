@@ -1,4 +1,5 @@
-﻿using Regard.Common.API.Model;
+﻿using Microsoft.AspNetCore.Components;
+using Regard.Common.API.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,10 @@ namespace Regard.Frontend.Shared.Video
     public class VideoViewModel
     {
         public ApiVideo ApiVideo { get; set; }
+
+        public ElementReference MenuLink { get; set; }
+
+        public bool IsContextMenuVisible { get; set; }
 
         public VideoViewModel(ApiVideo apiVideo)
         {

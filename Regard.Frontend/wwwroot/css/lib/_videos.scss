@@ -7,27 +7,106 @@
     }
 
     .list-view-item {
-        align-self: flex-start;
-        display: inline-block;
-        padding: 1rem;
+        display: flex;
+        flex-direction: row;
+        align-content: stretch;
         margin-bottom: .5rem;
-        width: 18rem;
+    }
+}
 
-        a {
-            text-decoration: none;
-        }
+.video {
+    width: 18rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-content: stretch;
 
-        h3 {
-            font-size: 14pt;
-            font-weight: normal;
-            margin-top: .5em;
-            margin-bottom: .25em;
-        }
+    transition: background-color linear 0.25s, opacity 0.25s, text-shadow 0.25s;
+    border: 0;
+    border-radius: var(--border-radius-btn);
 
-        img {
-            width: 18rem;
-            height: (18rem * 10 / 16);
-            object-fit: cover;
+    &:hover {
+        color: var(--color-fg-secondary);
+        background-color: var(--color-bg-secondary);
+        transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s;
+
+        .video-menu-link {
+            visibility: visible;
         }
     }
+
+    .video-menu-link {
+        visibility: collapse;
+    }
+
+    a {
+        text-decoration: none;
+    }
+
+    h3 {
+        font-size: 14pt;
+        font-weight: normal;
+        margin-top: .5em;
+        margin-bottom: .25em;
+    }
+
+    img {
+        width: 18rem;
+        height: (18rem * 10 / 16);
+        object-fit: cover;
+    }
+}
+
+.video-watched {
+    img {
+        opacity: .5;
+    }
+    .video-text {
+        opacity: .6;
+    }
+}
+
+.video-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+}
+
+.video-text {
+    flex-grow: 1;
+}
+
+.video-menu {
+    margin-right: -.65em;
+    margin-bottom: -.45em;
+    align-self: flex-end;
+}
+
+.video-image-wrapper {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.video-badges {
+    position: absolute;
+    top: .75em;
+    right: .75em;
+    display: flex;
+    flex-direction: row;
+}
+
+.video-badges-bottom {
+    position: absolute;
+    bottom: .75em;
+    right: .75em;
+    display: flex;
+    flex-direction: row;
+}
+
+.video-badge {
+    color: white;
+    opacity: .8;
+    margin: 0 .25em;
+    text-shadow: 1px 1px 3px black;
 }

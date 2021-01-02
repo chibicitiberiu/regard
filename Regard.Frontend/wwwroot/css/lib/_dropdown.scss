@@ -66,6 +66,7 @@
     opacity: 0;
     transition: visibility 0s linear .15s,
         opacity .15s ease-in;
+    z-index: 100;
 
     &[data-popper-placement^='top'] > .popper-arrow {
         bottom: -4px;

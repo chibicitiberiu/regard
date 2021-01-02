@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Humanizer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MoreLinq;
 using Quartz;
@@ -37,7 +38,8 @@ namespace Regard.Backend.Jobs
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
             VideoIds = (int[])context.MergedJobDataMap.Get("VideoIds");
-            
+            LogBegin();
+
             videosToDelete.Clear();
 
             if (VideoIds != null)
@@ -53,6 +55,11 @@ namespace Regard.Backend.Jobs
                 await DeleteVideo(video);
 
             await dataContext.SaveChangesAsync();
+        }
+
+        protected virtual void LogBegin()
+        {
+            log.LogInformation("Delete files job started for videos {0}", VideoIds.Humanize());
         }
 
         protected virtual void AddAdditionalVideos()

@@ -61,6 +61,9 @@ namespace Regard.Frontend.Pages
 
             else if (selectedItem is SubscriptionFolderViewModel folderViewModel)
                 await videoList.SetSelectedFolder(folderViewModel.Folder);
+
+            else if (selectedItem == null)
+                await videoList.DeselectAll();
         }
     }
 }

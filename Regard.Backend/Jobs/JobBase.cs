@@ -42,7 +42,7 @@ namespace Regard.Backend.Jobs
 
         private async Task ScheduleRetry(IJobExecutionContext context)
         {
-            var scheduler = new RegardScheduler(context.Scheduler);
+            var scheduler = new RegardScheduler(log, context.Scheduler);
             await scheduler.ScheduleJobRetry(context.JobDetail, Attempt + 1, RetryInterval);
         }
 

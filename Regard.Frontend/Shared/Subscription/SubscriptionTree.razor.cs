@@ -114,6 +114,16 @@ namespace Regard.Frontend.Shared.Subscription
                 {
                     folderNode.Parent.Children.Remove(folderNode);
                     treeFolders.Remove(folderId);
+
+                    // Deselect
+                    if (treeView.SelectedItem != null)
+                    {
+                        if (treeView.SelectedItem.Data is SubscriptionViewModel subVm && subVm.ParentId == folderId)
+                            treeView.SelectedItem = null;
+
+                        if (treeView.SelectedItem.Data is SubscriptionFolderViewModel folderVm && folderVm.Folder.Id == folderId)
+                            treeView.SelectedItem = null;
+                    }
                 }
             }
         }
@@ -151,6 +161,9 @@ namespace Regard.Frontend.Shared.Subscription
                 {
                     current.Parent.Children.Remove(current);
                     foundCount++;
+
+                    if (current == treeView.SelectedItem)
+                        treeView.SelectedItem = null;
                 }
 
                 foreach (var child in current.Children)

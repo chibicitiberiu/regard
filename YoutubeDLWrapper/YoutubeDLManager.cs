@@ -94,9 +94,9 @@ namespace YoutubeDLWrapper
             return true;
         }
 
-        public async Task CleanupOldVersions()
+        public async Task CleanupOldVersions(int keepCount = 1)
         {
-            var toDelete = Versions.OrderByDescending(x => x.Key).Skip(1).ToArray();
+            var toDelete = Versions.OrderByDescending(x => x.Key).Skip(keepCount).ToArray();
 
             foreach (var version in toDelete)
             {

@@ -172,6 +172,17 @@ namespace Regard.Services
         public Task<(ApiResponse<VideoListResponse>, HttpResponseMessage)> VideoList(VideoListRequest data)
             => Post<VideoListRequest, VideoListResponse>("api/video/list", data);
 
+        public Task<(ApiResponse, HttpResponseMessage)> VideoDownload(VideoDownloadRequest data)
+            => Post("api/video/download", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> VideoDeleteFiles(VideoDeleteFilesRequest data)
+            => Post("api/video/delete_files", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> VideoMarkWatched(VideoMarkWatchedRequest data)
+            => Post("api/video/mark_watched", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> VideoMarkNotWatched(VideoMarkNotWatchedRequest data)
+            => Post("api/video/mark_not_watched", data);
         #endregion
     }
 }

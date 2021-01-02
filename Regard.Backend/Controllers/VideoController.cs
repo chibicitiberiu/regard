@@ -88,5 +88,45 @@ namespace Regard.Backend.Controllers
                 Videos = query.Select(x => x.ToApi()).ToArray(),
             }));
         }
+
+        [HttpPost]
+        [Route("download")]
+        [Authorize]
+        public async Task<IActionResult> Download([FromBody] VideoDownloadRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            await videoManager.Download(user, request.VideoIds);
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("delete_files")]
+        [Authorize]
+        public async Task<IActionResult> DeleteFiles([FromBody] VideoDeleteFilesRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            await videoManager.DeleteFiles(user, request.VideoIds);
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("mark_watched")]
+        [Authorize]
+        public async Task<IActionResult> MarkWatched([FromBody] VideoMarkWatchedRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            await videoManager.Update(user, request.VideoIds, video => video.IsWatched = true);
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("mark_not_watched")]
+        [Authorize]
+        public async Task<IActionResult> MarkNotWatched([FromBody] VideoMarkNotWatchedRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            await videoManager.Update(user, request.VideoIds, video => video.IsWatched = false);
+            return Ok(responseFactory.Success());
+        }
     }
 }

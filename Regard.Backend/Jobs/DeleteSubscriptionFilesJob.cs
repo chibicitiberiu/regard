@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Humanizer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Regard.Backend.DB;
@@ -39,6 +40,12 @@ namespace Regard.Backend.Jobs
 
                 await subscriptionManager.DeleteSubscriptionsInternal(firstSub.User, SubscriptionIds);
             }
+        }
+
+        protected override void LogBegin()
+        {
+            log.LogInformation("Delete files job started for subscriptions {0}, will {1}delete subscriptions.", 
+                SubscriptionIds.Humanize(), DeleteSubscriptions ? "" : "not ");
         }
 
         protected override void AddAdditionalVideos()
