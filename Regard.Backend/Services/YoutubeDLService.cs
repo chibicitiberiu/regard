@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Nito.AsyncEx;
 using Regard.Backend.Common.Services;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace Regard.Backend.Services
     public class YoutubeDLService : IYoutubeDlService
     {
         private readonly YoutubeDLManager ytdlManager = new YoutubeDLManager();
-        private readonly ReaderWriterLock ytdlLock = new ReaderWriterLock();
+        private readonly AsyncReaderWriterLock ytdlLock = new AsyncReaderWriterLock();
         private YoutubeDL ytdl = null;
         
         public Version CurrentVersion { get; private set; }
@@ -40,38 +41,36 @@ namespace Regard.Backend.Services
             await ytdlManager.DownloadLatestVersion();
 
             // Critical section - replace ytdl when nobody uses it            
-            try
+            using (var @lock = await ytdlLock.WriterLockAsync())
             {
-                ytdlLock.AcquireWriterLock(int.MaxValue);
-
                 // replace ytdl
                 CurrentVersion = ytdlManager.Versions.Keys.Max();
                 ytdl = ytdlManager.Versions[CurrentVersion];
-            }
-            finally
-            {
-                ytdlLock.ReleaseWriterLock();
             }
 
             // Delete old versions which are no longer required
             await ytdlManager.CleanupOldVersions();
         }
 
-        public async Task UsingYoutubeDL(Func<YoutubeDL, Task> action, int waitTimeout = int.MaxValue)
+        public async Task UsingYoutubeDL(Func<YoutubeDL, Task> action)
         {
-            try
-            {
-                ytdlLock.AcquireReaderLock(waitTimeout);
+            using var @lock = await ytdlLock.ReaderLockAsync();
+            
+            if (ytdl == null)
+                throw new Exception("YoutubeDL not yet downloaded!");
 
-                if (ytdl == null)
-                    throw new Exception("YoutubeDL not yet downloaded!");
+            await action.Invoke(ytdl);
+        }
 
-                await action.Invoke(ytdl);
-            }
-            finally
-            {
-                ytdlLock.ReleaseReaderLock();
-            }
+        public async Task<T> UsingYoutubeDL<T>(Func<YoutubeDL, Task<T>> action)
+        {
+            using var @lock = await ytdlLock.ReaderLockAsync();
+            
+            if (ytdl == null)
+                throw new Exception("YoutubeDL not yet downloaded!");
+
+            return await action.Invoke(ytdl);
+            
         }
     }
 }

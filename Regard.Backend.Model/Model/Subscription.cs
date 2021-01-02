@@ -11,6 +11,9 @@ namespace Regard.Backend.Model
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
+        [NotNull, MaxLength(2048)]
+        public string OriginalUrl { get; set; }
+
         /// <summary>
         /// Provider ID
         /// </summary>
@@ -57,6 +60,7 @@ namespace Regard.Backend.Model
 
         [MaxLength(260)]
         public string DownloadPath { get; set; }
+
 
         public override string ToString()
         {

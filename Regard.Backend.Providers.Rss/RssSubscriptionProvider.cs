@@ -51,6 +51,7 @@ namespace Regard.Backend.Providers.Rss
             {
                 SubscriptionProviderId = Id,
                 SubscriptionId = uri.AbsoluteUri,
+                OriginalUrl = uri.ToString(),
                 Name = feed.Title.Text,
                 Description = feed.Description.Text,
                 ThumbnailPath = feed.ImageUrl.AbsoluteUri

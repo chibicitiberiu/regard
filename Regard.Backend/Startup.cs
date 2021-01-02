@@ -23,6 +23,7 @@ using Regard.Backend.Jobs;
 using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Services;
 using Regard.Backend.Providers.Rss;
+using Regard.Backend.Providers.YouTubeDL;
 
 namespace Regard.Backend
 {
@@ -123,17 +124,20 @@ namespace Regard.Backend
                 opts.WaitForJobsToComplete = true;
             });
             services.AddScoped<RegardScheduler>();
-            services.AddScoped<InitJob>();
-            services.AddScoped<SynchronizeJob>();
-            services.AddScoped<DownloadVideoJob>();
-            services.AddScoped<YoutubeDLUpdateJob>();
+
             services.AddScoped<DeleteFilesJob>();
             services.AddScoped<DeleteSubscriptionFilesJob>();
             services.AddScoped<DeleteSubscriptionFolderFilesJob>();
+            services.AddScoped<DownloadVideoJob>();
+            services.AddScoped<FetchThumbnailsJob>();
+            services.AddScoped<InitJob>();
+            services.AddScoped<SynchronizeJob>();
+            services.AddScoped<YoutubeDLUpdateJob>();
 
             // Providers
             services.AddSingleton<IProvider, RssSubscriptionProvider>();
             services.AddSingleton<IProvider, YouTubeAPIProvider>();
+            services.AddSingleton<IProvider, YouTubeDLProvider>();
             services.AddSingleton<IProviderManager, ProviderManager>();
 
             // Others

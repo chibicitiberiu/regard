@@ -14,6 +14,8 @@ namespace Regard.Backend.Common.Services
 
         Task DownloadLatest();
 
-        Task UsingYoutubeDL(Func<YoutubeDL, Task> action, int waitTimeout = int.MaxValue);
+        Task UsingYoutubeDL(Func<YoutubeDL, Task> action);
+
+        Task<T> UsingYoutubeDL<T>(Func<YoutubeDL, Task<T>> action);
     }
 }

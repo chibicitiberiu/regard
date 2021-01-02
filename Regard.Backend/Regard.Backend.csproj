@@ -23,6 +23,8 @@
     </PackageReference>
     <PackageReference Include="MimeMapping" Version="1.0.1.30" />
     <PackageReference Include="morelinq" Version="3.3.2" />
+    <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.0" />
+    <PackageReference Include="NLog.Web.AspNetCore" Version="4.10.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="3.1.4" />
     <PackageReference Include="Quartz.AspNetCore" Version="3.2.3" />
     <PackageReference Include="System.Linq.Async" Version="4.1.1" />
@@ -36,6 +38,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Regard.Backend.Model\Regard.Backend.Common.csproj" />
     <ProjectReference Include="..\Regard.Backend.Providers.Rss\Regard.Backend.Providers.Rss.csproj" />
+    <ProjectReference Include="..\Regard.Backend.Providers.YouTubeDL\Regard.Backend.Providers.YouTubeDL.csproj" />
     <ProjectReference Include="..\Regard.Backend.Providers.YouTube\Regard.Backend.Providers.YouTube.csproj" />
     <ProjectReference Include="..\Regard.Common\Regard.Common.csproj" />
     <ProjectReference Include="..\YoutubeDLWrapper\YoutubeDLWrapper.csproj" />

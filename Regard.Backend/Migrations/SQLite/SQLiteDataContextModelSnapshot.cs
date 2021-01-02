@@ -14,7 +14,7 @@ namespace Regard.Backend.Migrations.SQLite
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.9");
+                .HasAnnotation("ProductVersion", "3.1.10");
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -231,6 +231,10 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<string>("Name")
                         .HasColumnType("TEXT")
                         .HasMaxLength(250);
+
+                    b.Property<string>("OriginalUrl")
+                        .HasColumnType("TEXT")
+                        .HasMaxLength(2048);
 
                     b.Property<int?>("ParentFolderId")
                         .HasColumnType("INTEGER");

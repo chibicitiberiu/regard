@@ -94,6 +94,7 @@ namespace Regard.Backend.Providers.YouTube
             {
                 SubscriptionId = uri.AbsoluteUri,
                 SubscriptionProviderId = Id,
+                OriginalUrl = uri.ToString()
             };
 
             YtChannel channel = null;
