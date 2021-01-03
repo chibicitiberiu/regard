@@ -45,6 +45,15 @@ namespace Regard.Backend.Services
             return provider.Id;
         }
 
+        public void ValidateNameIsAvailable(string name, int? parentFolderId)
+        {
+            if (dataContext.Subscriptions.AsQueryable()
+                .Where(x => x.ParentFolderId == parentFolderId)
+                .Where(x => x.Name.ToLower() == name.ToLower())
+                .Any())
+                throw new Exception("Another subscription with the same name already exists in this folder!");
+        }
+
         public async Task<Subscription> Create(Uri uri, UserAccount userAccount, int? parentFolderId)
         {
             // Verify parent folder ID exists
@@ -71,6 +80,33 @@ namespace Regard.Backend.Services
             // Start a sync job
             await scheduler.ScheduleSynchronizeSubscription(sub.Id);
 
+            return sub;
+        }
+
+        public async Task<Subscription> CreateEmpty(string name, UserAccount userAccount, int? parentFolderId)
+        {
+            // Verify parent folder ID exists
+            SubscriptionFolder parent = null;
+            if (parentFolderId.HasValue)
+            {
+                parent = dataContext.SubscriptionFolders.Find(parentFolderId.Value);
+                if (parent == null)
+                    throw new Exception("Parent folder not found!");
+            }
+
+            // Verify name is unique
+            ValidateNameIsAvailable(name, parentFolderId);
+
+            // Create subscription
+            Subscription sub = new Subscription()
+            {
+                Name = name,
+                ParentFolder = parent,
+                User = userAccount,
+            };
+            dataContext.Subscriptions.Add(sub);
+            await dataContext.SaveChangesAsync();
+            await messaging.NotifySubscriptionCreated(userAccount, sub.ToApi());
             return sub;
         }
 

@@ -11,19 +11,19 @@ namespace Regard.Backend.Model
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        [NotNull, MaxLength(2048)]
+        [MaxLength(2048)]
         public string OriginalUrl { get; set; }
 
         /// <summary>
         /// Provider ID
         /// </summary>
-        [NotNull, MaxLength(60)]
+        [MaxLength(60)]
         public string SubscriptionProviderId { get; set; }
 
         /// <summary>
         /// Subscription ID, as defined by the provider
         /// </summary>
-        [NotNull, MaxLength(2048)]
+        [MaxLength(2048)]
         public string SubscriptionId { get; set; }
 
         [NotNull, MaxLength(250)]

@@ -128,5 +128,40 @@ namespace Regard.Backend.Controllers
             await videoManager.Update(user, request.VideoIds, video => video.IsWatched = false);
             return Ok(responseFactory.Success());
         }
+
+        [HttpPost]
+        [Route("validate")]
+        [Authorize]
+        public async Task<IActionResult> Validate([FromBody] VideoValidateRequest request)
+        {
+            try
+            {
+                var url = new Uri(request.Url);
+                await videoManager.ValidateUrl(url);
+                return Ok(responseFactory.Success());
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(responseFactory.Error(ex.Message));
+            }
+        }
+
+        [HttpPost]
+        [Route("add")]
+        [Authorize]
+        public async Task<IActionResult> Add([FromBody] VideoAddRequest request)
+        {
+            try
+            {
+                var user = await userManager.GetUserAsync(User);
+                var url = new Uri(request.Url);
+                await videoManager.Add(user, url, request.SubscriptionId);
+                return Ok(responseFactory.Success());
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(responseFactory.Error(ex.Message));
+            }
+        }
     }
 }

@@ -1,18 +1,18 @@
 ﻿<Modal @ref="modal">
-    <Title>Create subscription</Title>
+    <Title>Create empty subscription</Title>
     <Body>
         <EditForm Model="Request"
                   OnValidSubmit="OnSubmit">
 
-            <RgFieldWrapper Id="subcreate_url"
-                            Label="Url:" LabelWidth="2"
+            <RgFieldWrapper Id="subcreate_name"
+                            Label="Name:" LabelWidth="2"
                             Required="true">
                 <Field>
-                    <div class="input-wrapper @UrlStateClass">
-                        <BOIInputText @bind-Value="@Request.Url"
-                                      @onkeyup="OnUrlKeyUp"
-                                      type="url"
-                                      id="register_username"
+                    <div class="input-wrapper @NameStateClass">
+                        <BOIInputText @bind-Value="@Request.Name"
+                                      @onkeyup="OnNameKeyUp"
+                                      type="text"
+                                      id="subcreate_name"
                                       class="form-control"
                                       autocomplete="username"
                                       autocapitalize="none"

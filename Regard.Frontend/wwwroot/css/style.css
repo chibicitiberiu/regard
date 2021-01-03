@@ -419,6 +419,11 @@ em, strong {
   100% {
     opacity: 1; } }
 
+.svg-icon {
+  fill: currentColor;
+  width: 1.5em;
+  height: 1.5em; }
+
 .material-icons, .input-wrapper.valid:after, .input-wrapper.loading:after, .input-wrapper.invalid:after {
   font-family: 'Material Icons';
   font-weight: normal;

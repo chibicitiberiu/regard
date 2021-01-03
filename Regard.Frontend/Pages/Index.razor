@@ -2,7 +2,11 @@
 
 <SubscriptionCreateModal @ref="subscriptionCreateModal" />
 
+<SubscriptionCreateEmptyModal @ref="subscriptionCreateEmptyModal" />
+
 <FolderCreateModal @ref="folderCreateModal" />
+
+<VideoAddModal @ref="videoAddModal" />
 
 <div class="row">
 
@@ -14,6 +18,13 @@
                 <button type="button" title="Create subscription"
                         @onclick="@CreateSubscription">
                     <Icon Glyph="Icons.SubscriptionNew" />
+                </button>
+
+                <button type="button" title="Create empty subscription"
+                        @onclick="@CreateEmptySubscription">
+                    <svg class="svg-icon" width="24" height="24" viewBox="0 0 24 24">
+                        <path d="M 2 6 L 2 8 L 2 14 L 2 16 L 4 16 L 10 16 L 10 14 L 4 14 L 4 8 L 12 8 L 12 11.986328 L 14 11.986328 L 14 8 L 14 6 L 12 6 L 4 6 L 2 6 z M 16 10 L 16 14 L 12 14 L 12 16 L 16 16 L 16 20 L 18 20 L 18 16 L 22 16 L 22 14 L 18 14 L 18 10 L 16 10 z " />
+                    </svg>
                 </button>
 
                 <button type="button" title="Create folder"
@@ -32,8 +43,11 @@
                         @onclick="@Refresh">
                     <Icon Glyph="Icons.Refresh" />
                 </button>
+            </div>
+
+            <div class="button-group">
                 <button type="button" title="Synchronize now"
-                        @onclick="@Refresh">
+                        @onclick="@SynchronizeAll">
                     <Icon Glyph="Icons.Synchronize" />
                 </button>
             </div>
@@ -45,7 +59,14 @@
 
     <div class="col-xs-9">
         <div class="toolbar">
-
+            <div class="button-group">
+                <button type="button" title="Add video"
+                        @onclick="@AddVideo" disabled="@(!isSubscriptionSelected)">
+                    <svg class="svg-icon" width="24" height="24" viewBox="0 0 24 24">
+                        <path d="M 4 4 C 2.9 4 2.0097656 4.9 2.0097656 6 L 2 18 C 2 19.1 2.9 20 4 20 L 20 20 C 21.1 20 22 19.1 22 18 L 22 4 L 18 4 L 19.388672 6.7773438 L 16.388672 6.7773438 L 15 4 L 13 4 L 14.388672 6.7773438 L 11.388672 6.7773438 L 10 4 L 8 4 L 9.3886719 6.7773438 L 6.3886719 6.7773438 L 5 4 L 4 4 z M 14 9 L 16 9 L 16 12 L 19 12 L 19 14 L 16 14 L 16 17 L 14 17 L 14 14 L 11 14 L 11 12 L 14 12 L 14 9 z " />
+                    </svg>
+                </button>
+            </div>
             <div class="button-group">
                 <button type="button" title="Order"
                         @onclick="@CreateSubscription">

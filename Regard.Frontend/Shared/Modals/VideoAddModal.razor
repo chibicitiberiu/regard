@@ -1,5 +1,5 @@
 ﻿<Modal @ref="modal">
-    <Title>Create subscription</Title>
+    <Title>Add video</Title>
     <Body>
         <EditForm Model="Request"
                   OnValidSubmit="OnSubmit">
@@ -21,13 +21,9 @@
                         </BOIInputText>
                     </div>
                 </Field>
-                <HelpText>Paste an URL to something you want to subscribe to, such as a channel, a playlist or a search.</HelpText>
+                <HelpText>Paste an URL to a video.</HelpText>
             </RgFieldWrapper>
 
-            <FolderSelect Id="subcreate_parent"
-                          @bind-Value="Request.ParentFolderId"
-                          Label="Folder:" LabelWidth="2"
-                          Required="true" />
             <div class="form-group row">
                 <div class="col-xs-12 fg-error">
                     @ValidationMessage
@@ -43,3 +39,4 @@
         </EditForm>
     </Body>
 </Modal>
+

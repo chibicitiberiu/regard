@@ -100,7 +100,10 @@ namespace Regard.Backend.Jobs
         {
             try
             {
-                await CheckForNewVideos(sub);
+                if (sub.SubscriptionProviderId != null)
+                {
+                    await CheckForNewVideos(sub);
+                }
                 await CheckForDeletedVideos(sub);
                 await CheckDownloadRules(sub);
             }

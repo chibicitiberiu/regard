@@ -35,11 +35,22 @@ namespace Regard.Backend.Controllers
         {
             try
             {
-                var url = new Uri(request.Url);
-                var result = await subscriptionManager.TestUrl(url);
+                string provider = null;
+
+                if (request.Url != null)
+                {
+                    var url = new Uri(request.Url);
+                    provider = await subscriptionManager.TestUrl(url);
+                }
+
+                if (request.Name != null)
+                {
+                    subscriptionManager.ValidateNameIsAvailable(request.Name, request.ParentFolderId);
+                }
+
                 return Ok(responseFactory.Success(new SubscriptionValidateResponse()
                 {
-                    ProviderName = result,
+                    ProviderName = provider,
                 }));
             }
             catch (UriFormatException)
@@ -76,6 +87,23 @@ namespace Regard.Backend.Controllers
             catch (UriFormatException)
             {
                 return BadRequest(responseFactory.Error("Invalid URL format!"));
+            }
+        }
+
+        [HttpPost]
+        [Route("create_empty")]
+        [Authorize]
+        public async Task<IActionResult> CreateEmpty([FromBody] SubscriptionCreateEmptyRequest request)
+        {
+            try
+            {
+                var user = await userManager.GetUserAsync(User);
+                var result = await subscriptionManager.CreateEmpty(request.Name, user, request.ParentFolderId);
+                return Ok(responseFactory.Success(result.ToApi()));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(responseFactory.Error(ex.Message));
             }
         }
 

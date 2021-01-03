@@ -137,6 +137,9 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionCreate(SubscriptionCreateRequest data)
             => Post("api/subscription/create", data);
 
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionCreateEmpty(SubscriptionCreateEmptyRequest data)
+            => Post("api/subscription/create_empty", data);
+
         public Task<(ApiResponse<SubscriptionListResponse>, HttpResponseMessage)> SubscriptionList(SubscriptionListRequest data)
             => Post<SubscriptionListRequest, SubscriptionListResponse>("api/subscription/list", data);
 
@@ -183,6 +186,13 @@ namespace Regard.Services
 
         public Task<(ApiResponse, HttpResponseMessage)> VideoMarkNotWatched(VideoMarkNotWatchedRequest data)
             => Post("api/video/mark_not_watched", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> VideoAdd(VideoAddRequest data)
+            => Post("api/video/add", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> VideoValidate(VideoValidateRequest data)
+            => Post("api/video/validate", data);
+
         #endregion
     }
 }
