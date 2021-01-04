@@ -7,8 +7,23 @@ Subscriptions_DownloadOrder,Order in which to download videos,VideoOrder,VideoOr
 Subscriptions_MaxCount,"Maximum number of downloaded videos to keep per subscription (-1 = no limit). This limit only applies to the automatic downloader, but the user can manually download more videos.",int,3,subscriptions.max_count,Subscriptions:MaxCount,,x,x,x
 Subscriptions_MaxSize,"Maximum size a subscription can take on disk in MB (-1 = no limit). This limit only applies to the automatic downloader, but the user can manually download more videos.",int,-1,subscriptions.max_size,Subscriptions:MaxSize,,x,x,x
 Subscriptions_AutoDeleteWatched,"When videos are marked as watched, they are deleted automatically from disk.",bool,true,subscriptions.auto_delete_watched,Subscriptions:AutoDeleteWatched,,x,x,x
-Subscriptions_DownloadPath,Pattern indicating where files are downloaded automatically.,string,"""${DownloadDirectory}/${SubscriptionFolderPath}/${SubscriptionName}/${VideoPlaylistIndex}-${VideoName}""",subscriptions.download_path,Subscriptions:DownloadPath,,x,x,x
+Subscriptions_DownloadPath,Pattern indicating where files are downloaded automatically.,string,"""{DownloadDirectory}/{FolderPath}/{Subscription.Name}/{Video.PlaylistIndex}-{Video.Name}""",subscriptions.download_path,Subscriptions:DownloadPath,,x,x,x
 User_MaxCount,"Maximum number of downloaded videos to keep per user (-1 = no limit). This setting only applies to the automatic downloader, the user can download more videos than this limit. Use the User_CountQuota option for a hard limit.",int,10,user.max_count,User:MaxCount,,x,,
 User_MaxSize,"Maximum size a user's downloaded videos can take in MB (-1 = no limit). This setting only applies to the automatic downloader, the user can download more videos than this limit. Use the User_SizeQuota option for a hard limit.",int,-1,user.max_size,User:MaxSize,,x,,
 User_CountQuota,Hard limit on numbers of downloaded videos a user can keep (-1 = no limit). Also applies to manual downloads.,int,-1,user.count_quota,User:CountQuota,,x,,
 User_SizeQuota,Hard limit on total size of downloaded videos a user can keep in MB (-1 = no limit). Also applies to manual downloads.,int,-1,user.size_quota,User:SizeQuota,,x,,
+Ytdl_LimitRate,Maximum download rate in bytes per second (e.g. 50K or 4.2M),string,null,ytdl.limit_rate,Ytdl:LimitRate,,x,x,x
+Ytdl_Retries,"Number of retries (default is 10), or ""infinite"".",string,null,ytdl.retries,Ytdl:Retries,,x,x,x
+Ytdl_WriteDescription,Write video description to a .description file.,bool,false,ytdl.write_description,Ytdl:WriteDescription,,x,x,x
+Ytdl_WriteInfoJson,Write video metadata to a .info.json file,bool,false,ytdl.write_info_json,Ytdl:WriteInfoJson,,x,x,x
+Ytdl_WriteThumbnail,Write thumbnail image to disk,bool,false,ytdl.write_thumbnail,Ytdl:WriteThumbnail,,x,x,x
+Ytdl_CallHome,Contact the youtube-dl server for debugging,bool?,null,ytdl.call_home,Ytdl:CallHome,,,,
+Ytdl_Format,Video format to download,string,"""bestvideo+bestaudio""",ytdl.format,Ytdl:Format,,x,x,x
+Ytdl_AllFormats,Download all possible formats,bool,false,ytdl.all_formats,Ytdl:AllFormats,,x,x,x
+Ytdl_PreferFreeFormats,Prefer free video formats,bool,false,ytdl.prefer_free_formats,Ytdl:PreferFreeFormats,,x,x,x
+Ytdl_MergeOutputFormat,"If a merge is required (e.g. bestvideo+bestaudio), output to given container format. One of mkv, mp4, ogg, webm, flv. Ignored if no merge is required.",string,"""mp4""",ytdl.merge_output_format,Ytdl:MergeOutputFormat,,x,x,x
+Ytdl_WriteSubtitles,Write subtitle files,bool,false,ytdl.write_sub,Ytdl:WriteSub,,x,x,x
+Ytdl_WriteAutoSub,Write automatically generated subtitles (YouTube only),bool,false,ytdl.write_auto_sub,Ytdl:WriteAutoSub,,x,x,x
+Ytdl_AllSubs,Write all available subtitles of the video,bool,false,ytdl.all_subs,Ytdl:AllSubs,,x,x,x
+Ytdl_SubFormat,"Subtitle format, accepts formats preference, for example: ""srt"" or ""ass/srt/best""",string,"""best""",ytdl.sub_format,Ytdl:SubFormat,,x,x,x
+Ytdl_SubLang,Languages of the subtitles to download (optional) separated by commas.,string,"""en""",ytdl.sub_lang,Ytdl:SubLang,,x,x,x

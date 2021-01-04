@@ -102,7 +102,7 @@ namespace Regard.Backend.Services
         /// Pattern indicating where files are downloaded automatically.
         /// </summary>
         public static readonly PreferenceDefinition<string> Subscriptions_DownloadPath = new PreferenceDefinition<string>(
-            "${DownloadDirectory}/${SubscriptionFolderPath}/${SubscriptionName}/${VideoPlaylistIndex}-${VideoName}",
+            "{DownloadDirectory}/{FolderPath}/{Subscription.Name}/{Video.PlaylistIndex}-{Video.Name}",
             "subscriptions.download_path",
             "Subscriptions:DownloadPath",
             null,
@@ -151,6 +151,171 @@ namespace Regard.Backend.Services
             "User:SizeQuota",
             null,
             PreferenceFlags.User
+        );
+
+        /// <summary>
+        /// Maximum download rate in bytes per second (e.g. 50K or 4.2M)
+        /// </summary>
+        public static readonly PreferenceDefinition<string> Ytdl_LimitRate = new PreferenceDefinition<string>(
+            null,
+            "ytdl.limit_rate",
+            "Ytdl:LimitRate",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Number of retries (default is 10), or "infinite".
+        /// </summary>
+        public static readonly PreferenceDefinition<string> Ytdl_Retries = new PreferenceDefinition<string>(
+            null,
+            "ytdl.retries",
+            "Ytdl:Retries",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Write video description to a .description file.
+        /// </summary>
+        public static readonly PreferenceDefinition<bool> Ytdl_WriteDescription = new PreferenceDefinition<bool>(
+            false,
+            "ytdl.write_description",
+            "Ytdl:WriteDescription",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Write video metadata to a .info.json file
+        /// </summary>
+        public static readonly PreferenceDefinition<bool> Ytdl_WriteInfoJson = new PreferenceDefinition<bool>(
+            false,
+            "ytdl.write_info_json",
+            "Ytdl:WriteInfoJson",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Write thumbnail image to disk
+        /// </summary>
+        public static readonly PreferenceDefinition<bool> Ytdl_WriteThumbnail = new PreferenceDefinition<bool>(
+            false,
+            "ytdl.write_thumbnail",
+            "Ytdl:WriteThumbnail",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Contact the youtube-dl server for debugging
+        /// </summary>
+        public static readonly PreferenceDefinition<bool?> Ytdl_CallHome = new PreferenceDefinition<bool?>(
+            null,
+            "ytdl.call_home",
+            "Ytdl:CallHome",
+            null,
+            0
+        );
+
+        /// <summary>
+        /// Video format to download
+        /// </summary>
+        public static readonly PreferenceDefinition<string> Ytdl_Format = new PreferenceDefinition<string>(
+            "bestvideo+bestaudio",
+            "ytdl.format",
+            "Ytdl:Format",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Download all possible formats
+        /// </summary>
+        public static readonly PreferenceDefinition<bool> Ytdl_AllFormats = new PreferenceDefinition<bool>(
+            false,
+            "ytdl.all_formats",
+            "Ytdl:AllFormats",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Prefer free video formats
+        /// </summary>
+        public static readonly PreferenceDefinition<bool> Ytdl_PreferFreeFormats = new PreferenceDefinition<bool>(
+            false,
+            "ytdl.prefer_free_formats",
+            "Ytdl:PreferFreeFormats",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// If a merge is required (e.g. bestvideo+bestaudio), output to given container format. One of mkv, mp4, ogg, webm, flv. Ignored if no merge is required.
+        /// </summary>
+        public static readonly PreferenceDefinition<string> Ytdl_MergeOutputFormat = new PreferenceDefinition<string>(
+            "mp4",
+            "ytdl.merge_output_format",
+            "Ytdl:MergeOutputFormat",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Write subtitle files
+        /// </summary>
+        public static readonly PreferenceDefinition<bool> Ytdl_WriteSubtitles = new PreferenceDefinition<bool>(
+            false,
+            "ytdl.write_sub",
+            "Ytdl:WriteSub",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Write automatically generated subtitles (YouTube only)
+        /// </summary>
+        public static readonly PreferenceDefinition<bool> Ytdl_WriteAutoSub = new PreferenceDefinition<bool>(
+            false,
+            "ytdl.write_auto_sub",
+            "Ytdl:WriteAutoSub",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Write all available subtitles of the video
+        /// </summary>
+        public static readonly PreferenceDefinition<bool> Ytdl_AllSubs = new PreferenceDefinition<bool>(
+            false,
+            "ytdl.all_subs",
+            "Ytdl:AllSubs",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Subtitle format, accepts formats preference, for example: "srt" or "ass/srt/best"
+        /// </summary>
+        public static readonly PreferenceDefinition<string> Ytdl_SubFormat = new PreferenceDefinition<string>(
+            "best",
+            "ytdl.sub_format",
+            "Ytdl:SubFormat",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
+        );
+
+        /// <summary>
+        /// Languages of the subtitles to download (optional) separated by commas.
+        /// </summary>
+        public static readonly PreferenceDefinition<string> Ytdl_SubLang = new PreferenceDefinition<string>(
+            "en",
+            "ytdl.sub_lang",
+            "Ytdl:SubLang",
+            null,
+            PreferenceFlags.User | PreferenceFlags.SubscriptionFolder | PreferenceFlags.Subscription
         );
 
     }

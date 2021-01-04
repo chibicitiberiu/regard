@@ -138,7 +138,14 @@ namespace Regard.Backend.Services
                 .StartAt(DateTimeOffset.Now.Add(retryInterval))
                 .Build();
 
-            await quartz.ScheduleJob(retryJob, retryTrigger);
+            try
+            {
+                await quartz.ScheduleJob(retryJob, retryTrigger);
+            } 
+            catch (ObjectAlreadyExistsException)
+            {
+                // NOOP
+            }
 
             log.LogInformation($"Scheduled attempt #{attempt} for job {jobDetail.Key.Name}, which will be done in {retryInterval}.");
         }

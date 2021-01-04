@@ -47,7 +47,14 @@ namespace YoutubeDLWrapper
                     try
                     {
                         var version = await ytdl.GetVersion();
-                        Versions.Add(version, ytdl);
+                        if (Versions.ContainsKey(version))
+                        {
+                            await Task.Run(() => File.Delete(file));
+                        }
+                        else
+                        {
+                            Versions.Add(version, ytdl);
+                        }
                     }
                     catch (Exception ex)
                     {

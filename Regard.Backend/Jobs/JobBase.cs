@@ -28,6 +28,9 @@ namespace Regard.Backend.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
+            if (context.MergedJobDataMap.ContainsKey("Attempt"))
+                Attempt = context.MergedJobDataMap.GetInt("Attempt");
+
             try
             {
                 await ExecuteJob(context);

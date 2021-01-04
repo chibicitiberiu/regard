@@ -289,7 +289,7 @@ namespace Regard.Backend.Jobs
                     .Count();
 
                 int canDownload = Math.Max(limit - downloadedCount, 0);
-                downloadList.Take(canDownload);
+                downloadList = downloadList.Take(canDownload);
 
                 log.LogTrace("Limit is set, can only download up to {0} videos.", canDownload);
             }
