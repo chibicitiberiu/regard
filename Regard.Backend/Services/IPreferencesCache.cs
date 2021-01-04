@@ -2,10 +2,14 @@
 
 namespace Regard.Backend.Services
 {
-    public interface IPreferencesCache
+    public interface IPreferencesCache<TKey>
     {
+        bool Get<TValue>(TKey key, out TValue value);
+
+        void Set<TValue>(TKey key, TValue value);
+
+        void Invalidate();
+
         void ClearExpired();
-        bool Get<TValue>(string key, out TValue value, UserAccount user = null);
-        void Set<TValue>(string key, TValue value, UserAccount user = null);
     }
 }

@@ -15,7 +15,7 @@ namespace Regard.Backend.Model
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        [NotNull, MaxLength(64)]
+        [Required, MaxLength(64)]
         public string Name { get; set; }
 
         public string UserId { get; set; }
@@ -25,22 +25,6 @@ namespace Regard.Backend.Model
         public int? ParentId { get; set; }
 
         public SubscriptionFolder Parent { get; set; }
-
-
-        // Setting overrides
-
-        public bool? AutoDownload { get; set; }
-
-        public int? DownloadMaxCount { get; set; }
-
-        public int? DownloadMaxSize { get; set; }
-
-        public VideoOrder? DownloadOrder { get; set; }
-
-        public bool? AutomaticDeleteWatched { get; set; }
-
-        [MaxLength(260)]
-        public string DownloadPath { get; set; }
 
         public override string ToString()
         {

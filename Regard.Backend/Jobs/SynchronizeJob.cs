@@ -232,7 +232,7 @@ namespace Regard.Backend.Jobs
                 video.DownloadedPath = null;
                 video.DownloadedSize = null;
 
-                if (await preferencesManager.Get(Preferences.Videos_MarkDeletedAsWatched))
+                if (preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDeleteWatched, sub.Id))
                 {
                     video.IsWatched = true;
                     log.LogInformation("Deleted video {0} marked as watched.", video);
@@ -247,12 +247,17 @@ namespace Regard.Backend.Jobs
         private async Task CheckDownloadRules(Subscription sub)
         {
             // Check auto download value
-            if (!await subscriptionManager.GetOption_AutoDownload(sub))
+            if (!preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDownload, sub.Id))
                 return;
 
-            VideoOrder order = await subscriptionManager.GetOption_DownloadOrder(sub);
-            int limit = await subscriptionManager.GetOption_DownloadMaxCount(sub);
-            int globalLimit = await preferencesManager.Get(Preferences.Download_GlobalMaxCount);
+            VideoOrder order = preferencesManager.GetForSubscription(Preferences.Subscriptions_DownloadOrder, sub.Id);
+            int limit = preferencesManager.GetForSubscription(Preferences.Subscriptions_MaxCount, sub.Id);
+
+            int userLimit = preferencesManager.GetForUser(Preferences.User_MaxCount, sub.UserId);
+            int userQuota = preferencesManager.GetForUser(Preferences.User_CountQuota, sub.UserId);
+            int globalLimit = (userLimit >= 0 && userQuota >= 0)
+                ? Math.Min(userLimit, userQuota)
+                : Math.Max(userLimit, userQuota);
 
             var downloadList = dataContext.Videos
                 .AsQueryable()

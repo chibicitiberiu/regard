@@ -151,6 +151,7 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Content")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Details")
@@ -170,6 +171,42 @@ namespace Regard.Backend.Migrations.SQLite
                     b.HasIndex("UserId");
 
                     b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Common.Model.SubscriptionFolderPreference", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SubscriptionFolderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key", "SubscriptionFolderId");
+
+                    b.HasIndex("SubscriptionFolderId");
+
+                    b.ToTable("SubscriptionFolderPreferences");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Common.Model.SubscriptionPreference", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SubscriptionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key", "SubscriptionId");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.ToTable("SubscriptionPreferences");
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.Preference", b =>
@@ -192,6 +229,7 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasMaxLength(60);
 
                     b.Property<string>("Configuration")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("ProviderId");
@@ -205,30 +243,12 @@ namespace Regard.Backend.Migrations.SQLite
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool?>("AutoDownload")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool?>("AutomaticDeleteWatched")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Description")
                         .HasColumnType("TEXT")
                         .HasMaxLength(2048);
 
-                    b.Property<int?>("DownloadMaxCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("DownloadMaxSize")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("DownloadOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("DownloadPath")
-                        .HasColumnType("TEXT")
-                        .HasMaxLength(260);
-
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasMaxLength(250);
 
@@ -273,26 +293,8 @@ namespace Regard.Backend.Migrations.SQLite
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool?>("AutoDownload")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool?>("AutomaticDeleteWatched")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("DownloadMaxCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("DownloadMaxSize")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("DownloadOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("DownloadPath")
-                        .HasColumnType("TEXT")
-                        .HasMaxLength(260);
-
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasMaxLength(64);
 
@@ -427,10 +429,12 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasMaxLength(250);
 
                     b.Property<string>("OriginalUrl")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasMaxLength(2048);
 
@@ -461,10 +465,12 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasColumnType("TEXT");
 
                     b.Property<string>("VideoId")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasMaxLength(60);
 
                     b.Property<string>("VideoProviderId")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasMaxLength(60);
 
@@ -537,6 +543,24 @@ namespace Regard.Backend.Migrations.SQLite
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
+            modelBuilder.Entity("Regard.Backend.Common.Model.SubscriptionFolderPreference", b =>
+                {
+                    b.HasOne("Regard.Backend.Model.SubscriptionFolder", "SubscriptionFolder")
+                        .WithMany()
+                        .HasForeignKey("SubscriptionFolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Regard.Backend.Common.Model.SubscriptionPreference", b =>
+                {
+                    b.HasOne("Regard.Backend.Model.Subscription", "Subscription")
+                        .WithMany()
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Regard.Backend.Model.Subscription", b =>
                 {
                     b.HasOne("Regard.Backend.Model.SubscriptionFolder", "ParentFolder")
@@ -570,7 +594,8 @@ namespace Regard.Backend.Migrations.SQLite
                     b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.Video", b =>

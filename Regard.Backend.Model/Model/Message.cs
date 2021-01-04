@@ -2,7 +2,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Regard.Backend.Common.Model
 {
@@ -21,7 +20,7 @@ namespace Regard.Backend.Common.Model
 
         public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
 
-        [NotNull]
+        [Required]
         public string Content { get; set; }
 
         public string Details { get; set; }

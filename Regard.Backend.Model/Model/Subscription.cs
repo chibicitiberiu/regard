@@ -1,8 +1,6 @@
 ﻿using Regard.Model;
-using Regard.Backend.Model;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Regard.Backend.Model
 {
@@ -26,7 +24,7 @@ namespace Regard.Backend.Model
         [MaxLength(2048)]
         public string SubscriptionId { get; set; }
 
-        [NotNull, MaxLength(250)]
+        [Required, MaxLength(250)]
         public string Name { get; set; }
 
         [MaxLength(2048)]
@@ -44,23 +42,6 @@ namespace Regard.Backend.Model
         public virtual UserAccount User { get; set; }
         
         public string ProviderData { get; set; }
-
-
-        // Setting overrides
-        
-        public bool? AutoDownload { get; set; }
-        
-        public int? DownloadMaxCount { get; set; }
-
-        public int? DownloadMaxSize { get; set; }
-
-        public VideoOrder? DownloadOrder { get; set; }
-        
-        public bool? AutomaticDeleteWatched { get; set; }
-
-        [MaxLength(260)]
-        public string DownloadPath { get; set; }
-
 
         public override string ToString()
         {

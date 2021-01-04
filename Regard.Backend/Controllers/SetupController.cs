@@ -35,7 +35,7 @@ namespace Regard.Backend.Controllers
 
             return Ok(responseFactory.Success(new ServerStatusResponse()
             {
-                Initialized = await preferencesManager.Get(Preferences.Server_Initialized),
+                Initialized = preferencesManager.GetGlobal(Preferences.Server_Initialized),
                 HaveUsers = users.Count > 0,
                 HaveAdmin = admins.Count > 0
             }));
@@ -59,7 +59,7 @@ namespace Regard.Backend.Controllers
             // Complete setup
             if (errors.Count == 0)
             {
-                await preferencesManager.Set(Preferences.Server_Initialized, true);
+                preferencesManager.SetGlobal(Preferences.Server_Initialized, true);
                 return Ok(responseFactory.Success());
             }
             else

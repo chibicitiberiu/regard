@@ -248,78 +248,8 @@ namespace Regard.Backend.Services
                 .Where(x => x.UserId == userAccount.Id);
         }
 
-        private async Task<T> GetOption<T>(Subscription sub,
-                                           Func<Subscription, T?> optGetter,
-                                           Func<SubscriptionFolder, T?> folderOptGetter,
-                                           PreferenceDefinition<T> preference) where T : struct
-        {
-            // Get from subscription
-            T? value = optGetter(sub);
-            if (value.HasValue)
-                return value.Value;
-
-            // Get from subscription folder
-            var folder = sub.ParentFolder;
-            while (folder != null)
-            {
-                value = folderOptGetter(folder);
-                if (value.HasValue)
-                    return value.Value;
-            }
-
-            // Get from preference
-            return await preferencesManager.Get(preference);
-        }
-
-        private async Task<T> GetOption<T>(Subscription sub,
-                                           Func<Subscription, T> optGetter,
-                                           Func<SubscriptionFolder, T> folderOptGetter,
-                                           PreferenceDefinition<T> preference) where T : class
-        {
-            // Get from subscription
-            T value = optGetter(sub);
-            if (value != null)
-                return value;
-
-            // Get from subscription folder
-            var folder = sub.ParentFolder;
-            while (folder != null)
-            {
-                value = folderOptGetter(folder);
-                if (value != null)
-                    return value;
-            }
-
-            // Get from preference
-            return await preferencesManager.Get(preference);
-        }
-
-        public Task<bool> GetOption_AutoDownload(Subscription subscription)
-        {
-            return GetOption(subscription,
-                sub => sub.AutoDownload,
-                folder => folder.AutoDownload,
-                Preferences.Download_AutoDownload);
-        }
-
-        public Task<VideoOrder> GetOption_DownloadOrder(Subscription subscription)
-        {
-            return GetOption(subscription,
-                sub => sub.DownloadOrder,
-                folder => folder.DownloadOrder,
-                Preferences.Download_Order);
-        }
-
-        public Task<int> GetOption_DownloadMaxCount(Subscription subscription)
-        {
-            return GetOption(subscription,
-                sub => sub.DownloadMaxCount,
-                folder => folder.DownloadMaxCount,
-                Preferences.Download_DefaultMaxCount);
-        }
-
         public async Task SynchronizeSubscription(int subscriptionId)
-        {
+        {   
             await scheduler.ScheduleSynchronizeSubscription(subscriptionId);
         }
 

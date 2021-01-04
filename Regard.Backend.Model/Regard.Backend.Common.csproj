@@ -5,6 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Model\Preferences\Preferences.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Preferences.tt</DependentUpon>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.1.9" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="4.7.0" />
@@ -13,6 +21,25 @@
   <ItemGroup>
     <ProjectReference Include="..\Regard.Common\Regard.Common.csproj" />
     <ProjectReference Include="..\YoutubeDLWrapper\YoutubeDLWrapper.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Model\Preferences\Preferences.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Preferences.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Model\Preferences\Preferences.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Preferences.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 </Project>

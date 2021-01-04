@@ -12,7 +12,7 @@ namespace Regard.Backend.Model
         [Key, MaxLength(60)]
         public string ProviderId { get; set; }
 
-        [NotNull]
+        [Required]
         public string Configuration { get; set; }
     }
 }

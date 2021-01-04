@@ -1,7 +1,4 @@
-﻿using Regard.Backend.Model;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Regard.Backend.Model
 {
@@ -11,10 +8,10 @@ namespace Regard.Backend.Model
 
         public string Value { get; set; }
 
-        [NotNull]
+        [Required]
         public UserAccount User { get; set; }
         
-        [NotNull]
+        [Required]
         public string UserId { get; set; }
     }
 }

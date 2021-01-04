@@ -106,7 +106,7 @@ namespace Regard.Backend
 
             // Preferences
             services.AddScoped<IPreferencesManager, PreferencesManager>();
-            services.AddSingleton<IPreferencesCache, PreferencesCache>();
+            services.AddSingleton(typeof(IPreferencesCache<>), typeof(PreferencesCache<>));
 
             // Scheduler
             services.AddQuartz(q =>
