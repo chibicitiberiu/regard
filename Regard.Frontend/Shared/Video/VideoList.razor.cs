@@ -21,10 +21,22 @@ namespace Regard.Frontend.Shared.Video
         protected MessagingService Messaging { get; set; }
 
         private readonly ObservableCollection<VideoViewModel> videos = new ObservableCollection<VideoViewModel>();
-
         private ApiSubscription selectedSubscription = null;
-
         private ApiSubscriptionFolder selectedFolder = null;
+        private int page = 0;
+        private int videosPerPage = 60;
+        private int totalVideoCount = 0;
+
+        private int PageCount => (totalVideoCount / videosPerPage) + ((totalVideoCount % videosPerPage > 0) ? 1 : 0);
+
+        private int Page
+        {
+            get => page;
+            set
+            {
+                GoToPage(value);
+            }
+        }
 
         protected override async Task OnInitializedAsync()
         {
@@ -58,7 +70,9 @@ namespace Regard.Frontend.Shared.Video
             var (resp, httpResp) = await Backend.VideoList(new VideoListRequest()
             {
                 SubscriptionFolderId = selectedFolder?.Id,
-                SubscriptionId = selectedSubscription?.Id
+                SubscriptionId = selectedSubscription?.Id,
+                Limit = videosPerPage,
+                Offset = page * videosPerPage,
             });
 
             if (httpResp.IsSuccessStatusCode)
@@ -66,7 +80,15 @@ namespace Regard.Frontend.Shared.Video
                 videos.Clear();
                 foreach (var video in resp.Data.Videos)
                     videos.Add(new VideoViewModel(video));
+
+                totalVideoCount = resp.Data.TotalCount;
             }
+        }
+
+        public async Task GoToPage(int page)
+        {
+            this.page = page;
+            await Populate();
         }
 
         private void Messaging_VideoUpdated(object sender, ApiVideo e)

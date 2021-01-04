@@ -36,7 +36,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YoutubeDLWrapper", "Youtube
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Regard.Backend.Tests", "Regard.Backend.Tests\Regard.Backend.Tests.csproj", "{32314599-55C0-444B-9BE2-E250B1CDDFF2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Regard.Backend.Providers.YouTubeDL", "Regard.Backend.Providers.YouTubeDL\Regard.Backend.Providers.YouTubeDL.csproj", "{91C603DF-F2CE-48E7-96B0-1B42FE680B69}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Regard.Backend.Providers.YouTubeDL", "Regard.Backend.Providers.YouTubeDL\Regard.Backend.Providers.YouTubeDL.csproj", "{91C603DF-F2CE-48E7-96B0-1B42FE680B69}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

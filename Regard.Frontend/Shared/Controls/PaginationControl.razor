@@ -1,0 +1,18 @@
+﻿<div class="pagination">
+    <div class="button-group">
+        @foreach (var i in GetPagesToDisplay())
+        {
+            if (i.HasValue)
+            {
+                <button class="button @CssUtils.BoolToClass(i == Page, "primary")"
+                        @onclick="() => Page = i.Value">
+                    @(i + 1)
+                </button>
+            }
+            else
+            {
+                <button class="button">...</button>
+            }
+        }
+    </div>
+</div>
