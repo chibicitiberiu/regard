@@ -22,7 +22,7 @@ namespace Regard.Frontend.Shared.Controls
         /// <summary>
         /// Event called when items are added or removed from the subtree
         /// </summary>
-        public event NotifyCollectionChangedEventHandler TreeChanged;
+        public event EventHandler<BulkObservableCollectionEventArgs> TreeChanged;
 
         private TreeViewNode<Model> parent = null;
         private bool isSelected = false;
@@ -32,7 +32,7 @@ namespace Regard.Frontend.Shared.Controls
         /// <summary>
         /// Gets the collection of children
         /// </summary>
-        public virtual ObservableCollection<TreeViewNode<Model>> Children { get; } = new ObservableCollection<TreeViewNode<Model>>();
+        public virtual BulkObservableCollection<TreeViewNode<Model>> Children { get; } = new BulkObservableCollection<TreeViewNode<Model>>();
 
         /// <summary>
         /// Gets or sets the parent tree node
@@ -115,7 +115,7 @@ namespace Regard.Frontend.Shared.Controls
             ChildPropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private void OnChildrenCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnChildrenCollectionChanged(object sender, BulkObservableCollectionEventArgs e)
         {
             if (e.OldItems != null)
             {

@@ -69,5 +69,8 @@
     </ItemTemplate>
 </ListView>
 
-<PaginationControl PageCount="PageCount"
-                   @bind-Page="Page" />
+@if (PageCount > 1)
+{
+    <PaginationControl PageCount="PageCount"
+                       @bind-Page="Page" />
+}

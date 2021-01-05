@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
+using Regard.Common.Utils;
 using Regard.Frontend.Services;
 using Regard.Services;
 using System;
@@ -20,7 +21,7 @@ namespace Regard.Frontend.Shared.Video
         [Inject]
         protected MessagingService Messaging { get; set; }
 
-        private readonly ObservableCollection<VideoViewModel> videos = new ObservableCollection<VideoViewModel>();
+        private readonly BulkObservableCollection<VideoViewModel> videos = new BulkObservableCollection<VideoViewModel>();
         private ApiSubscription selectedSubscription = null;
         private ApiSubscriptionFolder selectedFolder = null;
         private int page = 0;
@@ -49,6 +50,7 @@ namespace Regard.Frontend.Shared.Video
         {
             selectedSubscription = subscription;
             selectedFolder = null;
+            page = 0;
             await Populate();
         }
 
@@ -56,12 +58,15 @@ namespace Regard.Frontend.Shared.Video
         {
             selectedSubscription = null;
             selectedFolder = folder;
+            page = 0;
             await Populate();
         }
+
         public async Task DeselectAll()
         {
             selectedFolder = null;
             selectedSubscription = null;
+            page = 0;
             await Populate();
         }
 
@@ -77,11 +82,14 @@ namespace Regard.Frontend.Shared.Video
 
             if (httpResp.IsSuccessStatusCode)
             {
+                videos.BeginBatch();
                 videos.Clear();
                 foreach (var video in resp.Data.Videos)
                     videos.Add(new VideoViewModel(video));
+                videos.EndBatch();
 
                 totalVideoCount = resp.Data.TotalCount;
+                StateHasChanged();
             }
         }
 

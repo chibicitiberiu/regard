@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
+using Regard.Common.Utils;
 using Regard.Frontend.Services;
 using Regard.Frontend.Shared.Controls;
 using Regard.Services;
@@ -22,7 +23,7 @@ namespace Regard.Frontend.Shared.Forms
 
     public class FolderSelect : RgInputSelect<FolderSelectViewModel, int?>
     {
-        protected ObservableCollection<FolderSelectViewModel> Folders { get; } = new ObservableCollection<FolderSelectViewModel>();
+        protected BulkObservableCollection<FolderSelectViewModel> Folders { get; } = new BulkObservableCollection<FolderSelectViewModel>();
 
         protected Dictionary<int, FolderSelectViewModel> FoldersDict { get; } = new Dictionary<int, FolderSelectViewModel>();
 
@@ -56,56 +57,62 @@ namespace Regard.Frontend.Shared.Forms
 
         private void RepopulateFolders(ApiSubscriptionFolder[] folders)
         {
-            Folders.Clear();
-            Folders.Add(new FolderSelectViewModel() { Id = null, DisplayName = "<none>" });
-            this.FoldersDict.Clear();
+            Folders.BeginBatch();
 
-            var queue = new Queue<ApiSubscriptionFolder>(folders);
-            var pushedItems = new HashSet<int>();
-
-            foreach (var item in folders)
-                Console.WriteLine($">>> {item.Id} > {item.Name}");
-
-            while (queue.Count > 0)
+            try
             {
-                var item = queue.Dequeue();
+                Folders.Clear();
+                Folders.Add(new FolderSelectViewModel() { Id = null, DisplayName = "<none>" });
+                this.FoldersDict.Clear();
 
-                // Root level - just add it to the dict
-                if (!item.ParentId)
+                var queue = new Queue<ApiSubscriptionFolder>(folders);
+                var pushedItems = new HashSet<int>();
+
+                foreach (var item in folders)
+                    Console.WriteLine($">>> {item.Id} > {item.Name}");
+
+                while (queue.Count > 0)
                 {
-                    FoldersDict.Add(item.Id, new FolderSelectViewModel() { Id = item.Id, DisplayName = item.Name });
-                }
-                // The parent was already added to the dict, use it to build the display name
-                else if (FoldersDict.TryGetValue(item.ParentId.Value.Value, out FolderSelectViewModel parent))
-                {
-                    FoldersDict.Add(item.Id, new FolderSelectViewModel()
+                    var item = queue.Dequeue();
+
+                    // Root level - just add it to the dict
+                    if (!item.ParentId)
                     {
-                        Id = item.Id,
-                        DisplayName = $"{parent.DisplayName}\\{item.Name}"
-                    });
-                }
-                // Parent wasn't added to the dict yet, put back in the queue
-                else if (!pushedItems.Contains(item.Id))
-                {
-                    // Push to end of queue
-                    queue.Enqueue(item);
+                        FoldersDict.Add(item.Id, new FolderSelectViewModel() { Id = item.Id, DisplayName = item.Name });
+                    }
+                    // The parent was already added to the dict, use it to build the display name
+                    else if (FoldersDict.TryGetValue(item.ParentId.Value.Value, out FolderSelectViewModel parent))
+                    {
+                        FoldersDict.Add(item.Id, new FolderSelectViewModel()
+                        {
+                            Id = item.Id,
+                            DisplayName = $"{parent.DisplayName}\\{item.Name}"
+                        });
+                    }
+                    // Parent wasn't added to the dict yet, put back in the queue
+                    else if (!pushedItems.Contains(item.Id))
+                    {
+                        // Push to end of queue
+                        queue.Enqueue(item);
 
-                    // Keep track of what folders we already pushed, to avoid an infinite loop
-                    pushedItems.Add(item.Id);
+                        // Keep track of what folders we already pushed, to avoid an infinite loop
+                        pushedItems.Add(item.Id);
+                    }
+                    // Orphaned folder, we did not get its parent :(
+                    else
+                    {
+                        Debug.Fail("Orphan folder found!", $"Folder {item.Id} is orphaned, parent {item.ParentId} not found!");
+                    }
                 }
-                // Orphaned folder, we did not get its parent :(
-                else
-                {
-                    Debug.Fail("Orphan folder found!", $"Folder {item.Id} is orphaned, parent {item.ParentId} not found!");
-                }
+
+                // Put folders to observable collection
+                foreach (var folder in FoldersDict.Values.OrderBy(x => x.DisplayName))
+                    Folders.Add(folder);
             }
-
-            // Put folders to observable collection
-            foreach (var folder in FoldersDict.Values.OrderBy(x => x.DisplayName))
-                Folders.Add(folder);
-
-            foreach (var item in Folders)
-                Console.WriteLine($"{item.Id} -> {item.DisplayName}");
+            finally
+            {
+                Folders.EndBatch();
+            }
         }
 
         private void Messaging_SubscriptionFolderUpdated(object sender, ApiSubscriptionFolder e)

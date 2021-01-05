@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Regard.Common.Utils;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -49,7 +50,7 @@ namespace Regard.Frontend.Shared.Controls
             Root.TreeChanged += OnTreeChanged;
         }
 
-        private void OnTreeChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnTreeChanged(object sender, BulkObservableCollectionEventArgs e)
         {
             StateHasChanged();
         }

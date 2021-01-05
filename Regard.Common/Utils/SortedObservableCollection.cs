@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Regard.Common.Utils
 {
-    public class SortedObservableCollection<T, TKey> : ObservableCollection<T>
+    public class SortedObservableCollection<T, TKey> : BulkObservableCollection<T>
     {
         private readonly Func<T, TKey> keySelector;
         private readonly Comparer<TKey> comparer;

@@ -14,7 +14,7 @@ namespace Regard.Frontend.Shared.Controls
 
     public class SortedTreeViewNode<Model, TSortKey> : TreeViewNode<Model> where Model : ISortedTreeViewNodeModel<TSortKey>
     {
-        public override ObservableCollection<TreeViewNode<Model>> Children { get; } 
+        public override BulkObservableCollection<TreeViewNode<Model>> Children { get; } 
             = new SortedObservableCollection<TreeViewNode<Model>, TSortKey>(item => item.Data.SortKey);
 
         public SortedTreeViewNode() : base()
