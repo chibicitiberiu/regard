@@ -1,4 +1,5 @@
-﻿using Regard.Backend.Model;
+﻿using Nito.AsyncEx;
+using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,20 +14,29 @@ namespace Regard.Backend.Services
             public DateTime Timestamp;
         }
 
-        private readonly Dictionary<TKey, CacheEntry> cache = new Dictionary<TKey, CacheEntry>();
         private const int CacheExpirationSeconds = 3600 * 24;
+
+        private readonly Dictionary<TKey, CacheEntry> cache = new Dictionary<TKey, CacheEntry>();
+        private readonly AsyncReaderWriterLock cacheLock = new AsyncReaderWriterLock();
 
         public bool Get<TValue>(TKey key, out TValue value)
         {
-            if (cache.TryGetValue(key, out CacheEntry entry))
+            bool entryFound;
+
+            using (var @lock = cacheLock.ReaderLock())
             {
-                if (entry.Timestamp + TimeSpan.FromSeconds(CacheExpirationSeconds) > DateTime.Now)
+                entryFound = cache.TryGetValue(key, out CacheEntry entry);
+                if (entryFound && entry.Timestamp + TimeSpan.FromSeconds(CacheExpirationSeconds) > DateTime.Now)
                 {
                     value = (TValue)entry.Value;
                     return true;
                 }
+            };
 
+            if (entryFound)
+            {
                 // cache expired
+                using var wLock = cacheLock.WriterLock();
                 cache.Remove(key);
             }
 
@@ -36,6 +46,8 @@ namespace Regard.Backend.Services
 
         public void Set<TValue>(TKey key, TValue value)
         {
+            using var @lock = cacheLock.WriterLock();
+
             cache[key] = new CacheEntry()
             {
                 Timestamp = DateTime.Now,
@@ -45,6 +57,8 @@ namespace Regard.Backend.Services
 
         public void ClearExpired()
         {
+            using var @lock = cacheLock.WriterLock();
+
             var expiredKeys = cache
                 .Where(x => x.Value.Timestamp + TimeSpan.FromSeconds(CacheExpirationSeconds) < DateTime.Now)
                 .Select(x => x.Key)
@@ -56,6 +70,7 @@ namespace Regard.Backend.Services
 
         public void Invalidate()
         {
+            using var @lock = cacheLock.WriterLock();
             cache.Clear();
         }
     }
