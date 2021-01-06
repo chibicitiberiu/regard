@@ -83,7 +83,7 @@ namespace Regard.Services
 
             string targetUri = "/";
 
-            if (parsedQuery.TryGetValue("from", out var value))
+            if (parsedQuery != null && parsedQuery.TryGetValue("from", out var value))
                 targetUri = value.ToString();
 
             navigationManager.NavigateTo(targetUri);
