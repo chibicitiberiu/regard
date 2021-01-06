@@ -12,7 +12,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Regard.Common.Utils;
 
 namespace Regard.Backend.Jobs
 {
@@ -21,9 +23,16 @@ namespace Regard.Backend.Jobs
         protected readonly IConfiguration configuration;
         protected readonly IPreferencesManager preferencesManager;
         protected readonly IYoutubeDlService ytdlService;
+        protected readonly VideoManager videoManager;
+
+        private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)%");
+        private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
+        private readonly Regex AlreadyDownloadedRegex = new Regex(@"\[download\] (.*) has already been downloaded");
+        private readonly Regex DestinationRegex = new Regex(@"Destination: (.*)");
 
         bool shouldRetry = false;
         private string outputPath = null;
+        private Video video = null;
 
         protected override int RetryCount => (shouldRetry ? 3 : 0);
 
@@ -32,16 +41,17 @@ namespace Regard.Backend.Jobs
         public int VideoId { get; set; }
 
 
-
         public DownloadVideoJob(ILogger<DownloadVideoJob> logger,
                                 DataContext dataContext, 
                                 IConfiguration configuration,
                                 IPreferencesManager preferencesManager,
-                                IYoutubeDlService ytdlService) : base(logger, dataContext)
+                                IYoutubeDlService ytdlService,
+                                VideoManager videoManager) : base(logger, dataContext)
         {
             this.configuration = configuration;
             this.preferencesManager = preferencesManager;
             this.ytdlService = ytdlService;
+            this.videoManager = videoManager;
         }
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
@@ -49,7 +59,7 @@ namespace Regard.Backend.Jobs
             VideoId = context.MergedJobDataMap.GetInt("VideoId");
             shouldRetry = false;
 
-            var video = dataContext.Videos.Find(VideoId);
+            video = dataContext.Videos.Find(VideoId);
             if (video == null)
                 throw new ArgumentException($"Download failed - invalid video id {VideoId}.");
 
@@ -64,17 +74,59 @@ namespace Regard.Backend.Jobs
             await ytdlService.UsingYoutubeDL(async ytdl =>
             {
                 int resultCode = ytdl.Run(opts, 
-                    msg => log.LogInformation($"videoId={VideoId}: {msg}"), 
-                    msg => log.LogError($"videoId={VideoId}: {msg}"),
+                    ProcessStdout, 
+                    ProcessStderr,
                     timeoutMs: 24 * 3600 * 1000);
 
                 if (resultCode != 0)
                     throw new Exception($"videoId={VideoId}: Download failed!\n");
             });
 
-            video.DownloadedPath = outputPath;
-            await dataContext.SaveChangesAsync();
+            lock (video)
+            {
+                video.DownloadedPath = outputPath;
+                dataContext.SaveChanges();
+            }
             log.LogInformation($"videoId={VideoId}: Download completed!");
+        }
+
+        private void UpdateOutputPath(string newOutputPath)
+        {
+            lock (video)
+            {
+                outputPath = newOutputPath;
+                if (video.DownloadedPath != null)
+                {
+                    video.DownloadedPath = outputPath;
+                    dataContext.SaveChanges();
+                }
+            }
+        }
+
+        private void ProcessStdout(string message)
+        {
+            if (message == null)
+                return;
+
+            log.LogInformation($"videoId={VideoId}: {message}");
+
+            Match match;
+            if (DestinationRegex.TryMatch(message, out match)
+                || MergingRegex.TryMatch(message, out match)
+                || AlreadyDownloadedRegex.TryMatch(message, out match))
+                UpdateOutputPath(Path.ChangeExtension(match.Groups[1].Value, null));
+
+            else if (ProgressRegex.TryMatch(message, out match)
+                && float.TryParse(match.Groups[1].Value, out float percent))
+                videoManager.OnDownloadProgress(VideoId, percent / 100f);
+        }
+
+        private void ProcessStderr(string message)
+        {
+            if (message == null)
+                return;
+
+            log.LogError($"videoId={VideoId}: {message}");
         }
 
         private IEnumerable<string> ResolveDownloadOptions(Video video)
@@ -207,6 +259,7 @@ namespace Regard.Backend.Jobs
             // Normalize path
             path = path.Replace('\\', Path.DirectorySeparatorChar);
             path = path.Replace('/', Path.DirectorySeparatorChar);
+            path = MakeValidPath(path);
             return path;
         }
 
@@ -218,7 +271,7 @@ namespace Regard.Backend.Jobs
             while (parentId.HasValue)
             {
                 var folder = dataContext.SubscriptionFolders.Find(parentId.Value);
-                items.Add(MakeValidFileName(folder.Name));
+                items.Add(MakeValidPath(folder.Name, invalidChars: Path.GetInvalidFileNameChars()));
                 parentId = folder.ParentId;
             }
 
@@ -230,12 +283,12 @@ namespace Regard.Backend.Jobs
         /// <param name="text">Text to make into a valid filename. The same string is returned if it is valid already.</param>
         /// <param name="replacement">Replacement character, or null to simply remove bad characters.</param>
         /// <returns>A string that can be used as a filename. If the output string would otherwise be empty, returns "_".</returns>
-        private static string MakeValidFileName(string text, char? replacement = '_')
+        private static string MakeValidPath(string text, char? replacement = '_', char[] invalidChars = null)
         {
             text = text.Trim();
 
             StringBuilder sb = new StringBuilder(text.Length);
-            var invalids = Path.GetInvalidFileNameChars();
+            var invalids = invalidChars ?? Path.GetInvalidPathChars();
             bool changed = false;
             for (int i = 0; i < text.Length; i++)
             {

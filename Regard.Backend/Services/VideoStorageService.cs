@@ -41,7 +41,8 @@ namespace Regard.Backend.Services
                 {
                     foreach (var file in await Task.Run(() => Directory.GetFiles(dir)))
                     {
-                        if (file.StartsWith(filePrefix))
+                        string fileName = Path.GetFileName(file);
+                        if (fileName.StartsWith(filePrefix))
                             yield return file;
                     }
                 }
@@ -50,8 +51,14 @@ namespace Regard.Backend.Services
 
         public async Task<string> FindVideoFile(Video video)
         {
-            return await GetFiles(video)
-                .FirstOrDefaultAsync(file => MimeUtility.GetMimeMapping(file).StartsWith("video"));
+            await foreach (var file in GetFiles(video))
+            {
+                string mime = MimeUtility.GetMimeMapping(file);
+                if (mime.StartsWith("video"))
+                    return file;
+            }
+
+            return null;
         }
 
         public async Task<bool> VerifyIsDownloaded(Video video)

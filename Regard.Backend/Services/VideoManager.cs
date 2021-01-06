@@ -16,6 +16,8 @@ namespace Regard.Backend.Services
         private readonly RegardScheduler scheduler;
         private readonly IProviderManager providerManager;
 
+        private Dictionary<int, Video> videoProgress;
+
         public VideoManager(DataContext dataContext,
                             MessagingService messaging,
                             RegardScheduler scheduler,
@@ -101,6 +103,11 @@ namespace Regard.Backend.Services
 
             if (!found)
                 throw new Exception("Invalid/unsupported URL");
+        }
+
+        public void OnDownloadProgress(int videoId, float percent)
+        {
+            // TODO
         }
     }
 }
