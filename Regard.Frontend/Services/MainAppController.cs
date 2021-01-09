@@ -86,7 +86,7 @@ namespace Regard.Services
             if (parsedQuery != null && parsedQuery.TryGetValue("from", out var value))
                 targetUri = value.ToString();
 
-            navigationManager.NavigateTo(targetUri);
+            navigationManager.NavigateTo(targetUri, true);
         }
     }
 }

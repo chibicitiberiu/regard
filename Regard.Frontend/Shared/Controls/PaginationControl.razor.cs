@@ -10,6 +10,8 @@ namespace Regard.Frontend.Shared.Controls
     {
         private int page;
         private int pageCount;
+        private int itemsPerPage;
+        private int itemCount;
 
         [Parameter] public int PageCount 
         {
@@ -40,7 +42,39 @@ namespace Regard.Frontend.Shared.Controls
 
         [Parameter] public EventCallback<int> PageChanged { get; set; }
 
+        [Parameter] public int ItemCount
+        {
+            get => itemCount;
+            set
+            {
+                itemCount = value;
+                CalculatePageCount();
+                StateHasChanged();
+            }
+        }
+
+        [Parameter] public int ItemsPerPage
+        {
+            get => itemsPerPage;
+            set
+            {
+                itemsPerPage = value;
+                CalculatePageCount();
+                StateHasChanged();
+            }
+        }
+
+        public int ItemOffset => page * itemsPerPage;
+
         [Parameter] public int CurrentPagesToDisplay { get; set; } = 5;
+
+        private void CalculatePageCount()
+        {
+            if (itemsPerPage > 0)
+            {
+                pageCount = (itemCount / itemsPerPage) + ((itemCount % itemsPerPage > 0) ? 1 : 0);
+            }
+        }
 
         private IEnumerable<int?> GetPagesToDisplay()
         {

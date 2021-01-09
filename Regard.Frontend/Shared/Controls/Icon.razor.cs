@@ -27,6 +27,10 @@ namespace Regard.Frontend.Shared.Controls
         NotDownloaded,
         Refresh,
         Synchronize,
+        Checkmark,
+        Filter,
+        ShowWatched,
+        HideWatched,
     }
 
     public partial class Icon
@@ -52,6 +56,10 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.NotDownloaded, "cloud_off" },
             { Icons.Refresh, "refresh" },
             { Icons.Synchronize, "cached" },
+            { Icons.Checkmark, "done" },
+            { Icons.Filter, "filter_alt" },
+            { Icons.ShowWatched, "visibility" },
+            { Icons.HideWatched, "visibility_off" },
         };
 
         [Parameter(CaptureUnmatchedValues = true)]

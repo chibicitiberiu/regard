@@ -4,40 +4,45 @@ using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
 using Regard.Common.Utils;
 using Regard.Frontend.Services;
+using Regard.Model;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace Regard.Frontend.Shared.Video
 {
     public partial class VideoList : IDisposable
     {
+        private readonly BulkObservableCollection<VideoViewModel> videos = new BulkObservableCollection<VideoViewModel>();
+        
+        private int page = 0;
+        private int videosPerPage = 60;
+        private int totalVideoCount = 0;
+
+        private ApiSubscription selectedSubscription = null;
+        private ApiSubscriptionFolder selectedFolder = null;
+
+        private string query = "";
+
+        private VideoOrder order;
+        private ElementReference orderButton;
+        private bool orderMenuVisible = false;
+
+        private bool hideWatched;
+        
+        private bool? isDownloaded;
+        private ElementReference downloadedButton;
+        private bool downloadedMenuVisible = false;
+
         [Inject]
         protected BackendService Backend { get; set; }
 
         [Inject]
         protected MessagingService Messaging { get; set; }
-
-        private readonly BulkObservableCollection<VideoViewModel> videos = new BulkObservableCollection<VideoViewModel>();
-        private ApiSubscription selectedSubscription = null;
-        private ApiSubscriptionFolder selectedFolder = null;
-        private int page = 0;
-        private int videosPerPage = 60;
-        private int totalVideoCount = 0;
-
-        private int PageCount => (totalVideoCount / videosPerPage) + ((totalVideoCount % videosPerPage > 0) ? 1 : 0);
-
-        private int Page
-        {
-            get => page;
-            set
-            {
-                GoToPage(value);
-            }
-        }
 
         protected override async Task OnInitializedAsync()
         {
@@ -70,12 +75,70 @@ namespace Regard.Frontend.Shared.Video
             await Populate();
         }
 
+        public async Task SetPage(int page)
+        {
+            this.page = page;
+            await Populate();
+        }
+
+        public async Task SetQuery(string value)
+        {
+            this.query = value;
+            this.page = 0;
+            await Populate();
+        }
+
+        private async Task OnQueryChanged(ChangeEventArgs e)
+        {
+            await SetQuery((string)e.Value);
+        }
+
+        private async Task SetOrder(VideoOrder order)
+        {
+            this.order = order;
+            this.page = 0;
+            await Populate();
+        }
+
+        private void OnOrderClicked()
+        {
+            orderMenuVisible = true;
+        }
+
+        public async Task SetHideWatched(bool value)
+        {
+            this.hideWatched = value;
+            this.page = 0;
+            await Populate();
+        }
+
+        private async Task OnToggleHideWatched()
+        {
+            await SetHideWatched(!hideWatched);
+        }
+
+        private void OnFilterClicked()
+        {
+            downloadedMenuVisible = true;
+        }
+
+        private async Task SetFilterIsDownloaded(bool? isDownloaded)
+        {
+            this.isDownloaded = isDownloaded;
+            this.page = 0;
+            await Populate();
+        }
+
         public async Task Populate()
         {
             var (resp, httpResp) = await Backend.VideoList(new VideoListRequest()
             {
                 SubscriptionFolderId = selectedFolder?.Id,
                 SubscriptionId = selectedSubscription?.Id,
+                Query = query,
+                IsWatched = (hideWatched) ? (bool?)false : null,
+                IsDownloaded = isDownloaded,
+                Order = order,
                 Limit = videosPerPage,
                 Offset = page * videosPerPage,
             });
@@ -93,12 +156,6 @@ namespace Regard.Frontend.Shared.Video
             }
         }
 
-        public async Task GoToPage(int page)
-        {
-            this.page = page;
-            await Populate();
-        }
-
         private void Messaging_VideoUpdated(object sender, ApiVideo e)
         {
             Console.WriteLine($"Video updated: {e.Id}");
@@ -113,7 +170,7 @@ namespace Regard.Frontend.Shared.Video
             }
         }
 
-        void OnShowContextMenu(VideoViewModel videoVM)
+        void OnVideoShowContextMenu(VideoViewModel videoVM)
         {
             videoVM.IsContextMenuVisible = true;
             StateHasChanged();

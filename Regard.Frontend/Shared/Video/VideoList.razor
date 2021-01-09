@@ -1,4 +1,52 @@
-﻿<ListView Model="VideoViewModel"
+﻿<div class="toolbar">
+
+    <input type="search" placeholder="Search" @onchange="@OnQueryChanged" />
+
+    <div class="button-group">
+        <button @ref="orderButton" type="button" title="Order" @onclick="OnOrderClicked">
+            <Icon Glyph="Icons.Sort" />
+        </button>
+    </div>
+
+    <Menu AttachTo="orderButton" @bind-IsVisible="orderMenuVisible">
+        @foreach (var option in Enum.GetValues(typeof(Regard.Model.VideoOrder)).Cast<Regard.Model.VideoOrder>())
+        {
+            <CheckMenuItem IsChecked="@(option == this.order)"
+                           Click="() => SetOrder(option)">
+                @option.Humanize()
+            </CheckMenuItem>
+        }
+    </Menu>
+
+    <div class="button-group">
+        <button type="button" title="@(hideWatched ? "Show" : "Hide") watched"
+                @onclick="OnToggleHideWatched">
+            <Icon Glyph="@(hideWatched ? Icons.HideWatched : Icons.ShowWatched)"
+                  Class="@CssUtils.BoolToClass(hideWatched, "text-muted")" />
+        </button>
+
+        <button @ref="downloadedButton" type="button" title="Downloaded" @onclick="OnFilterClicked">
+            <Icon Glyph="Icons.Downloaded" />
+        </button>
+    </div>
+
+    <Menu AttachTo="downloadedButton" @bind-IsVisible="downloadedMenuVisible">
+        <CheckMenuItem IsChecked="@(!isDownloaded.HasValue)"
+                       Click="() => SetFilterIsDownloaded(null)">
+            All videos
+        </CheckMenuItem>
+        <CheckMenuItem IsChecked="@(isDownloaded.HasValue && isDownloaded.Value)"
+                       Click="() => SetFilterIsDownloaded(true)">
+            Downloaded only
+        </CheckMenuItem>
+        <CheckMenuItem IsChecked="@(isDownloaded.HasValue && !isDownloaded.Value)"
+                       Click="() => SetFilterIsDownloaded(false)">
+            Not downloaded
+        </CheckMenuItem>
+    </Menu>
+</div>
+
+<ListView Model="VideoViewModel"
           ItemsSource="videos"
           Class="video-gallery">
     <ItemTemplate Context="item">
@@ -42,7 +90,7 @@
                 </div>
                 <div class="video-menu">
                     <button @ref="item.MenuLink" class="button-undecorated video-menu-link"
-                            @onclick="() => OnShowContextMenu(item)">
+                            @onclick="() => OnVideoShowContextMenu(item)">
                         <Icon Glyph="Icons.Menu" />
                     </button>
                     <Menu AttachTo="item.MenuLink" @bind-IsVisible="item.IsContextMenuVisible">
@@ -69,8 +117,10 @@
     </ItemTemplate>
 </ListView>
 
-@if (PageCount > 1)
+@if (totalVideoCount > videosPerPage)
 {
-    <PaginationControl PageCount="PageCount"
-                       @bind-Page="Page" />
+    <PaginationControl Page="page" 
+                       PageChanged="SetPage"
+                       ItemCount="totalVideoCount"
+                       ItemsPerPage="videosPerPage" />
 }

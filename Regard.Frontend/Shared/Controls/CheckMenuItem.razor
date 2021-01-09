@@ -1,0 +1,12 @@
+﻿@inherits MenuItem
+
+<li class="menu-item" @onclick="OnClicked">
+    <Icon Glyph="Icons.Checkmark"
+          Class="@CssUtils.BoolToClass(!IsChecked, "v-hidden")" />
+    @ChildContent
+</li>
+
+@code {
+    [Parameter]
+    public bool IsChecked { get; set; }
+}
