@@ -51,17 +51,24 @@ namespace YoutubeDLWrapper
             int timeleft = timeoutMs;
             while (!process.HasExited && timeleft > 0)
             {
-                cancellationToken?.ThrowIfCancellationRequested();
+                if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
+                {
+                    process.Kill();
+                    process.WaitForExit();
+                    cancellationToken.Value.ThrowIfCancellationRequested();
+                }
+
                 process.WaitForExit(Math.Max(timeleft, 100));
                 timeleft -= 100;
             }
 
             if (!process.HasExited)
             {
-                cancellationToken?.ThrowIfCancellationRequested();
                 process.Kill();
                 process.WaitForExit();
             }
+
+            cancellationToken?.ThrowIfCancellationRequested();
         }
 
         public int Run(IEnumerable<string> args,

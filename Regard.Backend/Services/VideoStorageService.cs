@@ -74,5 +74,12 @@ namespace Regard.Backend.Services
                 log.LogInformation("Deleted file for video {0}: {1}", video, file);
             }
         }
+
+        public async Task<long> CalculateSize(Video video)
+        {
+            return await GetFiles(video)
+                .Select(file => new FileInfo(file))
+                .SumAsync(fileInfo => fileInfo.Length);
+        }
     }
 }

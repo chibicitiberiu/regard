@@ -3,11 +3,13 @@ using Quartz;
 using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Utils;
 using Regard.Backend.DB;
+using Regard.Backend.Downloader;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.Utils;
 using Regard.Model;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,7 +22,7 @@ namespace Regard.Backend.Jobs
         private readonly IPreferencesManager preferencesManager;
         private readonly IProviderManager providerManager;
         private readonly IVideoStorageService videoStorageService;
-        private readonly SubscriptionManager subscriptionManager;
+        private readonly IVideoDownloaderService videoDownloader;
         private IJobExecutionContext context;
         private RegardScheduler scheduler;
 
@@ -44,12 +46,12 @@ namespace Regard.Backend.Jobs
                               IPreferencesManager preferencesManager,
                               IProviderManager providerManager,
                               IVideoStorageService videoStorageService,
-                              SubscriptionManager subscriptionManager) : base(log, dataContext)
+                              IVideoDownloaderService videoDownloader) : base(log, dataContext)
         {
             this.preferencesManager = preferencesManager;
             this.providerManager = providerManager;
             this.videoStorageService = videoStorageService;
-            this.subscriptionManager = subscriptionManager;
+            this.videoDownloader = videoDownloader;
         }
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
@@ -104,8 +106,8 @@ namespace Regard.Backend.Jobs
                 {
                     await CheckForNewVideos(sub);
                 }
-                await CheckForDeletedVideos(sub);
-                await CheckDownloadRules(sub);
+                await CheckFiles(sub);
+                await videoDownloader.ProcessDownloadRules(sub);
             }
             catch (Exception ex)
             {
@@ -216,86 +218,45 @@ namespace Regard.Backend.Jobs
             return existingVideo;
         }
 
-        private async Task CheckForDeletedVideos(Subscription sub)
+        private async Task CheckFiles(Subscription sub)
         {
-            var deletedVideos = await dataContext.Videos.AsQueryable()
+            var downloadedVideos = dataContext.Videos.AsQueryable()
                 .Where(x => x.SubscriptionId == sub.Id)
                 .Where(x => x.DownloadedPath != null)
-                .ToAsyncEnumerable()
-                .WhereAwait(async x => !await videoStorageService.VerifyIsDownloaded(x))
-                .ToListAsync();
-
-            foreach (var video in deletedVideos)
+                .ToList();
+                
+            foreach (var video in downloadedVideos)
             {
-                log.LogInformation("Video file for {0} was deleted. Will clean up.", video);
-                await videoStorageService.Delete(video);
-                video.DownloadedPath = null;
-                video.DownloadedSize = null;
+                if (!await videoStorageService.VerifyIsDownloaded(video))
+                    await OnVideoDeleted(sub, video);
 
-                if (preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDeleteWatched, sub.Id))
-                {
-                    video.IsWatched = true;
-                    log.LogInformation("Deleted video {0} marked as watched.", video);
-                }
-
-                await dataContext.SaveChangesAsync();
+                if (!video.DownloadedSize.HasValue)
+                    await OnMissingSize(video);
             }
 
             // TODO: error handling, show user the errors
         }
 
-        private async Task CheckDownloadRules(Subscription sub)
+        private async Task OnVideoDeleted(Subscription sub, Video video)
         {
-            // Check auto download value
-            if (!preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDownload, sub.Id))
-                return;
+            log.LogInformation("Video file for {0} was deleted. Will clean up.", video);
+            await videoStorageService.Delete(video);
+            video.DownloadedPath = null;
+            video.DownloadedSize = null;
 
-            VideoOrder order = preferencesManager.GetForSubscription(Preferences.Subscriptions_DownloadOrder, sub.Id);
-            int limit = preferencesManager.GetForSubscription(Preferences.Subscriptions_MaxCount, sub.Id);
-
-            int userLimit = preferencesManager.GetForUser(Preferences.User_MaxCount, sub.UserId);
-            int userQuota = preferencesManager.GetForUser(Preferences.User_CountQuota, sub.UserId);
-            int globalLimit = (userLimit >= 0 && userQuota >= 0)
-                ? Math.Min(userLimit, userQuota)
-                : Math.Max(userLimit, userQuota);
-
-            var downloadList = dataContext.Videos
-                .AsQueryable()
-                .Where(x => x.SubscriptionId == sub.Id)
-                .Where(x => x.DownloadedPath == null)
-                .Where(x => !x.IsWatched)
-                .OrderBy(order);
-
-            if (globalLimit > 0)
+            if (preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDeleteWatched, sub.Id))
             {
-                var globalDownloadedCount = dataContext.Videos
-                    .AsQueryable()
-                    .Where(x => x.Subscription.UserId == sub.UserId)
-                    .Where(x => x.DownloadedPath != null)
-                    .Count();
-
-                int canDownload = Math.Max(globalLimit - globalDownloadedCount, 0);
-                downloadList = downloadList.Take(canDownload);
-
-                log.LogTrace("Global limit is set, can only download up to {0} videos.", canDownload);
+                video.IsWatched = true;
+                log.LogInformation("Deleted video {0} marked as watched.", video);
             }
 
-            if (limit > 0)
-            {
-                var downloadedCount = dataContext.Videos
-                    .AsQueryable()
-                    .Where(x => x.SubscriptionId == sub.Id)
-                    .Where(x => x.DownloadedPath != null)
-                    .Count();
+            await dataContext.SaveChangesAsync();
+        }
 
-                int canDownload = Math.Max(limit - downloadedCount, 0);
-                downloadList = downloadList.Take(canDownload);
-
-                log.LogTrace("Limit is set, can only download up to {0} videos.", canDownload);
-            }
-            
-            foreach (var video in downloadList)
-                await scheduler.ScheduleDownloadVideo(video.Id);
+        private async Task OnMissingSize(Video video)
+        {
+            video.DownloadedSize = await videoStorageService.CalculateSize(video);
+            await dataContext.SaveChangesAsync();
         }
     }
 }

@@ -5,13 +5,13 @@ Server_Debug,Send debugging information to the frontend,bool,false,server.debug,
 Subscriptions_AutoDownload,"If enabled, videos will be downloaded automatically",bool,true,subscriptions.auto_download,Subscriptions:AutoDownload,,x,x,x
 Subscriptions_DownloadOrder,Order in which to download videos,VideoOrder,VideoOrder.Newest,subscriptions.download_order,Subscriptions:DownloadOrder,,x,x,x
 Subscriptions_MaxCount,"Maximum number of downloaded videos to keep per subscription (-1 = no limit). This limit only applies to the automatic downloader, but the user can manually download more videos.",int,3,subscriptions.max_count,Subscriptions:MaxCount,,x,x,x
-Subscriptions_MaxSize,"Maximum size a subscription can take on disk in MB (-1 = no limit). This limit only applies to the automatic downloader, but the user can manually download more videos.",int,-1,subscriptions.max_size,Subscriptions:MaxSize,,x,x,x
+Subscriptions_MaxSize,"Maximum size a subscription can take on disk in MB (-1 = no limit). This limit only applies to the automatic downloader, but the user can manually download more videos.",long,-1,subscriptions.max_size,Subscriptions:MaxSize,,x,x,x
 Subscriptions_AutoDeleteWatched,"When videos are marked as watched, they are deleted automatically from disk.",bool,true,subscriptions.auto_delete_watched,Subscriptions:AutoDeleteWatched,,x,x,x
 Subscriptions_DownloadPath,Pattern indicating where files are downloaded automatically.,string,"""{DownloadDirectory}/{FolderPath}/{Subscription.Name}/{Video.PlaylistIndex}-{Video.Name}""",subscriptions.download_path,Subscriptions:DownloadPath,,x,x,x
 User_MaxCount,"Maximum number of downloaded videos to keep per user (-1 = no limit). This setting only applies to the automatic downloader, the user can download more videos than this limit. Use the User_CountQuota option for a hard limit.",int,10,user.max_count,User:MaxCount,,x,,
-User_MaxSize,"Maximum size a user's downloaded videos can take in MB (-1 = no limit). This setting only applies to the automatic downloader, the user can download more videos than this limit. Use the User_SizeQuota option for a hard limit.",int,-1,user.max_size,User:MaxSize,,x,,
+User_MaxSize,"Maximum size a user's downloaded videos can take in MB (-1 = no limit). This setting only applies to the automatic downloader, the user can download more videos than this limit. Use the User_SizeQuota option for a hard limit.",long,-1,user.max_size,User:MaxSize,,x,,
 User_CountQuota,Hard limit on numbers of downloaded videos a user can keep (-1 = no limit). Also applies to manual downloads.,int,-1,user.count_quota,User:CountQuota,,x,,
-User_SizeQuota,Hard limit on total size of downloaded videos a user can keep in MB (-1 = no limit). Also applies to manual downloads.,int,-1,user.size_quota,User:SizeQuota,,x,,
+User_SizeQuota,Hard limit on total size of downloaded videos a user can keep in MB (-1 = no limit). Also applies to manual downloads.,long,-1,user.size_quota,User:SizeQuota,,x,,
 Ytdl_LimitRate,Maximum download rate in bytes per second (e.g. 50K or 4.2M),string,null,ytdl.limit_rate,Ytdl:LimitRate,,x,x,x
 Ytdl_Retries,"Number of retries (default is 10), or ""infinite"".",string,null,ytdl.retries,Ytdl:Retries,,x,x,x
 Ytdl_WriteDescription,Write video description to a .description file.,bool,false,ytdl.write_description,Ytdl:WriteDescription,,x,x,x

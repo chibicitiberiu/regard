@@ -79,7 +79,7 @@ namespace Regard.Backend.Services
         /// <summary>
         /// Maximum size a subscription can take on disk in MB (-1 = no limit). This limit only applies to the automatic downloader, but the user can manually download more videos.
         /// </summary>
-        public static readonly PreferenceDefinition<int> Subscriptions_MaxSize = new PreferenceDefinition<int>(
+        public static readonly PreferenceDefinition<long> Subscriptions_MaxSize = new PreferenceDefinition<long>(
             -1,
             "subscriptions.max_size",
             "Subscriptions:MaxSize",
@@ -123,7 +123,7 @@ namespace Regard.Backend.Services
         /// <summary>
         /// Maximum size a user's downloaded videos can take in MB (-1 = no limit). This setting only applies to the automatic downloader, the user can download more videos than this limit. Use the User_SizeQuota option for a hard limit.
         /// </summary>
-        public static readonly PreferenceDefinition<int> User_MaxSize = new PreferenceDefinition<int>(
+        public static readonly PreferenceDefinition<long> User_MaxSize = new PreferenceDefinition<long>(
             -1,
             "user.max_size",
             "User:MaxSize",
@@ -145,7 +145,7 @@ namespace Regard.Backend.Services
         /// <summary>
         /// Hard limit on total size of downloaded videos a user can keep in MB (-1 = no limit). Also applies to manual downloads.
         /// </summary>
-        public static readonly PreferenceDefinition<int> User_SizeQuota = new PreferenceDefinition<int>(
+        public static readonly PreferenceDefinition<long> User_SizeQuota = new PreferenceDefinition<long>(
             -1,
             "user.size_quota",
             "User:SizeQuota",

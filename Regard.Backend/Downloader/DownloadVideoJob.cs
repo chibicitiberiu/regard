@@ -15,17 +15,22 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Regard.Common.Utils;
+using Nito.AsyncEx;
+using Regard.Backend.Jobs;
+using System.Threading;
+using Humanizer.Bytes;
 
-namespace Regard.Backend.Jobs
+namespace Regard.Backend.Downloader
 {
     public class DownloadVideoJob : JobBase
     {
         protected readonly IConfiguration configuration;
         protected readonly IPreferencesManager preferencesManager;
         protected readonly IYoutubeDlService ytdlService;
-        protected readonly VideoManager videoManager;
+        protected readonly IVideoDownloaderService videoDownloader;
+        protected readonly IVideoStorageService videoStorage;
 
-        private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)%");
+        private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of ~?([\d\.]+)([KMG]i?B)");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
         private readonly Regex AlreadyDownloadedRegex = new Regex(@"\[download\] (.*) has already been downloaded");
         private readonly Regex DestinationRegex = new Regex(@"Destination: (.*)");
@@ -33,6 +38,9 @@ namespace Regard.Backend.Jobs
         bool shouldRetry = false;
         private string outputPath = null;
         private Video video = null;
+        private AsyncLock videoMutex = new AsyncLock();
+        private CancellationTokenSource cancellationTokenSrc = new CancellationTokenSource();
+        private bool limitsChecked = false;
 
         protected override int RetryCount => (shouldRetry ? 3 : 0);
 
@@ -46,12 +54,14 @@ namespace Regard.Backend.Jobs
                                 IConfiguration configuration,
                                 IPreferencesManager preferencesManager,
                                 IYoutubeDlService ytdlService,
-                                VideoManager videoManager) : base(logger, dataContext)
+                                IVideoDownloaderService videoDownloader,
+                                IVideoStorageService videoStorage) : base(logger, dataContext)
         {
             this.configuration = configuration;
             this.preferencesManager = preferencesManager;
             this.ytdlService = ytdlService;
-            this.videoManager = videoManager;
+            this.videoDownloader = videoDownloader;
+            this.videoStorage = videoStorage;
         }
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
@@ -71,39 +81,54 @@ namespace Regard.Backend.Jobs
 
             log.LogInformation("Running youtube-dl with arguments: {0}", string.Join(" ", opts));
 
-            await ytdlService.UsingYoutubeDL(async ytdl =>
+            try
             {
-                int resultCode = ytdl.Run(opts, 
-                    ProcessStdout, 
-                    ProcessStderr,
-                    timeoutMs: 24 * 3600 * 1000);
+                await ytdlService.UsingYoutubeDL(async ytdl =>
+                {
+                    int resultCode = ytdl.Run(opts,
+                        ProcessStdout,
+                        ProcessStderr,
+                        timeoutMs: 24 * 3600 * 1000,
+                        cancellationToken: cancellationTokenSrc.Token);
 
-                if (resultCode != 0)
-                    throw new Exception($"videoId={VideoId}: Download failed!\n");
-            });
+                    if (resultCode != 0)
+                        throw new Exception($"videoId={VideoId}: Download failed!\n");
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                shouldRetry = false;
+                log.LogInformation("Video download was canceled!");
+                throw;
+            }
+            finally
+            {
+                videoDownloader.OnDownloadFinished(VideoId);
+            }
 
-            lock (video)
+            using (var @lock = await videoMutex.LockAsync())
             {
                 video.DownloadedPath = outputPath;
-                dataContext.SaveChanges();
+                video.DownloadedSize = await videoStorage.CalculateSize(video);
+                await dataContext.SaveChangesAsync();
             }
+            
             log.LogInformation($"videoId={VideoId}: Download completed!");
         }
 
-        private void UpdateOutputPath(string newOutputPath)
+        private async Task UpdateOutputPath(string newOutputPath)
         {
-            lock (video)
+            using var @lock = await videoMutex.LockAsync();
+            outputPath = newOutputPath;
+            if (video.DownloadedPath != null && video.DownloadedPath != newOutputPath)
             {
-                outputPath = newOutputPath;
-                if (video.DownloadedPath != null)
-                {
-                    video.DownloadedPath = outputPath;
-                    dataContext.SaveChanges();
-                }
+                video.DownloadedPath = newOutputPath;
+                video.DownloadedSize = await videoStorage.CalculateSize(video);
+                await dataContext.SaveChangesAsync();
             }
         }
 
-        private void ProcessStdout(string message)
+        private async void ProcessStdout(string message)
         {
             if (message == null)
                 return;
@@ -114,11 +139,44 @@ namespace Regard.Backend.Jobs
             if (DestinationRegex.TryMatch(message, out match)
                 || MergingRegex.TryMatch(message, out match)
                 || AlreadyDownloadedRegex.TryMatch(message, out match))
-                UpdateOutputPath(Path.ChangeExtension(match.Groups[1].Value, null));
+            {
+                await UpdateOutputPath(Path.ChangeExtension(match.Groups[1].Value, null));
+            }
+            else if (ProgressRegex.TryMatch(message, out match))
+            {
+                if (float.TryParse(match.Groups[1].Value, out float percent))
+                    videoDownloader.OnVideoDownloading(VideoId, percent / 100f);
 
-            else if (ProgressRegex.TryMatch(message, out match)
-                && float.TryParse(match.Groups[1].Value, out float percent))
-                videoManager.OnDownloadProgress(VideoId, percent / 100f);
+                if (!limitsChecked && double.TryParse(match.Groups[2].Value, out double size))
+                    ProcessFileSize(size, match.Groups[3].Value);
+            }
+        }
+
+        private void ProcessFileSize(double size, string unit)
+        {
+            // Get size in bytes
+            unit = unit.ToLower();
+            
+            int mul = 1;
+            if (unit[0] == 'k') mul = 1024;
+            else if (unit[0] == 'm') mul = 1024 * 1024;
+            else if (unit[0] == 'g') mul = 1024 * 1024 * 1024;
+
+            long sizeBytes = Convert.ToInt64(size * mul);
+
+            // Check if it is within limits
+            var sub = dataContext.Subscriptions.Find(video.SubscriptionId);
+            var maxSize = videoDownloader.DetermineMaximumAllowedSize(sub);
+            
+            if (maxSize.HasValue && sizeBytes > maxSize.Value)
+            {
+                log.LogError($"Stopping download of {VideoId}, as the video has {sizeBytes.Bytes()} which would go above the allowed limit of {maxSize.Value.Bytes()}");
+
+                // Cancel download
+                cancellationTokenSrc.Cancel();
+            }
+
+            limitsChecked = true;
         }
 
         private void ProcessStderr(string message)

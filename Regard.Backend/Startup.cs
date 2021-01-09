@@ -24,6 +24,7 @@ using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Services;
 using Regard.Backend.Providers.Rss;
 using Regard.Backend.Providers.YouTubeDL;
+using Regard.Backend.Downloader;
 
 namespace Regard.Backend
 {
@@ -143,8 +144,8 @@ namespace Regard.Backend
             // Others
             services.AddScoped<SubscriptionManager>();
             services.AddScoped<VideoManager>();
-
             services.AddSingleton<IVideoStorageService, VideoStorageService>();
+            services.AddScoped<IVideoDownloaderService, VideoDownloaderService>();
             services.AddSingleton<IYoutubeDlService, YoutubeDLService>();
             services.AddSingleton<ApiResponseFactory>();
         }

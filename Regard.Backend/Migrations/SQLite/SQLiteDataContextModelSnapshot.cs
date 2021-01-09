@@ -419,7 +419,7 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasColumnType("TEXT")
                         .HasMaxLength(260);
 
-                    b.Property<int?>("DownloadedSize")
+                    b.Property<long?>("DownloadedSize")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsWatched")

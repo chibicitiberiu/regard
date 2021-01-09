@@ -1,6 +1,7 @@
 ﻿using Humanizer;
 using Microsoft.Extensions.Logging;
 using Quartz;
+using Regard.Backend.Downloader;
 using Regard.Backend.Jobs;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,8 @@ namespace Regard.Backend.Services
         private ILogger log;
         private IScheduler quartz;
         private readonly ISchedulerFactory schedulerFactory;
+
+        public event Action<int> ScheduledVideoDownload;
 
         public RegardScheduler(ILogger log, IScheduler quartz)
         {
@@ -167,6 +170,7 @@ namespace Regard.Backend.Services
             {
                 await quartz.ScheduleJob(job, trigger);
                 log.LogInformation("Scheduled download job for video {0}.", videoId);
+                ScheduledVideoDownload?.Invoke(videoId);
             }
             else log.LogInformation("Did not schedule download job for video {0} - already scheduled.", videoId);
         }

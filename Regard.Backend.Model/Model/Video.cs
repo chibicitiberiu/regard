@@ -41,7 +41,7 @@ namespace Regard.Backend.Model
         [MaxLength(260)]
         public string DownloadedPath { get; set; }
 
-        public int? DownloadedSize { get; set; }
+        public long? DownloadedSize { get; set; }
 
         public int SubscriptionId { get; set; }
         //subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)

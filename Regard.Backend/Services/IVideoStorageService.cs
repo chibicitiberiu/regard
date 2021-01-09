@@ -13,5 +13,7 @@ namespace Regard.Backend.Services
         Task<string> FindVideoFile(Video video);
 
         Task Delete(Video video);
+
+        Task<long> CalculateSize(Video video);
     }
 }
