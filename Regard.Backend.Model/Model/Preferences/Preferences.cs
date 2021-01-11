@@ -223,7 +223,7 @@ namespace Regard.Backend.Services
         /// Video format to download
         /// </summary>
         public static readonly PreferenceDefinition<string> Ytdl_Format = new PreferenceDefinition<string>(
-            "bestvideo+bestaudio",
+            "bestvideo[vcodec!*=av01]+bestaudio",
             "ytdl.format",
             "Ytdl:Format",
             null,

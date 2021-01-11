@@ -1,5 +1,6 @@
 ﻿using Regard.Backend.Model;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Regard.Backend.Services
@@ -15,5 +16,9 @@ namespace Regard.Backend.Services
         Task Delete(Video video);
 
         Task<long> CalculateSize(Video video);
+
+        Task<string> GetMimeType(Video video);
+
+        Task<Stream> Open(Video video);
     }
 }

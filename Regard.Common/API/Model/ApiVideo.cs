@@ -16,9 +16,11 @@ namespace Regard.Common.API.Model
 
         public bool IsNew { get; set; }
 
-        public string DownloadedStreamUrl { get; set; }
+        public bool IsDownloaded { get; set; }
 
         public long? DownloadedSize { get; set; }
+
+        public string StreamMimeType { get; set; }
 
         public int SubscriptionId { get; set; }
 

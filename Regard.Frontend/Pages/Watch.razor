@@ -1,0 +1,41 @@
+﻿@page "/watch/{videoId:int}"
+
+<h2>@video?.Name</h2>
+
+@if (errorMessage != null)
+{
+    <div>Error: @errorMessage</div>
+}
+
+@if (video != null)
+{
+    @if (video.IsDownloaded)
+    { 
+        <Video ShowControls="true"
+               AutoPlay="true"
+               Error="e => errorMessage = e.Message">
+            <source src="@videoStreamUri" type="@video.StreamMimeType"
+                    @onerror="e => { errorMessage = e.Message; StateHasChanged(); }"/>
+        </Video>
+    }
+    else
+    {
+        <div>
+            <h2>Video is not yet downloaded</h2>
+            TODO: show something here
+            <ul>
+                <li>TODO: Show embedded video</li>
+                <li>TODO: View on original site</li>
+                <li>TODO: Download now</li>
+            </ul>
+        </div>
+    }
+
+    <div>
+        @video.Views views
+    </div>
+
+    <div>
+        @video.Description
+    </div>
+}

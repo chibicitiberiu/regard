@@ -81,5 +81,17 @@ namespace Regard.Backend.Services
                 .Select(file => new FileInfo(file))
                 .SumAsync(fileInfo => fileInfo.Length);
         }
+
+        public async Task<string> GetMimeType(Video video)
+        {
+            var videoFile = await FindVideoFile(video);
+            return (videoFile != null) ? MimeUtility.GetMimeMapping(videoFile) : null;
+        }
+
+        public async Task<Stream> Open(Video video)
+        {
+            var videoFile = await FindVideoFile(video);
+            return (videoFile != null) ? File.OpenRead(videoFile) : null;
+        }
     }
 }

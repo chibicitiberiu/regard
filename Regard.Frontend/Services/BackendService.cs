@@ -28,6 +28,8 @@ namespace Regard.Services
 
         private static readonly Empty EmptyRequest = new Empty();
 
+        public Uri BaseUrl => client.BaseAddress;
+
         public BackendService(BackendHttpClient client, ILocalStorageService localStorage)
         {
             this.client = client;
@@ -192,6 +194,12 @@ namespace Regard.Services
 
         public Task<(ApiResponse, HttpResponseMessage)> VideoValidate(VideoValidateRequest data)
             => Post("api/video/validate", data);
+
+        public async Task<Uri> VideoViewUrl(int videoId)
+        {
+            var token = await localStorage.GetItemAsync<string>(AuthenticationService.StorageAuthTokenKey);
+            return new Uri(BaseUrl, $"/api/video/view?v={videoId}&access_token={token}");
+        }
 
         #endregion
     }

@@ -52,14 +52,14 @@
     <ItemTemplate Context="item">
         <div class="video @CssUtils.BoolToClass(item.ApiVideo.IsWatched, "video-watched")">
             <div class="video-image">
-                <a class="video-image-wrapper" href="#">
+                <NavLink class="video-image-wrapper" href="@($"/watch/{item.ApiVideo.Id}")">
                     <img src="@item.ThumbnailUrl" />
                     <div class="video-badges">
                         @if (item.ApiVideo.IsWatched)
                         {
                             <Icon Glyph="Icons.Watched" Class="video-badge" title="Watched"/>
                         }
-                        @if (!string.IsNullOrEmpty(item.ApiVideo.DownloadedStreamUrl))
+                        @if (item.ApiVideo.IsDownloaded)
                         {
                             <Icon Glyph="Icons.Downloaded" Class="video-badge" title="Downloaded" />
                         }
@@ -67,11 +67,11 @@
                     <div class="video-badges-bottom">
                         <span class="video-badge video-badge-duration">5:00</span>
                     </div>
-                </a>
+                </NavLink>
             </div>
             <div class="video-body">
                 <div class="video-text">
-                    <a href="#">
+                    <NavLink href="@($"/watch/{item.ApiVideo.Id}")">
                         <h3>@item.Name</h3>
                         <small class="text-muted">
                             @if (item.ApiVideo.UploaderName != null)
@@ -86,7 +86,7 @@
                             }
                             <span>@item.ApiVideo.Published.ToLocalTime().Humanize()</span>
                         </small>
-                    </a>
+                    </NavLink>
                 </div>
                 <div class="video-menu">
                     <button @ref="item.MenuLink" class="button-undecorated video-menu-link"
@@ -102,7 +102,7 @@
                         { 
                             <MenuItem Click="() => OnVideoMarkWatched(item)">Mark watched</MenuItem>
                         }
-                        @if (string.IsNullOrEmpty(item.ApiVideo.DownloadedStreamUrl))
+                        @if (item.ApiVideo.IsDownloaded)
                         {
                             <MenuItem Click="() => OnVideoDownload(item)">Download</MenuItem>
                         }

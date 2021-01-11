@@ -1,0 +1,15 @@
+﻿<video class="video-js @Class"
+       controls="@ShowControls"
+       preload="auto"
+       width="@Width"
+       height="@Height"
+       poster="@Poster"
+       data-setup="{}"
+       autoplay="@AutoPlay"
+       @onended="OnEnded"
+       @onpause="OnPaused"
+       @onerror="OnError">
+    <CascadingValue Value="this">
+        @ChildContent
+    </CascadingValue>
+</video>

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Regard.Backend.Common.Utils;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
+using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
 using System;
 using System.Collections.Generic;
@@ -21,16 +22,19 @@ namespace Regard.Backend.Controllers
         private readonly VideoManager videoManager;
         private readonly SubscriptionManager subscriptionManager;
         private readonly ApiResponseFactory responseFactory;
+        private readonly IVideoStorageService videoStorage;
 
         public VideoController(UserManager<UserAccount> userManager,
                                VideoManager videoManager,
                                SubscriptionManager subscriptionManager,
-                               ApiResponseFactory responseFactory)
+                               ApiResponseFactory responseFactory,
+                               IVideoStorageService videoStorage)
         {
             this.userManager = userManager;
             this.videoManager = videoManager;
             this.subscriptionManager = subscriptionManager;
             this.responseFactory = responseFactory;
+            this.videoStorage = videoStorage;
         }
 
         [HttpPost]
@@ -81,11 +85,22 @@ namespace Regard.Backend.Controllers
             query = query.OrderBy(request.Order)
                 .Skip(request.Offset ?? 0)
                 .Take(request.Limit ?? 50);
-            
+
+            // Obtain mime types
+            var videos = query.ToArray();
+            var apiVideos = new List<ApiVideo>();
+
+            foreach (var video in videos)
+            {
+                var apiVideo = video.ToApi();
+                apiVideo.StreamMimeType = await videoStorage.GetMimeType(video);
+                apiVideos.Add(apiVideo);
+            }
+
             return Ok(responseFactory.Success(new VideoListResponse
             {
                 TotalCount = itemCount,
-                Videos = query.Select(x => x.ToApi()).ToArray(),
+                Videos = apiVideos.ToArray(),
             }));
         }
 
@@ -162,6 +177,26 @@ namespace Regard.Backend.Controllers
             {
                 return BadRequest(responseFactory.Error(ex.Message));
             }
+        }
+
+        [HttpGet]
+        [Route("view")]
+        [Authorize]
+        public async Task<IActionResult> View([FromQuery(Name = "v")] int videoId)
+        {
+            var video = videoManager.Get(videoId);
+            if (video == null)
+                return NotFound();
+
+            if (video.DownloadedPath == null)
+                return NotFound();
+
+            var mimeType = await videoStorage.GetMimeType(video);
+            if (mimeType == null)
+                return NotFound();
+
+            var videoFile = await videoStorage.FindVideoFile(video);
+            return PhysicalFile(videoFile, mimeType, true);
         }
     }
 }

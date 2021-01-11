@@ -29,6 +29,11 @@ namespace Regard.Backend.Services
             this.providerManager = providerManager;
         }
 
+        public Video Get(int id)
+        {
+            return dataContext.Videos.Find(id);
+        }
+
         public IQueryable<Video> GetAll(UserAccount userAccount)
         {
             return dataContext.Videos.AsQueryable()

@@ -18,7 +18,7 @@ Ytdl_WriteDescription,Write video description to a .description file.,bool,false
 Ytdl_WriteInfoJson,Write video metadata to a .info.json file,bool,false,ytdl.write_info_json,Ytdl:WriteInfoJson,,x,x,x
 Ytdl_WriteThumbnail,Write thumbnail image to disk,bool,false,ytdl.write_thumbnail,Ytdl:WriteThumbnail,,x,x,x
 Ytdl_CallHome,Contact the youtube-dl server for debugging,bool?,null,ytdl.call_home,Ytdl:CallHome,,,,
-Ytdl_Format,Video format to download,string,"""bestvideo+bestaudio""",ytdl.format,Ytdl:Format,,x,x,x
+Ytdl_Format,Video format to download,string,"""bestvideo[vcodec!*=av01]+bestaudio""",ytdl.format,Ytdl:Format,,x,x,x
 Ytdl_AllFormats,Download all possible formats,bool,false,ytdl.all_formats,Ytdl:AllFormats,,x,x,x
 Ytdl_PreferFreeFormats,Prefer free video formats,bool,false,ytdl.prefer_free_formats,Ytdl:PreferFreeFormats,,x,x,x
 Ytdl_MergeOutputFormat,"If a merge is required (e.g. bestvideo+bestaudio), output to given container format. One of mkv, mp4, ogg, webm, flv. Ignored if no merge is required.",string,"""mp4""",ytdl.merge_output_format,Ytdl:MergeOutputFormat,,x,x,x
