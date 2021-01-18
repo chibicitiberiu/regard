@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
 using Regard.Common.Utils;
+using Regard.Common.Utils.Collections;
 using Regard.Frontend.Services;
 using Regard.Model;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
@@ -38,17 +40,31 @@ namespace Regard.Frontend.Shared.Video
         private ElementReference downloadedButton;
         private bool downloadedMenuVisible = false;
 
-        [Inject]
-        protected BackendService Backend { get; set; }
+        [Inject] protected BackendService Backend { get; set; }
 
-        [Inject]
-        protected MessagingService Messaging { get; set; }
+        [Inject] protected MessagingService Messaging { get; set; }
+
+        [Inject] protected AppState AppState { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
             Messaging.VideoUpdated += Messaging_VideoUpdated;
+            AppState.PropertyChanged += AppState_PropertyChanged;
             await Populate();
+        }
+
+        private async void AppState_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "SelectedSubscription")
+            {
+                if (AppState.SelectedSubscription == null)
+                    await DeselectAll();
+                else if (AppState.SelectedSubscription.IsLeft)
+                    await SetSelectedSubscription(AppState.SelectedSubscription.Left);
+                else
+                    await SetSelectedFolder(AppState.SelectedSubscription.Right);
+            }
         }
 
         public async Task SetSelectedSubscription(ApiSubscription subscription)

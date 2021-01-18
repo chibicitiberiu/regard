@@ -1,12 +1,8 @@
 using System;
 using System.Net.Http;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Text;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Regard.Services;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -20,11 +16,15 @@ namespace Regard.Frontend
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
+
             builder.Services.AddSingleton<AppState>();
+            builder.Services.AddSingleton<SubscriptionManagerService>();
             builder.Services.AddSingleton<MessagingService>();
-            builder.Services.AddBlazoredLocalStorage();
+            builder.Services.AddScoped<AppController>();
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-            builder.Services.AddScoped<MainAppController>();
+
+            // storage
+            builder.Services.AddBlazoredLocalStorage();
 
             // backend
             builder.Services.AddScoped<BackendHttpClient>();

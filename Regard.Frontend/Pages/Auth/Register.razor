@@ -1,17 +1,11 @@
 ﻿@page "/auth/register"
-@inject MainAppController appCtrl
+@inject AppController appCtrl
 
 <h3>Login</h3>
 
 <RegisterForm SubmitText="Register" LoggedIn="OnFormCompleted" />
 
 @code {
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-        await appCtrl.OnInitialize();
-    }
-
     private void OnFormCompleted()
     {
         appCtrl.NavigateToFromUrl();

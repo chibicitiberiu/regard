@@ -699,6 +699,9 @@ form {
   .navbar-fixed-top + *:first-of-type {
     margin-top: 3em; }
 
+.main {
+  margin-top: 3em; }
+
 .navbar-brand {
   display: inline-block;
   font-size: 1.25em;
@@ -750,7 +753,7 @@ form {
   background-color: var(--color-bg-window);
   border-radius: var(--border-radius-window);
   box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.4);
-  min-width: 20em;
+  min-width: 30em;
   max-width: 50em;
   min-height: 10em;
   max-height: 100%;

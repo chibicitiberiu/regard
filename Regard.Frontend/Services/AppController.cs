@@ -1,33 +1,45 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
+using Regard.Common.API.Response;
 using Regard.Frontend.Services;
+using Regard.Frontend.Shared.Subscription;
 using System;
 using System.Threading.Tasks;
 
 namespace Regard.Services
 {
-    public class MainAppController
+    public class AppController
     {
-        readonly AppState appState;
-        readonly NavigationManager navigationManager;
-        readonly BackendService backend;
-        readonly MessagingService messaging;
-
-        public MainAppController(AppState appState, NavigationManager navigationManager, BackendService backend, MessagingService messaging)
-        {
-            this.appState = appState;
-            this.navigationManager = navigationManager;
-            this.backend = backend;
-            this.messaging = messaging;
-        }
-
-        // url, function that evaluates whether the step should be executed
-        readonly (string, Func<AppState, bool>)[] SetupSteps = 
+        private readonly (string, Func<AppState, bool>)[] SetupSteps =
         {
             ("/setup/welcome", _ => true),
             ("/setup/step1", appState => !appState.ServerStatus.HaveAdmin),
             ("/setup/finished", _ => true)
         };
+
+        private readonly AppState appState;
+        private readonly NavigationManager navigationManager;
+        private readonly MessagingService messaging;
+        private readonly BackendService backend;
+
+        public event EventHandler RefreshRequested;
+
+        public AppController(AppState appState,
+                             NavigationManager navigationManager,
+                             MessagingService messaging,
+                             BackendService backend)
+        {
+            this.appState = appState;
+            this.navigationManager = navigationManager;
+            this.messaging = messaging;
+            this.backend = backend;
+        }
+
+        #region Initialization
+
+        // url, function that evaluates whether the step should be executed
+
 
         public async Task OnInitialize()
         {
@@ -75,6 +87,8 @@ namespace Regard.Services
 
             navigationManager.NavigateTo("/");
         }
+
+        #endregion
 
         public void NavigateToFromUrl()
         {

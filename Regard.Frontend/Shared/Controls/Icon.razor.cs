@@ -9,6 +9,7 @@ namespace Regard.Frontend.Shared.Controls
     public enum Icons
     {
         Close,
+        Add,
         Subscription,
         SubscriptionNew,
         Folder,
@@ -38,6 +39,7 @@ namespace Regard.Frontend.Shared.Controls
         private static Dictionary<Icons, string> mapping = new Dictionary<Icons, string>()
         {
             { Icons.Close, "close" },
+            { Icons.Add, "add" },
             { Icons.Subscription, "subject" },
             { Icons.SubscriptionNew, "playlist_add" },
             { Icons.Folder, "folder" },

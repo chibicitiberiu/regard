@@ -2,12 +2,14 @@
 using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
+using Regard.Common.Utils.Collections;
 using Regard.Frontend.Services;
 using Regard.Frontend.Shared.Controls;
 using Regard.Services;
 using Regard.Utils;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -24,50 +26,30 @@ namespace Regard.Frontend.Shared.Subscription
 
         private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeFolders = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
 
-        [Inject]
-        protected AppState AppState { get; set; }
+        [Inject] protected AppState AppState { get; set; }
 
-        [Inject]
-        protected MessagingService Messaging { get; set; }
+        [Inject] protected SubscriptionManagerService SubscriptionManager { get; set; }
 
-        [Inject]
-        protected BackendService Backend { get; set; }
-
-        [Parameter]
-        public EventCallback<SubscriptionItemViewModelBase> SelectedItemChanged { get; set; }
-
+        [Parameter] public EventCallback<SubscriptionItemViewModelBase> SelectedItemChanged { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
+            await SubscriptionManager.Load();
 
-            Messaging.SubscriptionCreated += Messaging_SubscriptionCreated;
-            Messaging.SubscriptionUpdated += Messaging_SubscriptionUpdated;
-            Messaging.SubscriptionsDeleted += Messaging_SubscriptionsDeleted;
-            Messaging.SubscriptionFolderCreated += Messaging_SubscriptionFolderCreated;
-            Messaging.SubscriptionFoldersDeleted += Messaging_SubscriptionFoldersDeleted;
-            Messaging.SubscriptionFolderUpdated += Messaging_SubscriptionFolderUpdated;
-            await Repopulate();
+            RebuildTree();
+
+            AppState.Folders.DictionaryChanged += Folders_DictionaryChanged;
+            AppState.Subscriptions.DictionaryChanged += Subscriptions_DictionaryChanged;
         }
 
-        public async Task Repopulate()
-        {
-            var (folders, httpResp) = await Backend.SubscriptionFolderList(new SubscriptionFolderListRequest());
-            httpResp.EnsureSuccessStatusCode();
-
-            var (subs, httpRespSubs) = await Backend.SubscriptionList(new SubscriptionListRequest());
-            httpRespSubs.EnsureSuccessStatusCode();
-
-            BuildTree(folders.Data.Folders, subs.Data.Subscriptions);
-        }
-
-        private void BuildTree(ApiSubscriptionFolder[] folders, ApiSubscription[] subscriptions)
+        private void RebuildTree()
         {
             treeFolders.Clear();
             treeView.Root.Children.Clear();
 
             // Create and add nodes to dictionary
-            foreach (var folder in folders)
+            foreach (var folder in AppState.Folders.Values)
             {
                 var vmFolder = new SubscriptionFolderViewModel(folder);
                 var tvFolder = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(vmFolder);
@@ -76,116 +58,126 @@ namespace Regard.Frontend.Shared.Subscription
 
             // Parent all the nodes
             foreach (var pair in treeFolders)
-            {
-                var parent = treeView.Root;
-
-                if (pair.Value.Data.ParentId.HasValue)
-                    parent = treeFolders[pair.Value.Data.ParentId.Value];
-
-                parent.Children.Add(pair.Value);
-            }
+                GetParentFolder(pair.Value.Data.ParentId).Children.Add(pair.Value);
             
             // Create subscription leafs
-            foreach (var sub in subscriptions)
+            foreach (var sub in AppState.Subscriptions.Values)
+                AddSubscription(sub);
+        }
+
+        private void Subscriptions_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscription> e)
+        {
+            if (e.Action == NotifyCollectionChangedAction.Reset)
             {
-                var vmSub = new SubscriptionViewModel(sub);
-                var tvSub = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(vmSub);
+                RebuildTree();
+            }
+            else
+            {
+                foreach (var oldItem in e.OldItems)
+                    RemoveSubscription(oldItem.Value);
 
-                var parent = treeView.Root;
-                if (sub.ParentFolderId.HasValue)
-                    parent = treeFolders[sub.ParentFolderId.Value];
-
-                parent.Children.Add(tvSub);
+                foreach (var newItem in e.NewItems)
+                    AddSubscription(newItem.Value);
             }
         }
 
-        private void Messaging_SubscriptionFolderUpdated(object sender, ApiSubscriptionFolder e)
+        private void Folders_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscriptionFolder> e)
         {
-            Console.WriteLine($"Folder updated: {e.Id} {e.Name}");
-        }
-
-        private void Messaging_SubscriptionFoldersDeleted(object sender, int[] folderIds)
-        {
-            Console.WriteLine($"Folders deleted: {folderIds.Humanize(", ")}");
-
-            foreach (var folderId in folderIds)
+            if (e.Action == NotifyCollectionChangedAction.Reset)
             {
-                if (treeFolders.TryGetValue(folderId, out var folderNode))
+                RebuildTree();
+            }
+            else
+            {
+                foreach (var oldItem in e.OldItems)
+                    RemoveFolder(oldItem.Value);
+
+                // Add all the folders first
+                foreach (var newItem in e.NewItems)
                 {
-                    folderNode.Parent.Children.Remove(folderNode);
-                    treeFolders.Remove(folderId);
+                    var vmFolder = new SubscriptionFolderViewModel(newItem.Value);
+                    var tvFolder = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(vmFolder);
+                    treeFolders.Add(newItem.Key, tvFolder);
+                }
 
-                    // Deselect
-                    if (treeView.SelectedItem != null)
-                    {
-                        if (treeView.SelectedItem.Data is SubscriptionViewModel subVm && subVm.ParentId == folderId)
-                            treeView.SelectedItem = null;
-
-                        if (treeView.SelectedItem.Data is SubscriptionFolderViewModel folderVm && folderVm.Folder.Id == folderId)
-                            treeView.SelectedItem = null;
-                    }
+                // And then parent them
+                foreach (var newItem in e.NewItems)
+                {
+                    var tvFolder = treeFolders[newItem.Key];
+                    GetParentFolder(tvFolder.Data.ParentId).Children.Add(tvFolder);
                 }
             }
+
+            StateHasChanged();
         }
 
-        private void Messaging_SubscriptionFolderCreated(object sender, ApiSubscriptionFolder e)
+        private TreeViewNode<SubscriptionItemViewModelBase> GetParentFolder(int? parentId)
         {
-            Console.WriteLine($"Folder created: {e.Id} {e.Name}");
+            if (parentId.HasValue && treeFolders.TryGetValue(parentId.Value, out var folder))
+                return folder;
 
-            var parent = treeView.Root;
-            if (e.ParentId)
-                parent = treeFolders[e.ParentId.Value.Value];
-
-            var vm = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(new SubscriptionFolderViewModel(e));
-            parent.Children.Add(vm);
-            treeFolders.Add(e.Id, vm);
+            return treeView.Root;
         }
 
-        private void Messaging_SubscriptionUpdated(object sender, ApiSubscription e)
+        private void AddSubscription(ApiSubscription sub)
         {
-            Console.WriteLine($"Sub updated: {e.Id} {e.Name}");
+            var vmSub = new SubscriptionViewModel(sub);
+            var tvSub = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(vmSub);
+
+            GetParentFolder(sub.ParentFolderId).Children.Add(tvSub);
         }
 
-        private void Messaging_SubscriptionsDeleted(object sender, int[] subIds)
+        private bool RemoveSubscription(ApiSubscription subscription)
         {
-            Console.WriteLine($"Subs deleted: {subIds.Humanize(", ")}");
+            var parent = GetParentFolder(subscription.ParentFolderId);
 
-            // Search recursively for the subIds
-            int foundCount = 0;
-            var queue = new Queue<TreeViewNode<SubscriptionItemViewModelBase>>();
-            queue.Enqueue(treeView.Root);
-
-            while (queue.Count > 0 && foundCount < subIds.Length)
+            foreach (var child in parent.Children)
             {
-                var current = queue.Dequeue();
-                if (current.Data is SubscriptionViewModel subVm 
-                    && subIds.Contains(subVm.Subscription.Id))
+                if (child.Data is SubscriptionViewModel subVm
+                    && subVm.Subscription.Id == subscription.Id)
                 {
-                    current.Parent.Children.Remove(current);
-                    foundCount++;
+                    parent.Children.Remove(child);
 
-                    if (current == treeView.SelectedItem)
+                    if (child == treeView.SelectedItem)
+                        treeView.SelectedItem = null;
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool RemoveFolder(ApiSubscriptionFolder folder)
+        {
+            if (treeFolders.TryGetValue(folder.Id, out var folderNode))
+            {
+                folderNode.Parent.Children.Remove(folderNode);
+                treeFolders.Remove(folder.Id);
+
+                // Deselect
+                if (treeView.SelectedItem != null)
+                {
+                    if (treeView.SelectedItem.Data is SubscriptionViewModel subVm && subVm.ParentId == folder.Id)
+                        treeView.SelectedItem = null;
+
+                    if (treeView.SelectedItem.Data is SubscriptionFolderViewModel folderVm && folderVm.Folder.Id == folder.Id)
                         treeView.SelectedItem = null;
                 }
-
-                foreach (var child in current.Children)
-                    queue.Enqueue(child);
+                return true;
             }
-        }
 
-        private void Messaging_SubscriptionCreated(object sender, ApiSubscription e)
-        {
-            Console.WriteLine($"Sub created: {e.Id} {e.Name}");
-
-            var parent = treeView.Root;
-            if (e.ParentFolderId.HasValue)
-                parent = treeFolders[e.ParentFolderId.Value];
-
-            parent.Children.Add(new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(new SubscriptionViewModel(e)));
+            return false;
         }
 
         protected virtual async Task OnSelectedItemChanged(TreeViewNode<SubscriptionItemViewModelBase> item)
         {
+            if (item.Data is SubscriptionFolderViewModel vmFolder)
+                AppState.SelectedSubscription = vmFolder.Folder;
+
+            else if (item.Data is SubscriptionViewModel vmSub)
+                AppState.SelectedSubscription = vmSub.Subscription;
+
             await SelectedItemChanged.InvokeAsync(item.Data);
         }
 
@@ -221,14 +213,7 @@ namespace Regard.Frontend.Shared.Subscription
                 await deleteDialog.ShowDialog(async result =>
                 {
                     if (result == DialogResult.Primary)
-                    {
-                        await Backend.SubscriptionFolderDelete(new SubscriptionFolderDeleteRequest()
-                        {
-                            Ids = new[] { folderVm.Folder.Id },
-                            Recursive = deleteRecursive,
-                            DeleteDownloadedFiles = deleteDownloadedFiles
-                        });
-                    }
+                        await SubscriptionManager.Delete(folderVm.Folder, deleteRecursive, deleteDownloadedFiles);
                 });
             }
             else if (item.Data is SubscriptionViewModel subVm)
@@ -237,13 +222,7 @@ namespace Regard.Frontend.Shared.Subscription
                 await deleteDialog.ShowDialog(async result =>
                 {
                     if (result == DialogResult.Primary)
-                    {
-                        await Backend.SubscriptionDelete(new SubscriptionDeleteRequest()
-                        {
-                            Ids = new[] { subVm.Subscription.Id },
-                            DeleteDownloadedFiles = deleteDownloadedFiles
-                        });
-                    }
+                        await SubscriptionManager.Delete(subVm.Subscription, deleteDownloadedFiles);
                 });
             }
         }
@@ -251,10 +230,10 @@ namespace Regard.Frontend.Shared.Subscription
         protected virtual async Task OnSynchronizeItem(TreeViewNode<SubscriptionItemViewModelBase> item)
         {
             if (item.Data is SubscriptionFolderViewModel folderVm)
-                await Backend.SubscriptionFolderSynchronize(new SubscriptionFolderSynchronizeRequest() { Id = folderVm.Folder.Id });
+                await SubscriptionManager.Synchronize(folderVm.Folder);
 
             if (item.Data is SubscriptionViewModel subVm)
-                await Backend.SubscriptionSynchronize(new SubscriptionSynchronizeRequest() { Id = subVm.Subscription.Id });
+                await SubscriptionManager.Synchronize(subVm.Subscription);
         }
     }
 }

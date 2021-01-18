@@ -20,15 +20,9 @@ namespace Regard.Frontend.Pages.Setup
         protected AuthenticationService Auth { get; set; }
         
         [Inject] 
-        protected MainAppController AppCtrl { get; set; }
+        protected AppController AppCtrl { get; set; }
 
         bool pickUser = false;
-
-        protected override async Task OnInitializedAsync()
-        {
-            await base.OnInitializedAsync();
-            await AppCtrl.OnInitialize();
-        }
 
         private async Task OnFormCompleted()
         {

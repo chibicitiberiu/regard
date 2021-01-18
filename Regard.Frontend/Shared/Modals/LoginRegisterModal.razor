@@ -1,4 +1,4 @@
-﻿@inject MainAppController mainAppCtrl
+﻿@inject AppController appCtrl
 <Modal @ref="modal"
        IsCloseable="false"
        IsInitialVisible="true">
@@ -38,6 +38,6 @@
 
     private void OnLoggedIn()
     {
-        mainAppCtrl.NavigateToFromUrl();
+        appCtrl.NavigateToFromUrl();
     }
 }

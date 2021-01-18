@@ -1,36 +1,21 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Text;
-using System.Linq;
-using System.Collections;
 
-namespace Regard.Common.Utils
+namespace Regard.Common.Utils.Collections
 {
-    public class BulkObservableCollectionEventArgs
-    {
-        public NotifyCollectionChangedAction Action { get; set; }
-
-        public IList NewItems { get; set; }
-
-        public IList OldItems { get; set; }
-
-        public int? NewIndex { get; set; }
-
-        public int? OldIndex { get; set; }
-    }
-
-    public class BulkObservableCollection<T> : Collection<T>
+    public class BulkObservableCollection<T> : Collection<T>, IBulkCollection<T>, IObservableCollection
     {
         private int batchOperation = 0;
-        private readonly IList<BulkObservableCollectionEventArgs> suppressedOperations = new List<BulkObservableCollectionEventArgs>();
+        private readonly IList<CollectionChangedEventArgs> suppressedOperations = new List<CollectionChangedEventArgs>();
 
         /// <summary>
         /// Collection changed
         /// </summary>
-        public event EventHandler<BulkObservableCollectionEventArgs> CollectionChanged;
+        public event EventHandler<CollectionChangedEventArgs> CollectionChanged;
 
         /// <summary>
         /// Constructor
@@ -66,7 +51,6 @@ namespace Regard.Common.Utils
         public void BeginBatch()
         {
             batchOperation++;
-
         }
 
         public void EndBatch()
@@ -116,7 +100,7 @@ namespace Regard.Common.Utils
             OnCollectionChanged(NotifyCollectionChangedAction.Move, item, item, newIndex, oldIndex);
         }
 
-        protected virtual void OnCollectionChanged(BulkObservableCollectionEventArgs e)
+        protected virtual void OnCollectionChanged(CollectionChangedEventArgs e)
         {
             if (batchOperation > 0)
             {
@@ -130,7 +114,7 @@ namespace Regard.Common.Utils
             }
         }
 
-        private bool TryMergeOperation(BulkObservableCollectionEventArgs op)
+        private bool TryMergeOperation(CollectionChangedEventArgs op)
         {
             if (suppressedOperations.Count == 0)
                 return false;
@@ -170,7 +154,7 @@ namespace Regard.Common.Utils
 
         private void OnCollectionChanged(NotifyCollectionChangedAction action, object newItem, object oldItem, int? newIndex = null, int? oldIndex = null)
         {
-            var e = new BulkObservableCollectionEventArgs()
+            var e = new CollectionChangedEventArgs()
             {
                 Action = action,
                 NewItems = new ArrayList(),

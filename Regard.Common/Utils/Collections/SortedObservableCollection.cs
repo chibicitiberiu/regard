@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Regard.Common.Utils
+namespace Regard.Common.Utils.Collections
 {
     public class SortedObservableCollection<T, TKey> : BulkObservableCollection<T>
     {

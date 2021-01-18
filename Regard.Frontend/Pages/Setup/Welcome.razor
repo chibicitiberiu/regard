@@ -1,5 +1,5 @@
 ﻿@page "/setup/welcome"
-@inject MainAppController appCtrl
+@inject AppController appCtrl
 
 <h3>Welcome to Regard!</h3>
 
@@ -9,12 +9,6 @@
 
 @code {
     bool NextClicked { get; set; }
-
-    override protected async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-        await appCtrl.OnInitialize();
-    }
 
     private async Task GoNext()
     {

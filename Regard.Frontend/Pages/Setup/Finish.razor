@@ -1,5 +1,5 @@
 ﻿@page "/setup/finished"
-@inject MainAppController appCtrl
+@inject AppController appCtrl
 
 <h3>Setup complete!</h3>
 
@@ -14,7 +14,6 @@
     override protected async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        await appCtrl.OnInitialize();
 
         timer = new System.Timers.Timer(2 * 1000);
         timer.Elapsed += OnElapsed;

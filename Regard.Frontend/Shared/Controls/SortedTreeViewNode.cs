@@ -1,4 +1,5 @@
 ﻿using Regard.Common.Utils;
+using Regard.Common.Utils.Collections;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

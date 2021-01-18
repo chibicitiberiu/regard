@@ -1,13 +1,12 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
-using Regard.Common.Utils;
+using Regard.Common.Utils.Collections;
 using Regard.Frontend.Services;
 using Regard.Frontend.Shared.Controls;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,135 +17,100 @@ namespace Regard.Frontend.Shared.Forms
     {
         public int? Id { get; set; }
 
-        public string DisplayName { get; set; }
+        public string QualifiedName { get; set; }
+
+        public string Name { get; set; }
     }
 
-    public class FolderSelect : RgInputSelect<FolderSelectViewModel, int?>
+    internal class FolderSelectViewModelComparer : IComparer<FolderSelectViewModel>
     {
-        protected BulkObservableCollection<FolderSelectViewModel> Folders { get; } = new BulkObservableCollection<FolderSelectViewModel>();
+        public int Compare(FolderSelectViewModel x, FolderSelectViewModel y)
+        {
+            return string.Compare(x.QualifiedName, y.QualifiedName);
+        }
+    }
 
-        protected Dictionary<int, FolderSelectViewModel> FoldersDict { get; } = new Dictionary<int, FolderSelectViewModel>();
+    public class FolderSelect : RgInputSelect<FolderSelectViewModel, int?>, IDisposable
+    {
+        protected readonly SortedSet<FolderSelectViewModel> folders = new SortedSet<FolderSelectViewModel>(new FolderSelectViewModelComparer());
 
-        [Inject] protected MessagingService Messaging { get; set; }
-
-        [Inject] protected BackendService Backend { get; set; }
-
-        //public FolderSelect()
-        //{
-        //}
+        [Inject] protected AppState AppState { get; set; }
 
         protected override async Task OnInitializedAsync()
         {
             KeyFunc = folder => folder.Id;
-            DisplayTextFunc = folder => folder.DisplayName;
+            DisplayTextFunc = folder => folder.QualifiedName;
             ShowDefaultOption = false;
-            ItemsSource = Folders;
+            ItemsSource = folders;
 
             await base.OnInitializedAsync();
 
-            // Subscribe to changes
-            Messaging.SubscriptionFolderCreated += Messaging_SubscriptionFolderCreated;
-            Messaging.SubscriptionFoldersDeleted += Messaging_SubscriptionFolderDeleted;
-            Messaging.SubscriptionFolderUpdated += Messaging_SubscriptionFolderUpdated;
+            AppState.Folders.DictionaryChanged += Folders_DictionaryChanged;
 
-            // Populate folder list
-            var (resp, httpResp) = await Backend.SubscriptionFolderList(new SubscriptionFolderListRequest());
-            httpResp.EnsureSuccessStatusCode();
-            RepopulateFolders(resp.Data.Folders);
+            RepopulateFolders();
         }
 
-        private void RepopulateFolders(ApiSubscriptionFolder[] folders)
+        protected override void Dispose(bool disposing)
         {
-            Folders.BeginBatch();
+            AppState.Folders.DictionaryChanged -= Folders_DictionaryChanged;
+            base.Dispose(disposing);
+        }
 
-            try
+        private void RepopulateFolders()
+        {
+            folders.Clear();
+            folders.Add(new FolderSelectViewModel() { Id = null, Name = "<none>", QualifiedName = "<none>" });
+            InsertFolders(AppState.Folders.Values);
+        }
+
+        private void InsertFolders(IEnumerable<ApiSubscriptionFolder> newFolders)
+        {
+            Dictionary<int, string> folderNames = new Dictionary<int, string>(folders
+                .Where(x => x.Id.HasValue)
+                .Select(x => KeyValuePair.Create(x.Id.Value, x.QualifiedName)));
+
+            var queue = new Queue<ApiSubscriptionFolder>(newFolders);
+
+            while (queue.Count > 0)
             {
-                Folders.Clear();
-                Folders.Add(new FolderSelectViewModel() { Id = null, DisplayName = "<none>" });
-                this.FoldersDict.Clear();
+                var item = queue.Dequeue();
 
-                var queue = new Queue<ApiSubscriptionFolder>(folders);
-                var pushedItems = new HashSet<int>();
-
-                foreach (var item in folders)
-                    Console.WriteLine($">>> {item.Id} > {item.Name}");
-
-                while (queue.Count > 0)
+                // Root level - just add it to the dict
+                if (!item.ParentId)
                 {
-                    var item = queue.Dequeue();
-
-                    // Root level - just add it to the dict
-                    if (!item.ParentId)
-                    {
-                        FoldersDict.Add(item.Id, new FolderSelectViewModel() { Id = item.Id, DisplayName = item.Name });
-                    }
-                    // The parent was already added to the dict, use it to build the display name
-                    else if (FoldersDict.TryGetValue(item.ParentId.Value.Value, out FolderSelectViewModel parent))
-                    {
-                        FoldersDict.Add(item.Id, new FolderSelectViewModel()
-                        {
-                            Id = item.Id,
-                            DisplayName = $"{parent.DisplayName}\\{item.Name}"
-                        });
-                    }
-                    // Parent wasn't added to the dict yet, put back in the queue
-                    else if (!pushedItems.Contains(item.Id))
-                    {
-                        // Push to end of queue
-                        queue.Enqueue(item);
-
-                        // Keep track of what folders we already pushed, to avoid an infinite loop
-                        pushedItems.Add(item.Id);
-                    }
-                    // Orphaned folder, we did not get its parent :(
-                    else
-                    {
-                        Debug.Fail("Orphan folder found!", $"Folder {item.Id} is orphaned, parent {item.ParentId} not found!");
-                    }
+                    folderNames.Add(item.Id, item.Name);
+                    folders.Add(new FolderSelectViewModel() { Id = item.Id, Name = item.Name, QualifiedName = item.Name });
                 }
-
-                // Put folders to observable collection
-                foreach (var folder in FoldersDict.Values.OrderBy(x => x.DisplayName))
-                    Folders.Add(folder);
-            }
-            finally
-            {
-                Folders.EndBatch();
-            }
-        }
-
-        private void Messaging_SubscriptionFolderUpdated(object sender, ApiSubscriptionFolder e)
-        {
-            // TODO
-        }
-
-        private void Messaging_SubscriptionFolderDeleted(object sender, int[] folderIds)
-        {
-            foreach (var id in folderIds)
-            {
-                if (FoldersDict.TryGetValue(id, out FolderSelectViewModel vmFolder))
+                // The parent was already added to the dict, use it to build the display name
+                else if (folderNames.TryGetValue(item.ParentId.Value.Value, out string parentName))
                 {
-                    FoldersDict.Remove(id);
-                    Folders.Remove(vmFolder);
+                    string qualifiedName = $"{parentName}\\{item.Name}";
+                    folderNames.Add(item.Id, qualifiedName);
+                    folders.Add(new FolderSelectViewModel() { Id = item.Id, Name = item.Name, QualifiedName = qualifiedName });
+                }
+                // Parent wasn't added to the dict yet, put back in the queue
+                else
+                {
+                    // Push to end of queue
+                    queue.Enqueue(item);
                 }
             }
         }
 
-        private void Messaging_SubscriptionFolderCreated(object sender, ApiSubscriptionFolder e)
+        private void Folders_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscriptionFolder> e)
         {
-            if (!e.ParentId)
-            {
-                var vmFolder = new FolderSelectViewModel() { Id = e.Id, DisplayName = e.Name };
-                FoldersDict.Add(e.Id, vmFolder);
-                Folders.Add(vmFolder);
-            }
-        }
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                folders.Clear();
 
-        public void Dispose()
-        {
-            Messaging.SubscriptionFolderCreated -= Messaging_SubscriptionFolderCreated;
-            Messaging.SubscriptionFoldersDeleted -= Messaging_SubscriptionFolderDeleted;
-            Messaging.SubscriptionFolderUpdated -= Messaging_SubscriptionFolderUpdated;
+            foreach (var oldItem in e.OldItems)
+            {
+                var item = folders.FirstOrDefault(x => x.Id == oldItem.Key);
+                if (item != null)
+                    folders.Remove(item);
+            }
+
+            InsertFolders(e.NewItems.Select(x => x.Value));
+            StateHasChanged();
         }
     }
 }

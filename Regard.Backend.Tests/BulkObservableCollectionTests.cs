@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Regard.Common.Utils;
+using Regard.Common.Utils.Collections;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -15,7 +16,7 @@ namespace Regard.Backend.Tests
         [TestMethod]
         public void AddTest()
         {
-            BulkObservableCollectionEventArgs args = null;
+            CollectionChangedEventArgs args = null;
 
             var collection = new BulkObservableCollection<int>();
             collection.CollectionChanged += (sender, e) => args = e;
@@ -38,7 +39,7 @@ namespace Regard.Backend.Tests
         [TestMethod]
         public void RemoveTest()
         {
-            BulkObservableCollectionEventArgs args = null;
+            CollectionChangedEventArgs args = null;
             var collection = new BulkObservableCollection<int>(Enumerable.Range(0, 50));
             collection.CollectionChanged += (sender, e) => args = e;
 
@@ -60,7 +61,7 @@ namespace Regard.Backend.Tests
         [TestMethod]
         public void MoveTest()
         {
-            BulkObservableCollectionEventArgs args = null;
+            CollectionChangedEventArgs args = null;
             Random random = new Random();
             var collection = new BulkObservableCollection<int>(Enumerable.Range(0, 50));
             collection.CollectionChanged += (sender, e) => args = e;
@@ -83,7 +84,7 @@ namespace Regard.Backend.Tests
         [TestMethod]
         public void ResetTest()
         {
-            BulkObservableCollectionEventArgs args = null;
+            CollectionChangedEventArgs args = null;
             var collection = new BulkObservableCollection<int>(Enumerable.Range(0, 50));
             collection.CollectionChanged += (sender, e) => args = e;
 
@@ -100,7 +101,7 @@ namespace Regard.Backend.Tests
         [TestMethod]
         public void ReplaceTest()
         {
-            BulkObservableCollectionEventArgs args = null;
+            CollectionChangedEventArgs args = null;
             Random random = new Random();
             var collection = new BulkObservableCollection<int>(Enumerable.Range(0, 50));
             collection.CollectionChanged += (sender, e) => args = e;
@@ -129,7 +130,7 @@ namespace Regard.Backend.Tests
         [TestMethod]
         public void AddRangeTest()
         {
-            BulkObservableCollectionEventArgs args = null;
+            CollectionChangedEventArgs args = null;
 
             var collection = new BulkObservableCollection<int>();
             collection.CollectionChanged += (sender, e) => args = e;
@@ -162,7 +163,7 @@ namespace Regard.Backend.Tests
         [TestMethod]
         public void BeginEndBulkOperationTest()
         {
-            BulkObservableCollectionEventArgs args = null;
+            CollectionChangedEventArgs args = null;
 
             var collection = new BulkObservableCollection<int>();
             collection.CollectionChanged += (sender, e) => args = e;
@@ -198,7 +199,7 @@ namespace Regard.Backend.Tests
         [TestMethod]
         public void OperationCollapseTest()
         {
-            var argsList = new List<BulkObservableCollectionEventArgs>();
+            var argsList = new List<CollectionChangedEventArgs>();
             var collection = new BulkObservableCollection<int>();
             collection.CollectionChanged += (sender, e) => argsList.Add(e);
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Regard.Common.Utils;
+using Regard.Common.Utils.Collections;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,7 +23,7 @@ namespace Regard.Frontend.Shared.Controls
         /// <summary>
         /// Event called when items are added or removed from the subtree
         /// </summary>
-        public event EventHandler<BulkObservableCollectionEventArgs> TreeChanged;
+        public event EventHandler<CollectionChangedEventArgs> TreeChanged;
 
         private TreeViewNode<Model> parent = null;
         private bool isSelected = false;
@@ -42,11 +43,6 @@ namespace Regard.Frontend.Shared.Controls
             get => parent;
             set => SetField(ref parent, value);
         }
-
-        /// <summary>
-        /// Gets the current depth in the tree
-        /// </summary>
-        public int Level { get => (parent != null) ? (parent.Level + 1) : 0; }
 
         /// <summary>
         /// Gets or sets the associated data
@@ -115,7 +111,7 @@ namespace Regard.Frontend.Shared.Controls
             ChildPropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private void OnChildrenCollectionChanged(object sender, BulkObservableCollectionEventArgs e)
+        private void OnChildrenCollectionChanged(object sender, CollectionChangedEventArgs e)
         {
             if (e.OldItems != null)
             {

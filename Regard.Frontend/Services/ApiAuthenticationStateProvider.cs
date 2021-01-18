@@ -40,6 +40,8 @@ namespace Regard.Services
                 }
             }
 
+            Console.WriteLine("Auth state: " + claimsIdentity.IsAuthenticated);
+
             return new AuthenticationState(new ClaimsPrincipal(claimsIdentity));
         }
 
