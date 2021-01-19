@@ -16,13 +16,13 @@ pipeline {
 
         stage('Regard.Backend.Tests') {
             steps {
-                sh 'dotnet test Backend/Debug/Regard.Backend.Tests.dll --results-directory TestResults --verbosity normal'
+                sh 'dotnet test Backend/Debug/Regard.Backend.Tests.dll --results-directory TestResults --logger trx --verbosity normal'
             }
         }
 
         stage('YoutubeDLWrapper.Tests') {
             steps {
-                sh 'dotnet test Backend/Debug/YoutubeDLWrapper.Tests.dll --results-directory TestResults --verbosity normal'
+                sh 'dotnet test Backend/Debug/YoutubeDLWrapper.Tests.dll --results-directory TestResults --logger trx --verbosity normal'
             }
         }
     }

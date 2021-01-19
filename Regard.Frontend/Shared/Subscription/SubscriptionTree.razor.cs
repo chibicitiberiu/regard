@@ -65,6 +65,11 @@ namespace Regard.Frontend.Shared.Subscription
                 AddSubscription(sub);
         }
 
+        public void DeselectAll()
+        {
+            treeView.SelectedItem = null;
+        }
+
         private void Subscriptions_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscription> e)
         {
             if (e.Action == NotifyCollectionChangedAction.Reset)

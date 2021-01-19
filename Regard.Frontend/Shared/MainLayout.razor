@@ -10,7 +10,7 @@
 
         <VideoAddModal @ref="videoAddModal" />
 
-        <NavMenu />
+        <NavMenu LogoClicked="@OnLogoClicked" />
 
         <div class="main">
 
@@ -74,11 +74,9 @@
     </Authorized>
 
     <NotAuthorized>
-        <NavMenu />
+        <NavMenu/>
         <div class="main">
-            <div class="content px-4">
-                @Body
-            </div>
+            <LoginRegisterModal />
         </div>
     </NotAuthorized>
 </AuthorizeView>

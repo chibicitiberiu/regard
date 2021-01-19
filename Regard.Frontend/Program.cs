@@ -16,11 +16,11 @@ namespace Regard.Frontend
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
-
+            
             builder.Services.AddSingleton<AppState>();
             builder.Services.AddSingleton<SubscriptionManagerService>();
             builder.Services.AddSingleton<MessagingService>();
-            builder.Services.AddScoped<AppController>();
+            builder.Services.AddSingleton<AppController>();
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
             // storage

@@ -19,14 +19,15 @@ namespace Regard.Frontend.Shared.Video
 {
     public partial class VideoList : IDisposable
     {
+        private bool initialized = false;
         private readonly BulkObservableCollection<VideoViewModel> videos = new BulkObservableCollection<VideoViewModel>();
         
         private int page = 0;
         private int videosPerPage = 60;
         private int totalVideoCount = 0;
 
-        private ApiSubscription selectedSubscription = null;
-        private ApiSubscriptionFolder selectedFolder = null;
+        private int? selectedSubscription = null;
+        private int? selectedFolder = null;
 
         private string query = "";
 
@@ -46,41 +47,43 @@ namespace Regard.Frontend.Shared.Video
 
         [Inject] protected AppState AppState { get; set; }
 
+        [Parameter] public int? SelectedSubscription
+        {
+            get => selectedSubscription;
+            set => SetSelectedSubscription(value);
+        }
+
+        [Parameter] public int? SelectedFolder 
+        {
+            get => selectedFolder;
+            set => SetSelectedFolder(value);
+        }
+
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
             Messaging.VideoUpdated += Messaging_VideoUpdated;
-            AppState.PropertyChanged += AppState_PropertyChanged;
+
             await Populate();
+            initialized = true;
         }
 
-        private async void AppState_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        public async Task SetSelectedSubscription(int? subscriptionId)
         {
-            if (e.PropertyName == "SelectedSubscription")
-            {
-                if (AppState.SelectedSubscription == null)
-                    await DeselectAll();
-                else if (AppState.SelectedSubscription.IsLeft)
-                    await SetSelectedSubscription(AppState.SelectedSubscription.Left);
-                else
-                    await SetSelectedFolder(AppState.SelectedSubscription.Right);
-            }
-        }
-
-        public async Task SetSelectedSubscription(ApiSubscription subscription)
-        {
-            selectedSubscription = subscription;
+            selectedSubscription = subscriptionId;
             selectedFolder = null;
             page = 0;
-            await Populate();
+            if (initialized)
+                await Populate();
         }
 
-        public async Task SetSelectedFolder(ApiSubscriptionFolder folder)
+        public async Task SetSelectedFolder(int? folderId)
         {
             selectedSubscription = null;
-            selectedFolder = folder;
+            selectedFolder = folderId;
             page = 0;
-            await Populate();
+            if (initialized)
+                await Populate();
         }
 
         public async Task DeselectAll()
@@ -88,7 +91,8 @@ namespace Regard.Frontend.Shared.Video
             selectedFolder = null;
             selectedSubscription = null;
             page = 0;
-            await Populate();
+            if (initialized)
+                await Populate();
         }
 
         public async Task SetPage(int page)
@@ -147,28 +151,34 @@ namespace Regard.Frontend.Shared.Video
 
         public async Task Populate()
         {
-            var (resp, httpResp) = await Backend.VideoList(new VideoListRequest()
+            try
             {
-                SubscriptionFolderId = selectedFolder?.Id,
-                SubscriptionId = selectedSubscription?.Id,
-                Query = query,
-                IsWatched = (hideWatched) ? (bool?)false : null,
-                IsDownloaded = isDownloaded,
-                Order = order,
-                Limit = videosPerPage,
-                Offset = page * videosPerPage,
-            });
+                var (resp, httpResp) = await Backend.VideoList(new VideoListRequest()
+                {
+                    SubscriptionFolderId = selectedFolder,
+                    SubscriptionId = selectedSubscription,
+                    Query = query,
+                    IsWatched = (hideWatched) ? (bool?)false : null,
+                    IsDownloaded = isDownloaded,
+                    Order = order,
+                    Limit = videosPerPage,
+                    Offset = page * videosPerPage,
+                });
 
-            if (httpResp.IsSuccessStatusCode)
+                if (httpResp.IsSuccessStatusCode)
+                {
+                    videos.BeginBatch();
+                    videos.Clear();
+                    foreach (var video in resp.Data.Videos)
+                        videos.Add(new VideoViewModel(video));
+                    videos.EndBatch();
+
+                    totalVideoCount = resp.Data.TotalCount;
+                    StateHasChanged();
+                }
+            }
+            catch (Exception)
             {
-                videos.BeginBatch();
-                videos.Clear();
-                foreach (var video in resp.Data.Videos)
-                    videos.Add(new VideoViewModel(video));
-                videos.EndBatch();
-
-                totalVideoCount = resp.Data.TotalCount;
-                StateHasChanged();
             }
         }
 

@@ -14,6 +14,10 @@ namespace Regard.Frontend.Shared
         private ElementReference notificationsLink;
         private ElementReference userLink;
 
+        [Inject] protected NavigationManager NavigationManager { get; set; }
+
+        [Parameter] public EventCallback LogoClicked { get; set; }
+
         // TODO
         private bool CanRegister { get; set; } = true;
 
@@ -45,6 +49,5 @@ namespace Regard.Frontend.Shared
             if (!visible)
                 UserPanelVisible = true;
         }
-
     }
 }

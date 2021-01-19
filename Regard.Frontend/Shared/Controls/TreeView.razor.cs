@@ -32,6 +32,8 @@ namespace Regard.Frontend.Shared.Controls
                         selectedItem.IsSelected = true;
 
                     SelectedItemChanged.InvokeAsync(selectedItem);
+
+                    StateHasChanged();
                 }
             }
         }

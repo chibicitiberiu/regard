@@ -75,9 +75,14 @@ namespace Regard.Frontend.Shared
         {
             if (e.PropertyName == "SelectedSubscription")
             {
-                isSubscriptionSelected = AppState.SelectedSubscription.IsLeft;
+                isSubscriptionSelected = (AppState.SelectedSubscription != null) && AppState.SelectedSubscription.IsLeft;
                 StateHasChanged();
             }
+        }
+
+        private void OnLogoClicked()
+        {
+            subscriptionTree.DeselectAll();
         }
     }
 }

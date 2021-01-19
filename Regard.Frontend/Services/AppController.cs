@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Regard.Services
 {
-    public class AppController
+    public class AppController : IDisposable
     {
         private readonly (string, Func<AppState, bool>)[] SetupSteps =
         {
@@ -21,19 +21,19 @@ namespace Regard.Services
         private readonly AppState appState;
         private readonly NavigationManager navigationManager;
         private readonly MessagingService messaging;
-        private readonly BackendService backend;
-
-        public event EventHandler RefreshRequested;
+        private readonly IServiceProvider serviceProvider;
 
         public AppController(AppState appState,
                              NavigationManager navigationManager,
                              MessagingService messaging,
-                             BackendService backend)
+                             IServiceProvider serviceProvider)
         {
             this.appState = appState;
             this.navigationManager = navigationManager;
             this.messaging = messaging;
-            this.backend = backend;
+            this.serviceProvider = serviceProvider;
+
+            appState.PropertyChanged += AppState_PropertyChanged;
         }
 
         #region Initialization
@@ -47,7 +47,11 @@ namespace Regard.Services
 
             // read server status
             if (appState.ServerStatus == null)
+            {
+                using var scope = serviceProvider.CreateScope();
+                var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
                 appState.ServerStatus = (await backend.SetupServerStatus()).Data;
+            }
 
             // check if server is initialized
             if (!appState.ServerStatus.Initialized)
@@ -77,6 +81,9 @@ namespace Regard.Services
 
         private async Task FinishSetup()
         {
+            using var scope = serviceProvider.CreateScope();
+            var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
+
             // Finish initialization
             var (result, httpResponse) = await backend.SetupInitialize();
             if (!httpResponse.IsSuccessStatusCode)
@@ -101,6 +108,24 @@ namespace Regard.Services
                 targetUri = value.ToString();
 
             navigationManager.NavigateTo(targetUri, true);
+        }
+
+        private void AppState_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "SelectedSubscription")
+            {
+                if (appState.SelectedSubscription == null)
+                    navigationManager.NavigateTo("/");
+                else if (appState.SelectedSubscription.IsLeft)
+                    navigationManager.NavigateTo($"/subscription/{appState.SelectedSubscription.Left.Id}");
+                else
+                    navigationManager.NavigateTo($"/folder/{appState.SelectedSubscription.Right.Id}");
+            }
+        }
+
+        public void Dispose()
+        {
+            appState.PropertyChanged -= AppState_PropertyChanged;
         }
     }
 }

@@ -1,0 +1,7 @@
+﻿@page "/subscription/{subscriptionId:int}"
+
+<VideoList SelectedSubscription="SubscriptionId" />
+
+@code {
+    [Parameter] public int SubscriptionId { get; set; }
+}

@@ -1,0 +1,7 @@
+﻿@page "/folder/{folderId:int}"
+
+<VideoList SelectedFolder="FolderId" />
+
+@code {
+    [Parameter] public int FolderId { get; set; }
+}
