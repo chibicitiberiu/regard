@@ -10,13 +10,19 @@ pipeline {
             steps {
                 copyArtifacts fingerprintArtifacts: true,
                     projectName: 'Regard/master',  
-                    selector: upstream()
+                    selector: lastSuccessful()
             }
         }
 
         stage('Regard.Backend.Tests') {
             steps {
                 sh 'dotnet test Backend/Debug/Regard.Backend.Tests.dll --results-directory TestResults --verbosity normal'
+            }
+        }
+
+        stage('YoutubeDLWrapper.Tests') {
+            steps {
+                sh 'dotnet test Backend/Debug/YoutubeDLWrapper.Tests.dll --results-directory TestResults --verbosity normal'
             }
         }
     }
