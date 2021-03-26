@@ -155,7 +155,6 @@ namespace Regard.Backend
         {
             app.UseSignalRQueryStringAuth();
 
-            //dataContext.Database.Migrate();
             app.UseResponseCompression();
 
             if (env.IsDevelopment())
@@ -178,6 +177,14 @@ namespace Regard.Backend
                 endpoints.MapControllers();
                 endpoints.MapHub<MessagingHub>("/api/message_hub");
             });
+
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("REGARD_MIGRATE")))
+                ApplyMigrations(dataContext);
+        }
+
+        public void ApplyMigrations(DataContext dataContext)
+        {
+            dataContext.Database.Migrate();
         }
     }
 }
