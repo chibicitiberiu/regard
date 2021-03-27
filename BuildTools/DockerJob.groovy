@@ -1,16 +1,32 @@
 
 node {
-    stage('Backend') {
+    docker.withRegistry('https://registry.hub.docker.com', 'docker_hub') {
+        stage('Backend (release)') {
+            def dockerfile = 'Dockerfile.Backend'
+            def img = docker.build("regard-backend:${env.BUILD_ID}", "-f ${dockerfile} --build-arg CONFIG=Release .")
+            img.push()
+            img.push('latest')
+        }
+        
+        stage('Frontend (release)') {
+            def dockerfile = 'Dockerfile.Frontend'
+            def img = docker.build("regard-frontend:${env.BUILD_ID}", "-f ${dockerfile} --build-arg CONFIG=Release .")
+            img.push()
+            img.push('latest')
+        }
 
-        def dockerfile = 'Dockerfile.Backend'
-        def customImage = docker.build("regard-backend:${env.BUILD_ID}", "-f ${dockerfile} .")
-
-    }
-    
-    stage('Frontend') {
-
-        def dockerfile = 'Dockerfile.Frontend'
-        def customImage = docker.build("regard-frontend:${env.BUILD_ID}", "-f ${dockerfile} .")
-
+        stage('Backend (debug)') {
+            def dockerfile = 'Dockerfile.Backend'
+            def img = docker.build("regard-backend:${env.BUILD_ID}-debug", "-f ${dockerfile} --build-arg CONFIG=Debug .")
+            img.push()
+            img.push('latest-debug')
+        }
+        
+        stage('Frontend (debug)') {
+            def dockerfile = 'Dockerfile.Frontend'
+            def img = docker.build("regard-frontend:${env.BUILD_ID}-debug", "-f ${dockerfile} --build-arg CONFIG=Debug .")
+            img.push()
+            img.push('latest-debug')
+        }
     }
 }
