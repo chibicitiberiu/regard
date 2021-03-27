@@ -1,6 +1,5 @@
 pipeline {
-
-    stages {
+    node {
         stage('Backend') {
             steps {
                 def dockerfile = 'Dockerfile.Backend'
