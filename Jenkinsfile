@@ -8,29 +8,33 @@ pipeline {
     stages {
         stage('Backend debug') {
             steps {
-                sh 'dotnet publish Backend.sln -c Debug -o Backend/Debug'
-                archiveArtifacts artifacts: 'Backend/Debug/**/*.*', fingerprint: true, onlyIfSuccessful: true
+                sh 'dotnet restore Source/Backend.sln'
+                sh 'dotnet publish Source/Backend.sln -c Debug -o Build/Debug/Backend'
+                archiveArtifacts artifacts: 'Build/Debug/Backend/**/*.*', fingerprint: true, onlyIfSuccessful: true
             }
         }
 
         stage('Frontend debug') {
             steps {
-                sh 'dotnet publish Frontend.sln -c Debug -o Frontend/Debug'
-                archiveArtifacts artifacts: 'Frontend/Debug/**/*.*', fingerprint: true, onlyIfSuccessful: true
+                sh 'dotnet restore Source/Frontend.sln'
+                sh 'dotnet publish Source/Frontend.sln -c Debug -o Build/Debug/Frontend'
+                archiveArtifacts artifacts: 'Build/Debug/Frontend/**/*.*', fingerprint: true, onlyIfSuccessful: true
             }
         }
         
         stage('Backend release') {
             steps {
-                sh 'dotnet publish Backend.sln -c Release -o Backend/Release'
-                archiveArtifacts artifacts: 'Backend/Release/**/*.*', fingerprint: true, onlyIfSuccessful: true
+                sh 'dotnet restore Source/Backend.sln'
+                sh 'dotnet publish Source/Backend.sln -c Release -o Build/Release/Backend'
+                archiveArtifacts artifacts: 'Build/Release/Backend/**/*.*', fingerprint: true, onlyIfSuccessful: true
             }
         }
         
         stage('Frontend release') {
             steps {
-                sh 'dotnet publish Frontend.sln -c Release -o Frontend/Release'
-                archiveArtifacts artifacts: 'Frontend/Release/**/*.*', fingerprint: true, onlyIfSuccessful: true
+                sh 'dotnet restore Source/Frontend.sln'
+                sh 'dotnet publish Source/Frontend.sln -c Release -o Build/Release/Frontend'
+                archiveArtifacts artifacts: 'Build/Release/Frontend/**/*.*', fingerprint: true, onlyIfSuccessful: true
             }
         }
     }

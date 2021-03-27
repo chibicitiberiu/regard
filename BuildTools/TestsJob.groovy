@@ -6,6 +6,11 @@ pipeline {
         }
     }
     stages {
+        stage('Install dependencies') {
+            steps {
+                sh 'apt-get update && apt-get install -y python3'
+            }
+        }
         stage('Copy artifacts') {
             steps {
                 copyArtifacts fingerprintArtifacts: true,
@@ -16,13 +21,13 @@ pipeline {
 
         stage('Regard.Backend.Tests') {
             steps {
-                sh 'dotnet test Backend/Debug/Regard.Backend.Tests.dll --results-directory TestResults --logger trx --verbosity normal'
+                sh 'dotnet test Build/Debug/Backend/Regard.Backend.Tests.dll --results-directory TestResults --logger trx --verbosity normal'
             }
         }
 
         stage('YoutubeDLWrapper.Tests') {
             steps {
-                sh 'dotnet test Backend/Debug/YoutubeDLWrapper.Tests.dll --results-directory TestResults --logger trx --verbosity normal'
+                sh 'dotnet test Build/Debug/Backend/YoutubeDLWrapper.Tests.dll --results-directory TestResults --logger trx --verbosity normal'
             }
         }
     }

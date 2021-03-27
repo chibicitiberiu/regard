@@ -1,0 +1,25 @@
+FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
+
+ARG CONFIG=debug
+
+WORKDIR /Regard
+COPY ./Source ./Source
+
+RUN dotnet restore Source/Frontend.sln
+RUN dotnet publish Source/Frontend.sln -c ${CONFIG} -o Build/Frontend/
+
+# -----
+
+FROM nginx:latest
+
+ENV BACKEND_URL ''
+
+EXPOSE 80
+
+WORKDIR /usr/share/nginx/html
+COPY ./Docker/Frontend/nginx.conf /etc/nginx/nginx.conf
+COPY ./Docker/Frontend/appsettings.json /etc/regard-frontend/appsettings.json
+COPY ./Docker/Frontend/50-envsubst-appsettings.sh /docker-entrypoint.d/
+COPY --from=build /Regard/Build/Frontend/ .
+
+RUN chmod a+x /docker-entrypoint.d/50-envsubst-appsettings.sh

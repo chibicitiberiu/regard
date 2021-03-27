@@ -1,0 +1,35 @@
+version: '3.1'
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment: 
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=yourStrong(!)Password
+      - MSSQL_PID=Developer
+    ports:
+      - 1433:1433
+    volumes:
+      - ./Tmp/SqlData:/var/opt/mssql
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.Backend
+    environment:
+      - "DB_MSSQL=Server=db,1433;Database=Regard;User Id=regard;Password=RegardSuperSecre3t!Passw0rd"
+      - "REGARD_DATA_DIR=/data"
+      - "REGARD_DOWNLOAD_DIR=/data/downloads"
+    volumes:
+      - ./Tmp/RegardData:/data
+    ports:
+      - 8999:80
+
+  frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile.Frontend
+    environment:
+      - BACKEND_URL=http://10.0.0.10:8999/
+    ports:
+      - 8998:80

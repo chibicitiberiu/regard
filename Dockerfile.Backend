@@ -1,0 +1,38 @@
+FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
+
+ARG CONFIG=debug
+
+WORKDIR /Regard
+COPY ./Source ./Source
+
+RUN dotnet restore Source/Backend.sln
+RUN dotnet publish Source/Backend.sln -c ${CONFIG} -o Build/Backend/
+
+# -----
+
+FROM mcr.microsoft.com/dotnet/aspnet:5.0 AS backend
+
+RUN apt-get update && \
+    apt-get install -y python3 gettext-base && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN useradd -ms /bin/bash regard
+
+ENV DB_MSSQL ""
+ENV REGARD_DATA_DIR "/data"
+ENV REGARD_DOWNLOAD_DIR "/data/download"
+ENV REGARD_MIGRATE 1
+
+EXPOSE 80
+
+WORKDIR /Regard
+COPY ./Docker/Backend/entry.sh .
+COPY ./Docker/Backend/wait-for-it.sh .
+RUN chmod a+x entry.sh wait-for-it.sh
+
+USER regard
+COPY --chown=regard ./Docker/Backend/appsettings.json /etc/regard/appsettings.json
+COPY --chown=regard --from=build /Regard/Build/Backend .
+COPY --chown=regard ./Docker/Backend/nlog.config .
+
+ENTRYPOINT ./entry.sh

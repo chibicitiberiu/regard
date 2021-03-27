@@ -36,15 +36,16 @@ namespace YoutubeDLWrapper
             process.StartInfo.Arguments = "-c \"import sys; print(sys.executable)\"";
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.RedirectStandardOutput = true;
-            process.Start();
-            process.WaitForExit(1000);
 
             try
             {
+                process.Start();
+                process.WaitForExit(1000);
+
                 if (process.ExitCode == 0)
-                    return process.StandardOutput.ReadToEnd();
+                    return process.StandardOutput.ReadToEnd().Trim();
             }
-            catch (InvalidOperationException)
+            catch (Exception)
             {
             }
 

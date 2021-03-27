@@ -184,6 +184,7 @@ namespace Regard.Backend
 
         public void ApplyMigrations(DataContext dataContext)
         {
+            Console.WriteLine("Applying migrations...");
             dataContext.Database.Migrate();
         }
     }
