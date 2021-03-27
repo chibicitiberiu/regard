@@ -1,7 +1,6 @@
 pipeline {
-    node {
-        checkout scm
-        
+
+    stages {
         stage('Backend') {
             steps {
                 def dockerfile = 'Dockerfile.Backend'
