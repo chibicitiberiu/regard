@@ -13,9 +13,10 @@ services:
       - ./Tmp/SqlData:/var/opt/mssql
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.Backend
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.Backend
+    image: chibicitiberiu/regard-backend:latest
     environment:
       - "DB_MSSQL=Server=db,1433;Database=Regard;User Id=regard;Password=RegardSuperSecre3t!Passw0rd"
       - "REGARD_DATA_DIR=/data"
@@ -26,9 +27,10 @@ services:
       - 8999:80
 
   frontend:
-    build: 
-      context: .
-      dockerfile: Dockerfile.Frontend
+    # build: 
+    #   context: .
+    #   dockerfile: Dockerfile.Frontend
+    image: chibicitiberiu/regard-frontend:latest
     environment:
       - BACKEND_URL=http://10.0.0.10:8999/
     ports:
