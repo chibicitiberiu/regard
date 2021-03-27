@@ -297,7 +297,7 @@ namespace Regard.Backend.Providers.YouTube
                     if (updateStatistics)
                     {
                         if (ytVideo.Statistics.ViewCount.HasValue)
-                            video.Views = Convert.ToInt32(ytVideo.Statistics.ViewCount.Value);
+                            video.Views = ytVideo.Statistics.ViewCount.Value;
 
                         if (ytVideo.Statistics.LikeCount.HasValue && ytVideo.Statistics.DislikeCount.HasValue)
                         {

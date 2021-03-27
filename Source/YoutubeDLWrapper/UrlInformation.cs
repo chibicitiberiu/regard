@@ -176,7 +176,7 @@ namespace YoutubeDLWrapper
         /// Opt: How many users have watched the video on the platform.
         /// </summary>
         [JsonProperty("view_count")]
-        public int? ViewCount { get; set; }
+        public ulong? ViewCount { get; set; }
 
         /// <summary>
         /// Opt: Number of positive ratings of the video

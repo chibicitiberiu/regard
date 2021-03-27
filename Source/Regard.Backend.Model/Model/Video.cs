@@ -62,7 +62,7 @@ namespace Regard.Backend.Model
 
         public string UploaderName { get; set; }
 
-        public int? Views { get; set; }
+        public ulong? Views { get; set; }
 
         public float? Rating { get; set; }
 
