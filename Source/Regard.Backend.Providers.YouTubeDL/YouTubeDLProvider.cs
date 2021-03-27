@@ -1,10 +1,12 @@
-﻿using Regard.Backend.Common.Providers;
+﻿using MoreLinq;
+using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Services;
 using Regard.Backend.Common.Utils;
 using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using YoutubeDLWrapper;
 
 namespace Regard.Backend.Providers.YouTubeDL
 {
@@ -88,26 +90,38 @@ namespace Regard.Backend.Providers.YouTubeDL
             var info = await ytdlService.UsingYoutubeDL(async ytdl => 
                 await ytdl.ExtractInformation(subscription.OriginalUrl, true));
 
+            Queue<UrlInformation> queue = new Queue<UrlInformation>(info.Entries);
+
             int index = 0;
-            foreach (var video in info.Entries)
+            while (queue.Count > 0)
             {
-                yield return new Video()
+                var entry = queue.Dequeue();
+                switch (entry.Type)
                 {
-                    SubscriptionProviderId = video.Id,
-                    VideoProviderId = Id,
-                    VideoId = video.Id,
-                    Name = video.Title,
-                    Description = video.Description,
-                    Subscription = subscription,
-                    PlaylistIndex = index++,
-                    Published = video.Timestamp,
-                    LastUpdated = DateTimeOffset.Now,
-                    ThumbnailPath = video.Thumbnail.ToString(),
-                    UploaderName = video.Uploader,
-                    OriginalUrl = video.WebpageUrl.ToString(),
-                    Views = video.ViewCount,
-                    Rating = ProviderHelpers.CalculateRating(video.LikeCount, video.DislikeCount)
-                };
+                    case UrlType.Playlist:
+                        entry.Entries.ForEach(queue.Enqueue);
+                        break;
+
+                    case UrlType.Video:
+                        yield return new Video()
+                        {
+                            SubscriptionProviderId = entry.Id,
+                            VideoProviderId = Id,
+                            VideoId = entry.Id,
+                            Name = entry.Title,
+                            Description = entry.Description,
+                            Subscription = subscription,
+                            PlaylistIndex = index++,
+                            Published = (entry.Timestamp != DateTime.MinValue) ? entry.Timestamp : DateTimeOffset.Now,
+                            LastUpdated = DateTimeOffset.Now,
+                            ThumbnailPath = entry.Thumbnail?.ToString(),
+                            UploaderName = entry.Uploader,
+                            OriginalUrl = entry.WebpageUrl?.ToString(),
+                            Views = entry.ViewCount,
+                            Rating = ProviderHelpers.CalculateRating(entry.LikeCount, entry.DislikeCount)
+                        };
+                        break;
+                }
             }
         }
 
