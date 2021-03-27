@@ -2,7 +2,9 @@
 
 Regard is a self hosted personal video management platform, which allows you to keep track of, download automatically and watch the content you want to see.
 
+## Installation (Docker)
 
+The easiest method to install Regard is to use the docker images
 
 ## Development setup
 
