@@ -34,6 +34,7 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: 'TestResults/**/*.*', fingerprint: true, onlyIfSuccessful: false
+            mstest testResultsFile: 'TestResults/**/*.trx', keepLongStdio: true
             sh 'chown -R 1000:1000 *'
         }
     }
