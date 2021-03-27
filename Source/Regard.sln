@@ -23,13 +23,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{3342
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{59FF1AC2-908E-4E08-816B-9D39A87061B6}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{54E2E2E2-9C19-4F56-A174-BC4E09F047BB}"
-	ProjectSection(SolutionItems) = preProject
-		.gitignore = .gitignore
-		Jenkinsfile = Jenkinsfile
-		README.md = README.md
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YoutubeDLWrapper.Tests", "YoutubeDLWrapper.Tests\YoutubeDLWrapper.Tests.csproj", "{D33006EF-20DE-469D-BC16-44BF6000F073}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YoutubeDLWrapper", "YoutubeDLWrapper\YoutubeDLWrapper.csproj", "{E0E489D1-281C-4A60-A51F-2E63D0302AAE}"

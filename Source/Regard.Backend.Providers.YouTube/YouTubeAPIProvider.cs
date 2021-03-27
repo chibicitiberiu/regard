@@ -172,7 +172,7 @@ namespace Regard.Backend.Providers.YouTube
                             Description = x.Snippet.Description,
                             Subscription = subscription,
                             PlaylistIndex = i,
-                            Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
+                            Published = x.Snippet.PublishedAt ?? DateTimeOffset.UtcNow,
                             LastUpdated = DateTime.Now,
                             ThumbnailPath = x.Snippet.Thumbnails.Maxres?.Url
                                 ?? x.Snippet.Thumbnails.High?.Url
@@ -194,7 +194,7 @@ namespace Regard.Backend.Providers.YouTube
                             Description = x.Snippet.Description,
                             Subscription = subscription,
                             PlaylistIndex = Convert.ToInt32(x.Snippet.Position ?? i),
-                            Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
+                            Published = x.Snippet.PublishedAt ?? DateTimeOffset.UtcNow,
                             LastUpdated = DateTime.Now,
                             ThumbnailPath = x.Snippet.Thumbnails.Maxres?.Url
                                 ?? x.Snippet.Thumbnails.High?.Url
@@ -216,7 +216,7 @@ namespace Regard.Backend.Providers.YouTube
                             Description = x.Snippet.Description,
                             Subscription = subscription,
                             PlaylistIndex = i,
-                            Published = DateTime.Parse(x.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind),
+                            Published = x.Snippet.PublishedAt ?? DateTimeOffset.UtcNow,
                             LastUpdated = DateTime.Now,
                             ThumbnailPath = x.Snippet.Thumbnails.Maxres?.Url
                                 ?? x.Snippet.Thumbnails.High?.Url
@@ -285,7 +285,7 @@ namespace Regard.Backend.Providers.YouTube
                     {
                         video.Name = ytVideo.Snippet.Title;
                         video.Description = ytVideo.Snippet.Description;
-                        video.Published = DateTime.Parse(ytVideo.Snippet.PublishedAt, styles: DateTimeStyles.RoundtripKind);
+                        video.Published = ytVideo.Snippet.PublishedAt ?? DateTimeOffset.UtcNow;
                         video.LastUpdated = DateTime.Now;
                         video.ThumbnailPath = ytVideo.Snippet.Thumbnails.Maxres?.Url
                                 ?? ytVideo.Snippet.Thumbnails.High?.Url
