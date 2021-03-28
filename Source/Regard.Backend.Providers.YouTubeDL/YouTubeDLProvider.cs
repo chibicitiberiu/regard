@@ -72,6 +72,9 @@ namespace Regard.Backend.Providers.YouTubeDL
 
         public async Task<Subscription> CreateSubscription(Uri uri)
         {
+            // Fixup youtube channel url's (get "uploads" playlist)
+            uri = YouTubeUrlHelper.FixYouTubeChannelUri(uri);
+
             // Running "ExtractInformation" here might be quite slow
             var info = await ytdlService.UsingYoutubeDL(async ytdl => 
                 await ytdl.ExtractInformation(uri.ToString(), false));
@@ -98,7 +101,9 @@ namespace Regard.Backend.Providers.YouTubeDL
             var info = await ytdlService.UsingYoutubeDL(async ytdl => 
                 await ytdl.ExtractInformation(subscription.OriginalUrl, true));
 
-            Queue<UrlInformation> queue = new Queue<UrlInformation>(info.Entries);
+            Queue<UrlInformation> queue = new Queue<UrlInformation>();
+            if (info.Entries != null)
+                info.Entries.ForEach(queue.Enqueue);
 
             int index = 0;
             while (queue.Count > 0)
@@ -107,7 +112,9 @@ namespace Regard.Backend.Providers.YouTubeDL
                 switch (entry.Type)
                 {
                     case UrlType.Playlist:
-                        entry.Entries.ForEach(queue.Enqueue);
+                    case UrlType.MultiVideo:
+                        if (entry.Entries != null)
+                            entry.Entries.ForEach(queue.Enqueue);
                         break;
 
                     case UrlType.Video:

@@ -58,7 +58,7 @@ namespace YoutubeDLWrapper
                 onErrorCallback.Invoke(e.Data);
             };
 
-            logger.LogDebug($"Invoking youtube-dl: {process.StartInfo.FileName} {string.Join(" ", process.StartInfo.Arguments)}");
+            logger.LogDebug($"Invoking youtube-dl: {process.StartInfo.FileName} {string.Join(" ", process.StartInfo.ArgumentList)}");
 
             process.Start();
             process.BeginErrorReadLine();

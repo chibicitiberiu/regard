@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Regard.Backend.Providers.Rss\Regard.Backend.Providers.Rss.csproj" />
+    <ProjectReference Include="..\Regard.Backend.Providers.YouTubeDL\Regard.Backend.Providers.YouTubeDL.csproj" />
     <ProjectReference Include="..\Regard.Common\Regard.Common.csproj" />
   </ItemGroup>
 
