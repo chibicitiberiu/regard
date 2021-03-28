@@ -12,6 +12,8 @@ RUN dotnet publish Source/Backend.sln -c ${CONFIG} -o Build/Backend/
 
 FROM mcr.microsoft.com/dotnet/aspnet:5.0 AS backend
 
+ARG CONFIG
+
 RUN apt-get update && \
     apt-get install -y python3 gettext-base && \
     rm -rf /var/lib/apt/lists/*
