@@ -28,7 +28,9 @@ namespace Regard.Backend.Services
             ytdlManager = new YoutubeDLManager(logFactory)
             {
                 StorePath = configuration["DataDirectory"],
-                LatestUrl = configuration["YoutubeDLLatestUrl"]
+                LatestUrl = configuration["YoutubeDLLatestUrl"],
+                Debug = configuration.GetValue<bool>("Debug"),
+                DebugPath = Path.Combine(configuration["DataDirectory"], "Logs", "ytdl"),
             };
         }
 
@@ -37,8 +39,6 @@ namespace Regard.Backend.Services
             await ytdlManager.Initialize();
             if (ytdlManager.Versions.Count > 0)
             {
-                log.LogInformation("Found youtube-dl versions {0}:", ytdlManager.Versions.Keys.Humanize());
-
                 CurrentVersion = ytdlManager.Versions.Keys.Max();
                 ytdl = ytdlManager.Versions[CurrentVersion];
                 log.LogInformation("Using version {0}:", CurrentVersion);
@@ -62,7 +62,6 @@ namespace Regard.Backend.Services
                     // replace ytdl
                     CurrentVersion = ytdlManager.Versions.Keys.Max();
                     ytdl = ytdlManager.Versions[CurrentVersion];
-
                     log.LogInformation("Update to {0} completed.", CurrentVersion);
                 }
             }

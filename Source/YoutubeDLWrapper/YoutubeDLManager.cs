@@ -11,14 +11,18 @@ namespace YoutubeDLWrapper
 {
     public class YoutubeDLManager
     {
-        private ILogger logger;
-        private ILogger ytdlLogger;
+        private readonly ILogger logger;
+        private readonly ILogger ytdlLogger;
 
         public string StorePath { get; set; }
 
         public string LatestUrl { get; set; } = "https://youtube-dl.org/downloads/latest/youtube-dl";
 
         public string PythonPath { get; private set; }
+
+        public bool Debug { get; set; }
+
+        public string DebugPath { get; set; }
 
         public Dictionary<Version, YoutubeDL> Versions { get; } = new Dictionary<Version, YoutubeDL>();
 
@@ -54,7 +58,7 @@ namespace YoutubeDLWrapper
             {
                 if (await IsYoutubeDl(file))
                 {
-                    var ytdl = new YoutubeDL(ytdlLogger, file, PythonPath);
+                    var ytdl = new YoutubeDL(ytdlLogger, file, PythonPath, Debug, DebugPath);
                     try
                     {
                         var version = await ytdl.GetVersion();
@@ -93,7 +97,7 @@ namespace YoutubeDLWrapper
             logger.LogInformation("Downloading latest youtube-dl...");
 
             var tmpFile = await DownloadLatest();
-            var ytdl = new YoutubeDL(ytdlLogger, tmpFile, PythonPath);
+            var ytdl = new YoutubeDL(ytdlLogger, tmpFile, PythonPath, Debug, DebugPath);
             var version = await ytdl.GetVersion();
 
             // We already have this version?

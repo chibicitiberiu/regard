@@ -98,8 +98,17 @@ namespace Regard.Backend.Providers.YouTubeDL
 
         public async IAsyncEnumerable<Video> FetchVideos(Subscription subscription)
         {
-            var info = await ytdlService.UsingYoutubeDL(async ytdl => 
-                await ytdl.ExtractInformation(subscription.OriginalUrl, true));
+            int tries = 3;
+            UrlInformation info;
+            do
+            {
+                info = await ytdlService.UsingYoutubeDL(async ytdl =>
+                    await ytdl.ExtractInformation(subscription.OriginalUrl, true));
+            }
+            while (info == null && tries-- > 0);
+
+            if (info == null)
+                throw new Exception("Failed to fetch videos (timed out)!");
 
             Queue<UrlInformation> queue = new Queue<UrlInformation>();
             if (info.Entries != null)

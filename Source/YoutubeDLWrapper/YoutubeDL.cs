@@ -14,17 +14,23 @@ namespace YoutubeDLWrapper
 {
     public class YoutubeDL
     {
-        private ILogger logger;
+        private readonly ILogger logger;
 
         public string YoutubeDlPath { get; set; }
 
         public string PythonExePath { get; set; }
 
-        public YoutubeDL(ILogger logger, string path, string pythonPath)
+        public bool Debug { get; set; }
+
+        public string DebugPath { get; set; }
+
+        public YoutubeDL(ILogger logger, string path, string pythonPath, bool debug, string debugPath)
         {
             this.logger = logger;
             this.YoutubeDlPath = path;
             this.PythonExePath = pythonPath;
+            this.Debug = debug;
+            this.DebugPath = debugPath;
         }
 
         private Process BuildProcess(IEnumerable<string> args)
@@ -46,19 +52,31 @@ namespace YoutubeDLWrapper
                                 int timeoutMs,
                                 CancellationToken? cancellationToken)
         {
+            logger.LogDebug($"Invoking youtube-dl: {process.StartInfo.FileName} {string.Join(" ", process.StartInfo.ArgumentList)}");
+            
+            string fileOut = null;
+            if (Debug)
+            {
+                Directory.CreateDirectory(DebugPath);
+                fileOut = Path.Combine(DebugPath, $"{DateTime.Now:yyyyMMddhhmmsstt}_stdout.txt");
+                logger.LogDebug($"Standard output will be written to {fileOut}");
+            }
+
             process.OutputDataReceived += (sender, e) =>
             {
-                logger.LogDebug($"OUT: {e.Data}");
+                if (fileOut != null)
+                {
+                    using var strOut = new StreamWriter(fileOut, true);
+                    strOut.Write(e.Data);
+                }
                 onOutputCallback.Invoke(e.Data);
             };
 
             process.ErrorDataReceived += (sender, e) =>
             {
-                logger.LogDebug($"ERR: {e.Data}");
+                logger.LogDebug($"ERR >> {e.Data}");
                 onErrorCallback.Invoke(e.Data);
             };
-
-            logger.LogDebug($"Invoking youtube-dl: {process.StartInfo.FileName} {string.Join(" ", process.StartInfo.ArgumentList)}");
 
             process.Start();
             process.BeginErrorReadLine();
@@ -150,7 +168,7 @@ namespace YoutubeDLWrapper
             args.Add(url);
 
             string stdOut = null, stdErr = null;
-            int returnCode = await Task.Run(() => Run(args, out stdOut, out stdErr));
+            int returnCode = await Task.Run(() => Run(args, out stdOut, out stdErr, timeoutMs: 1000 * 60 * 10));
             if (returnCode != 0)
                 throw new Exception("Information extraction failed! " + stdErr);
 
