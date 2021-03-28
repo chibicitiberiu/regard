@@ -1,5 +1,6 @@
 
 node {
+    checkout scm
     docker.withRegistry('https://registry.hub.docker.com', 'docker_hub') {
         stage('Backend (release)') {
             def dockerfile = 'Dockerfile.Backend'
