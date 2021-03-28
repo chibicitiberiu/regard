@@ -16,17 +16,20 @@ namespace Regard.Backend.Services
     public class YoutubeDLService : IYoutubeDlService
     {
         private readonly ILogger log;
-        private readonly YoutubeDLManager ytdlManager = new YoutubeDLManager();
+        private readonly YoutubeDLManager ytdlManager;
         private readonly AsyncReaderWriterLock ytdlLock = new AsyncReaderWriterLock();
         private YoutubeDL ytdl = null;
 
         public Version CurrentVersion { get; private set; }
 
-        public YoutubeDLService(ILogger<YoutubeDLService> log, IConfiguration configuration)
+        public YoutubeDLService(ILoggerFactory logFactory, IConfiguration configuration)
         {
-            this.log = log;
-            ytdlManager.StorePath = configuration["DataDirectory"];
-            ytdlManager.LatestUrl = configuration["YoutubeDLLatestUrl"];
+            log = logFactory.CreateLogger<YoutubeDLService>();
+            ytdlManager = new YoutubeDLManager(logFactory)
+            {
+                StorePath = configuration["DataDirectory"],
+                LatestUrl = configuration["YoutubeDLLatestUrl"]
+            };
         }
 
         public async Task Initialize()

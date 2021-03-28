@@ -33,6 +33,6 @@ RUN chmod a+x entry.sh wait-for-it.sh
 USER regard
 COPY --chown=regard ./Docker/Backend/appsettings.json /etc/regard/appsettings.json
 COPY --chown=regard --from=build /Regard/Build/Backend .
-COPY --chown=regard ./Docker/Backend/nlog.config .
+COPY --chown=regard ./Docker/Backend/nlog-${CONFIG}.config ./nlog.config
 
 ENTRYPOINT ./entry.sh

@@ -1,4 +1,5 @@
-﻿using MoreLinq;
+﻿using Microsoft.Extensions.Logging;
+using MoreLinq;
 using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Services;
 using Regard.Backend.Common.Utils;
@@ -12,6 +13,7 @@ namespace Regard.Backend.Providers.YouTubeDL
 {
     public class YouTubeDLProvider : ISubscriptionProvider, IVideoProvider
     {
+        private readonly ILogger logger;
         private readonly IYoutubeDlService ytdlService;
 
         public string Id => "YtDL";
@@ -22,8 +24,9 @@ namespace Regard.Backend.Providers.YouTubeDL
 
         public Type ConfigurationType => null;
 
-        public YouTubeDLProvider(IYoutubeDlService ytdlService)
+        public YouTubeDLProvider(ILogger<YouTubeDLProvider> logger, IYoutubeDlService ytdlService)
         {
+            this.logger = logger;
             this.ytdlService = ytdlService;
         }
 
@@ -39,6 +42,7 @@ namespace Regard.Backend.Providers.YouTubeDL
             }
             catch (Exception ex)
             {
+                logger.LogDebug(ex, $"Cannot handle subscription URL {uri}");
                 return false;
             }
         }
@@ -53,8 +57,9 @@ namespace Regard.Backend.Providers.YouTubeDL
                 return info.Type == YoutubeDLWrapper.UrlType.Video;
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.LogDebug(ex, $"Cannot handle video {video} {video.OriginalUrl}");
                 return false;
             }
         }
@@ -72,7 +77,10 @@ namespace Regard.Backend.Providers.YouTubeDL
                 await ytdl.ExtractInformation(uri.ToString(), false));
 
             if (info.Type != YoutubeDLWrapper.UrlType.Playlist && info.Type != YoutubeDLWrapper.UrlType.MultiVideo)
+            {
+                logger.LogDebug($"Subscription type for {uri}: {info.Type}");
                 throw new Exception("Invalid or unsupported URL format!");
+            }
 
             return new Subscription()
             {

@@ -1,4 +1,5 @@
-﻿using MoreLinq;
+﻿using Microsoft.Extensions.Logging;
+using MoreLinq;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -13,12 +14,15 @@ namespace YoutubeDLWrapper
 {
     public class YoutubeDL
     {
+        private ILogger logger;
+
         public string YoutubeDlPath { get; set; }
 
         public string PythonExePath { get; set; }
 
-        public YoutubeDL(string path, string pythonPath)
+        public YoutubeDL(ILogger logger, string path, string pythonPath)
         {
+            this.logger = logger;
             this.YoutubeDlPath = path;
             this.PythonExePath = pythonPath;
         }
@@ -42,8 +46,20 @@ namespace YoutubeDLWrapper
                                 int timeoutMs,
                                 CancellationToken? cancellationToken)
         {
-            process.OutputDataReceived += (sender, e) => onOutputCallback.Invoke(e.Data);
-            process.ErrorDataReceived += (sender, e) => onErrorCallback.Invoke(e.Data);
+            process.OutputDataReceived += (sender, e) =>
+            {
+                logger.LogDebug($"OUT: {e.Data}");
+                onOutputCallback.Invoke(e.Data);
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                logger.LogDebug($"ERR: {e.Data}");
+                onErrorCallback.Invoke(e.Data);
+            };
+
+            logger.LogDebug($"Invoking youtube-dl: {process.StartInfo.FileName} {string.Join(" ", process.StartInfo.Arguments)}");
+
             process.Start();
             process.BeginErrorReadLine();
             process.BeginOutputReadLine();
@@ -53,6 +69,7 @@ namespace YoutubeDLWrapper
             {
                 if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
                 {
+                    logger.LogWarning("Invoke cancelled. Killing youtube-dl...");
                     process.Kill();
                     process.WaitForExit();
                     cancellationToken.Value.ThrowIfCancellationRequested();
@@ -64,6 +81,7 @@ namespace YoutubeDLWrapper
 
             if (!process.HasExited)
             {
+                logger.LogWarning("Invoke timed out. Killing youtube-dl...");
                 process.Kill();
                 process.WaitForExit();
             }

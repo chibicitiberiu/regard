@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,6 +11,9 @@ namespace YoutubeDLWrapper
 {
     public class YoutubeDLManager
     {
+        private ILogger logger;
+        private ILogger ytdlLogger;
+
         public string StorePath { get; set; }
 
         public string LatestUrl { get; set; } = "https://youtube-dl.org/downloads/latest/youtube-dl";
@@ -17,6 +21,12 @@ namespace YoutubeDLWrapper
         public string PythonPath { get; private set; }
 
         public Dictionary<Version, YoutubeDL> Versions { get; } = new Dictionary<Version, YoutubeDL>();
+
+        public YoutubeDLManager(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger<YoutubeDLManager>();
+            ytdlLogger = loggerFactory.CreateLogger<YoutubeDL>();
+        }
 
         private async Task<bool> IsYoutubeDl(string path)
         {
@@ -37,18 +47,22 @@ namespace YoutubeDLWrapper
                 throw new ArgumentNullException("StorePath not set");
 
             PythonPath = PythonFinder.FindPython3();
+            logger.LogInformation((PythonPath != null) ? $"Found python: {PythonPath}" : "Python not found.");
 
             var files = await Task.Run(() => Directory.GetFiles(StorePath));
             foreach (var file in files)
             {
                 if (await IsYoutubeDl(file))
                 {
-                    var ytdl = new YoutubeDL(file, PythonPath);
+                    var ytdl = new YoutubeDL(ytdlLogger, file, PythonPath);
                     try
                     {
                         var version = await ytdl.GetVersion();
+                        logger.LogInformation($"Found youtube-dl {version}: {file}");
+
                         if (Versions.ContainsKey(version))
                         {
+                            logger.LogInformation($"Duplicate youtube-dl {version}, deleting {file}");
                             await Task.Run(() => File.Delete(file));
                         }
                         else
@@ -58,8 +72,7 @@ namespace YoutubeDLWrapper
                     }
                     catch (Exception ex)
                     {
-                        // TODO... log
-                        Console.Write(ex.ToString());
+                        logger.LogError(ex, $"Failed to retrieve version for youtube-dl executable {file}");
                     }
                 }
             }
@@ -77,18 +90,24 @@ namespace YoutubeDLWrapper
 
         public async Task<bool> DownloadLatestVersion()
         {
+            logger.LogInformation("Downloading latest youtube-dl...");
+
             var tmpFile = await DownloadLatest();
-            var ytdl = new YoutubeDL(tmpFile, PythonPath);
+            var ytdl = new YoutubeDL(ytdlLogger, tmpFile, PythonPath);
             var version = await ytdl.GetVersion();
 
             // We already have this version?
             if (Versions.ContainsKey(version))
             {
+                logger.LogInformation($"No new version.");
+
                 // Discard downloaded version
                 await Task.Run(() => File.Delete(tmpFile));
                 return false;
             }
-            
+
+            logger.LogInformation($"New youtube-dl version {version}.");
+
             // Rename to contain version number
             string newName = Path.Combine(
                 Path.GetDirectoryName(tmpFile),
@@ -107,6 +126,8 @@ namespace YoutubeDLWrapper
 
             foreach (var version in toDelete)
             {
+                logger.LogInformation($"Removing old youtube-dl version {version}.");
+
                 await Task.Run(() => File.Delete(version.Value.YoutubeDlPath));
                 Versions.Remove(version.Key);
             }

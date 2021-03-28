@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MoreLinq;
 using System;
 using System.Collections.Generic;
@@ -15,10 +16,12 @@ namespace YoutubeDLWrapper.Tests
     {
         public TestContext TestContext { get; set; }
 
+        private readonly LoggerFactory loggerFactory = new LoggerFactory();
+
         [TestMethod]
         public async Task DownloadTest()
         {
-            var manager = new YoutubeDLManager
+            var manager = new YoutubeDLManager(loggerFactory)
             {
                 StorePath = TestContext.TestDir
             };
@@ -45,7 +48,7 @@ namespace YoutubeDLWrapper.Tests
             TestUtils.DeployEmbeddedResource("youtube-dl-2001", TestContext.TestRunDirectory);
             TestUtils.DeployEmbeddedResource("youtube-dl-2002", TestContext.TestRunDirectory);
 
-            var manager = new YoutubeDLManager
+            var manager = new YoutubeDLManager(loggerFactory)
             {
                 StorePath = TestContext.TestRunDirectory
             };
