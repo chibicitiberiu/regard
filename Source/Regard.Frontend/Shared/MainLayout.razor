@@ -76,9 +76,21 @@
     <NotAuthorized>
         <NavMenu/>
         <div class="main">
-            <LoginRegisterModal />
+            @{
+                bool? state = AppState?.ServerStatus?.Initialized;
+                if (state.HasValue && state.Value)
+                {
+                    <LoginRegisterModal />
+                }
+                else if (state.HasValue && !state.Value)
+                {
+                    @Body
+                }
+                else
+                {
+                    <span>Loading...</span>
+                }
+            }
         </div>
     </NotAuthorized>
 </AuthorizeView>
-
-
