@@ -62,25 +62,10 @@ namespace YoutubeDLWrapper
                 logger.LogDebug($"Standard output will be written to {fileOut}");
             }
 
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (fileOut != null)
-                {
-                    using var strOut = new StreamWriter(fileOut, true);
-                    strOut.Write(e.Data);
-                }
-                onOutputCallback.Invoke(e.Data);
-            };
-
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                logger.LogDebug($"ERR >> {e.Data}");
-                onErrorCallback.Invoke(e.Data);
-            };
-
             process.Start();
-            process.BeginErrorReadLine();
-            process.BeginOutputReadLine();
+
+            var thread = new Thread(() => OutputProcessingThread(process, fileOut, onOutputCallback, onErrorCallback));
+            thread.Start();
 
             int timeleft = timeoutMs;
             while (!process.HasExited && timeleft > 0)
@@ -90,10 +75,11 @@ namespace YoutubeDLWrapper
                     logger.LogWarning("Invoke cancelled. Killing youtube-dl...");
                     process.Kill();
                     process.WaitForExit();
+                    thread.Join();
                     cancellationToken.Value.ThrowIfCancellationRequested();
                 }
 
-                process.WaitForExit(Math.Max(timeleft, 100));
+                process.WaitForExit(Math.Min(timeleft, 100));
                 timeleft -= 100;
             }
 
@@ -104,7 +90,52 @@ namespace YoutubeDLWrapper
                 process.WaitForExit();
             }
 
+            thread.Join();
             cancellationToken?.ThrowIfCancellationRequested();
+        }
+
+        private void OutputProcessingThread(Process process,
+                                            string outputFileOut,
+                                            Action<string> onOutputCallback, 
+                                            Action<string> onErrorCallback)
+        {
+            var stdOut = process.StandardOutput;
+            var stdErr = process.StandardError;
+
+            var readOut = stdOut.ReadLineAsync();
+            var readErr = stdErr.ReadLineAsync();
+            bool endOut = false, endErr = false;
+
+            do
+            {
+                // Read stdout
+                if (readOut.IsCompleted && !endOut)
+                {
+                    if (outputFileOut != null)
+                    {
+                        using var strOut = new StreamWriter(outputFileOut, true);
+                        strOut.WriteLine(readOut.Result);
+                    }
+                    onOutputCallback.Invoke(readOut.Result);
+
+                    if (!stdOut.EndOfStream)
+                        readOut = stdOut.ReadLineAsync();
+                    else endOut = true;
+                }
+
+                // Read stderr
+                if (readErr.IsCompleted && !endErr)
+                {
+                    onErrorCallback.Invoke(readErr.Result);
+
+                    if (!stdErr.EndOfStream)
+                        readErr = stdErr.ReadLineAsync();
+                    else endErr = true;
+                }
+
+                Task.WaitAny(readOut, readErr);
+
+            } while (!endOut || !endErr);
         }
 
         public int Run(IEnumerable<string> args,
@@ -131,12 +162,12 @@ namespace YoutubeDLWrapper
                        CancellationToken? cancellationToken = null)
         {
             using Process process = BuildProcess(args);
-            var stdOutBuilder = new StringBuilder();
-            var stdErrorBuilder = new StringBuilder();
+            var stdOutBuilder = new StringWriter();
+            var stdErrorBuilder = new StringWriter();
 
             RunProcess(process,
-                data => stdOutBuilder.AppendLine(data),
-                data => stdErrorBuilder.AppendLine(data),
+                data => stdOutBuilder.WriteLine(data),
+                data => stdErrorBuilder.WriteLine(data),
                 timeoutMs,
                 cancellationToken);
 

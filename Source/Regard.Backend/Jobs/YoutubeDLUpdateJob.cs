@@ -31,7 +31,7 @@ namespace Regard.Backend.Jobs
             try
             {
                 await ytdlService.DownloadLatest();
-                log.LogInformation("Updated youtube-dl to version {0}", ytdlService.CurrentVersion);
+                log.LogInformation("Youtube-dl is up to date ({0})", ytdlService.CurrentVersion);
             }
             catch(Exception ex)
             {
