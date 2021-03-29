@@ -4,7 +4,26 @@ Regard is a self hosted personal video management platform, which allows you to 
 
 ## Installation (Docker)
 
-The easiest method to install Regard is to use the docker images
+The easiest method to install Regard is to use Docker. Check the `docker-compose.yml` file for a full setup example. The `RunDocker.sh` script will perform all the required setup steps, like setting up a database and user.
+
+There are 3 things needed for Regard to work:
+
+- the database, so far only Microsoft SQL is supported. You can use this database image: `mcr.microsoft.com/mssql/server:2019-latest`
+
+- the backend `chibicitiberiu/regard-backend:latest`. For the backend, you need to setup the following environment variables:
+
+  - `DB_MSSQL` - contains the Microsoft SQL connection string
+  - `REGARD_DATA_DIR` - data directory that will be used for storing application data. This directory should be mounted as a volume to prevent data loss. Default: `/data/`
+  - `REGARD_DOWNLOAD_DIR` - directory where videos downloads will be stored. This directory should be mounted as a volume to prevent data loss. Default: `/data/downloads` 
+
+  Also, you need to expose port `80` (the backend needs to be publicly accessible, since the frontend will make the requests from the browser).
+
+- the frontend `chibicitiberiu/regard-frontend:latest`. Set the `BACKEND_URL` variable to point to the backend. The frontend will be accessible on port `80`.
+
+For both, frontend and backend, the following 2 tags are available on the Docker Hub:
+
+* `latest` contains the latest version
+* `latest-debug` contains the latest version, setup for debugging. This version is setup with additional logging, as well as debug symbols, but may be slower and less optimized.
 
 ## Development setup
 
