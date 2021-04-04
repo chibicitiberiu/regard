@@ -6,6 +6,7 @@ using Regard.Backend.Common.Utils;
 using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using YoutubeDLWrapper;
 
@@ -34,6 +35,8 @@ namespace Regard.Backend.Providers.YouTubeDL
         {
             try
             {
+                uri = YouTubeUrlHelper.FixYouTubeChannelUri(uri);
+
                 var info = await ytdlService.UsingYoutubeDL(async ytdl =>
                     await ytdl.ExtractInformation(uri.ToString(), false));
 
@@ -85,15 +88,31 @@ namespace Regard.Backend.Providers.YouTubeDL
                 throw new Exception("Invalid or unsupported URL format!");
             }
 
+            // Fetch thumbnail, real channel title
+            var metadata = new List<KeyValuePair<string, string>>();
+            if (uri.Host.EndsWith("youtube.com"))
+                metadata = MetadataScraper.ScrapeMetadata(uri).ToList();
+
             return new Subscription()
             {
                 SubscriptionId = info.Id,
                 SubscriptionProviderId = Id,
-                Name = info.Title,
+                Name = GetFirst(metadata, "name", "og:title", "twitter:title") ?? info.Title,
                 Description = info.Description,
-                ThumbnailPath = info.Thumbnail?.ToString(),
+                ThumbnailPath = GetFirst(metadata, "link:thumbnailUrl", "link:url", "og:image", "twitter:image") ?? info.Thumbnail?.ToString(),
                 OriginalUrl = uri.ToString()
             };
+        }
+
+        private static string GetFirst(IEnumerable<KeyValuePair<string, string>> items, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                var search = items.FirstOrDefault(x => x.Key == key && x.Value != null);
+                if (search.Key != null)
+                    return search.Value;
+            }
+            return null;
         }
 
         public async IAsyncEnumerable<Video> FetchVideos(Subscription subscription)
