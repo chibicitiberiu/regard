@@ -24,7 +24,7 @@ namespace Regard.Backend.DB
         {
             var dict = new Dictionary<string, string>()
             {
-                { "ConnectionStrings:SqlServer", "Data Source=GLORIOUS-PC\\SQLEXPRESS;Initial Catalog=RegardTest;Integrated Security=True;Pooling=False" }
+                { "ConnectionStrings:SqlServer", "Data Source=localhost\\SQLEXPRESS;Initial Catalog=Regard;Integrated Security=True;Pooling=False" }
             };
 
             IConfiguration config = new ConfigurationBuilder()
