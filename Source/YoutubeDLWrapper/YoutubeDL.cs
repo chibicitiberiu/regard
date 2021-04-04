@@ -52,14 +52,17 @@ namespace YoutubeDLWrapper
                                 int timeoutMs,
                                 CancellationToken? cancellationToken)
         {
-            logger.LogDebug($"Invoking youtube-dl: {process.StartInfo.FileName} {string.Join(" ", process.StartInfo.ArgumentList)}");
+            string fullCmdLine = $"{process.StartInfo.FileName} {string.Join(" ", process.StartInfo.ArgumentList)}";
+            logger.LogDebug($"Invoking youtube-dl: {fullCmdLine}");
             
             string fileOut = null;
             if (Debug)
             {
+                int r = new Random().Next(1000);
                 Directory.CreateDirectory(DebugPath);
-                fileOut = Path.Combine(DebugPath, $"{DateTime.Now:yyyyMMddhhmmsstt}_stdout.txt");
+                fileOut = Path.Combine(DebugPath, $"{DateTime.Now:yyyyMMddhhmmsstt}_{r}_stdout.txt");
                 logger.LogDebug($"Standard output will be written to {fileOut}");
+                File.AppendAllText(fileOut, $"> {fullCmdLine}{Environment.NewLine}");
             }
 
             process.Start();
