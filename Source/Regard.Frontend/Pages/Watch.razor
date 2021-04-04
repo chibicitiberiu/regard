@@ -1,7 +1,5 @@
 ﻿@page "/watch/{videoId:int}"
 
-<h2>@video?.Name</h2>
-
 @if (errorMessage != null)
 {
     <div>Error: @errorMessage</div>
@@ -31,11 +29,18 @@
         </div>
     }
 
-    <div>
-        @video.Views views
+
+    <div class="player-view-stats">
+        <div class="left-stats">
+            <h3>@video?.Name</h3><br>
+            <h5>@video.Views Views   •    Posted @video.Published   •    Score @video.Rating/5</h5>
+        </div>
+        <div class="right-stats"> 
+            @video.UploaderName  • <img src="https://i.imgur.com/7DXZees.jpg" alt="ChannelIcon">
+        </div>
     </div>
 
-    <div>
+    <div class="video-description">
         @FormattedDescription
     </div>
 }

@@ -596,7 +596,9 @@ form {
   visibility: visible;
   transform: translateY(0);
   opacity: 1;
-  transition: visibility 0s,  transform .25s ease-out, opacity .25s ease-out; }
+  transition: visibility 0s, 
+ transform .25s ease-out,
+ opacity .25s ease-out; }
   .dropdown.dropdown-right {
     right: .125rem;
     left: auto; }
@@ -607,7 +609,9 @@ form {
     display: block !important;
     transform: translateY(-10px);
     opacity: 0;
-    transition: visibility 0s linear .15s,  transform .15s ease-in, opacity .15s ease-in; }
+    transition: visibility 0s linear .15s, 
+ transform .15s ease-in,
+ opacity .15s ease-in; }
 
 .nav-item .dropdown:before {
   content: "";
@@ -632,7 +636,8 @@ form {
   border-radius: var(--border-radius-btn);
   visibility: collapse;
   opacity: 0;
-  transition: visibility 0s linear .15s, opacity .15s ease-in;
+  transition: visibility 0s linear .15s,
+ opacity .15s ease-in;
   z-index: 100; }
   .popper-dropdown[data-popper-placement^='top'] > .popper-arrow {
     bottom: -4px; }
@@ -646,7 +651,8 @@ form {
 .popper-dropdown-show {
   visibility: visible;
   opacity: 1;
-  transition: visibility 0s,  opacity .25s ease-out; }
+  transition: visibility 0s, 
+ opacity .25s ease-out; }
 
 .popper-arrow, .popper-arrow::before {
   position: absolute;
@@ -1259,3 +1265,57 @@ img.muted {
   position: absolute;
   bottom: 0;
   right: .5rem; }
+
+
+    /* Edited by Palash */
+
+    .player-view{
+      padding: 5px;
+      flex-basis: 80%;
+      max-width: 80%;
+    }
+    .subs-view{
+      padding: 5px;
+      flex-basis: 20%;
+      max-width: 20%;
+    }
+
+    .video-js{
+      width: -moz-available;          /* WebKit-based browsers will ignore this. */
+      width: -webkit-fill-available;  /* Mozilla-based browsers will ignore this. */
+      width: fill-available;
+      height: calc(80vh - 50px);
+    }
+    .content{
+      padding: 5px;
+    }
+
+    .video-gallery .list-view-items {
+      flex-flow: row wrap;
+      align-items: baseline;
+      justify-content: center;
+  }
+  
+    .player-view-stats{
+      display: flex;
+      flex-flow: row;
+      justify-content: space-around;
+      align-items: flex-end;
+      
+    }
+    .left-stats{
+      float: left;
+    }
+    .right-stats{
+      float: right;
+    }
+
+    hr{
+      width: 10%;
+      text-align: center;
+      background-color:aqua;
+    }
+    .video-description{
+      text-align: center;
+    }
+    
