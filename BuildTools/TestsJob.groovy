@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Install dependencies') {
             steps {
-                sh 'apt-get update && apt-get install -y python3'
+                sh 'apt-get --allow-unauthenticated update && apt-get --allow-unauthenticated install -y python3'
             }
         }
         stage('Copy artifacts') {
