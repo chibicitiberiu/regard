@@ -20,30 +20,30 @@
 @import "lib/toast";
 
 #main_footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 2rem;
-    line-height: 2rem;
-    padding: 0 1rem;
-    display: flex;
-    align-content: center;
-    font-size: 10pt;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2rem;
+  line-height: 2rem;
+  padding: 0 1rem;
+  display: flex;
+  align-content: center;
+  font-size: 10pt;
 }
 
 .black-overlay {
-    position: fixed; /* Sit on top of the page content */
-    display: none; /* Hidden by default */
-    width: 100%; /* Full width (cover the whole page) */
-    height: 100%; /* Full height (cover the whole page) */
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0,0,0,0.5); /* Black background with opacity */
-    z-index: 2; /* Specify a stack order in case you're using a different order for other elements */
-    cursor: pointer; /* Add a pointer on hover */
+  position: fixed; /* Sit on top of the page content */
+  display: none; /* Hidden by default */
+  width: 100%; /* Full width (cover the whole page) */
+  height: 100%; /* Full height (cover the whole page) */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5); /* Black background with opacity */
+  z-index: 2; /* Specify a stack order in case you're using a different order for other elements */
+  cursor: pointer; /* Add a pointer on hover */
 }
 
 /*.video-badges {
@@ -81,81 +81,154 @@
     }
 }*/
 
-
 .alert-card {
-    max-width: 35rem;
-    margin: 2rem 0;
+  max-width: 35rem;
+  margin: 2rem 0;
 }
 
 .no-asterisk {
-    .asteriskField {
-        display: none;
-    }
+  .asteriskField {
+    display: none;
+  }
 }
 
 .modal-field-error {
-    margin: 0.5rem 0;
-    padding: 0.5rem 0;
+  margin: 0.5rem 0;
+  padding: 0.5rem 0;
 
-    ul {
-        margin: 0;
-    }
+  ul {
+    margin: 0;
+  }
 }
 
 .star-rating {
-    display: inline-block;
-    margin-bottom: 0.5rem;
+  display: inline-block;
+  margin-bottom: 0.5rem;
 }
 
 .btn-toolbar {
-    margin: .5rem 0;
+  margin: 0.5rem 0;
 
-    .btn {
-        padding: 0.15rem 0.4rem;
-        font-size: 14pt;
-    }
+  .btn {
+    padding: 0.15rem 0.4rem;
+    font-size: 14pt;
+  }
 }
 
 .status-timestamp {
-    margin-right: 0.25rem;
+  margin-right: 0.25rem;
 }
 
 .dropdown-jobs {
-    min-width: 25rem;
+  min-width: 25rem;
 
-    .dropdown-item p {
-        margin: 0;
-        line-height: normal;
-    }
+  .dropdown-item p {
+    margin: 0;
+    line-height: normal;
+  }
 }
 
 img.muted {
-    opacity: .5;
+  opacity: 0.5;
 }
 
 .provider-wrapper {
-    padding-left: 5px;
-    padding-right: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
 
-    button {
-        width: 100%;
-    }
+  button {
+    width: 100%;
+  }
 }
 
 .provider-logo {
-    display: inline-block;
-    width: 8rem;
-    height: 4rem;
-    object-fit: contain;
-    margin: .25em auto;
-    font-size: 3rem;
-    text-align: center;
-    line-height: 4rem;
+  display: inline-block;
+  width: 8rem;
+  height: 4rem;
+  object-fit: contain;
+  margin: 0.25em auto;
+  font-size: 3rem;
+  text-align: center;
+  line-height: 4rem;
 }
 
 .provider-status {
-    font-size: 2rem;
-    position: absolute;
-    bottom: 0;
-    right: .5rem;
+  font-size: 2rem;
+  position: absolute;
+  bottom: 0;
+  right: 0.5rem;
+}
+
+/* Edited by Palash */
+body{
+  background-size: cover;
+}
+.player-view {
+  padding: 5px;
+  flex-basis: 80%;
+  max-width: 80%;
+  // indivisual scroll 
+  overflow: auto !important;
+  box-sizing: border-box !important;
+  height: min-content;
+  float: left !important;
+}
+.subs-view {
+  padding: 5px;
+  flex-basis: 20%;
+  max-width: 20%;
+  // scroll function
+  overflow: auto;
+  box-sizing: border-box;
+  height: 100%;
+  float: left;
+}
+
+.video-js {
+  width: -moz-available; /* WebKit-based browsers will ignore this. */
+  width: -webkit-fill-available; /* Mozilla-based browsers will ignore this. */
+  width: fill-available;
+  height: calc(80vh - 50px);
+}
+.content {
+  padding: 5px;
+}
+.tree-view {
+    height: 95vh;
+    overflow-y: scroll;
+}
+.tree-view::-webkit-scrollbar,
+.video-gallery::-webkit-scrollbar{
+    display: none;
+}
+.video-gallery {
+    flex-flow: row wrap;
+    align-items: baseline;
+    justify-content: center;
+    height: 85vh;
+    overflow-y: scroll;
+}
+
+.player-view-stats {
+  display: flex;
+  flex-flow: row;
+  justify-content: space-around;
+  align-items: flex-end;
+}
+.left-stats {
+  float: left;
+}
+
+.right-stats {
+  float: right;
+}
+
+hr {
+  width: 10%;
+  text-align: center;
+  background-color: aqua;
+}
+
+.video-description {
+  text-align: center;
 }

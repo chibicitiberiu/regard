@@ -596,9 +596,7 @@ form {
   visibility: visible;
   transform: translateY(0);
   opacity: 1;
-  transition: visibility 0s, 
- transform .25s ease-out,
- opacity .25s ease-out; }
+  transition: visibility 0s,  transform .25s ease-out, opacity .25s ease-out; }
   .dropdown.dropdown-right {
     right: .125rem;
     left: auto; }
@@ -609,9 +607,7 @@ form {
     display: block !important;
     transform: translateY(-10px);
     opacity: 0;
-    transition: visibility 0s linear .15s, 
- transform .15s ease-in,
- opacity .15s ease-in; }
+    transition: visibility 0s linear .15s,  transform .15s ease-in, opacity .15s ease-in; }
 
 .nav-item .dropdown:before {
   content: "";
@@ -636,8 +632,7 @@ form {
   border-radius: var(--border-radius-btn);
   visibility: collapse;
   opacity: 0;
-  transition: visibility 0s linear .15s,
- opacity .15s ease-in;
+  transition: visibility 0s linear .15s, opacity .15s ease-in;
   z-index: 100; }
   .popper-dropdown[data-popper-placement^='top'] > .popper-arrow {
     bottom: -4px; }
@@ -651,8 +646,7 @@ form {
 .popper-dropdown-show {
   visibility: visible;
   opacity: 1;
-  transition: visibility 0s, 
- opacity .25s ease-out; }
+  transition: visibility 0s,  opacity .25s ease-out; }
 
 .popper-arrow, .popper-arrow::before {
   position: absolute;
@@ -1227,7 +1221,7 @@ form {
   margin-bottom: 0.5rem; }
 
 .btn-toolbar {
-  margin: .5rem 0; }
+  margin: 0.5rem 0; }
   .btn-toolbar .btn {
     padding: 0.15rem 0.4rem;
     font-size: 14pt; }
@@ -1242,7 +1236,7 @@ form {
     line-height: normal; }
 
 img.muted {
-  opacity: .5; }
+  opacity: 0.5; }
 
 .provider-wrapper {
   padding-left: 5px;
@@ -1255,7 +1249,7 @@ img.muted {
   width: 8rem;
   height: 4rem;
   object-fit: contain;
-  margin: .25em auto;
+  margin: 0.25em auto;
   font-size: 3rem;
   text-align: center;
   line-height: 4rem; }
@@ -1264,58 +1258,72 @@ img.muted {
   font-size: 2rem;
   position: absolute;
   bottom: 0;
-  right: .5rem; }
+  right: 0.5rem; }
 
+/* Edited by Palash */
+body {
+  background-size: cover; }
 
-    /* Edited by Palash */
+.player-view {
+  padding: 5px;
+  flex-basis: 80%;
+  max-width: 80%;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+  height: min-content;
+  float: left !important; }
 
-    .player-view{
-      padding: 5px;
-      flex-basis: 80%;
-      max-width: 80%;
-    }
-    .subs-view{
-      padding: 5px;
-      flex-basis: 20%;
-      max-width: 20%;
-    }
+.subs-view {
+  padding: 5px;
+  flex-basis: 20%;
+  max-width: 20%;
+  overflow: auto;
+  box-sizing: border-box;
+  height: 100%;
+  float: left; }
 
-    .video-js{
-      width: -moz-available;          /* WebKit-based browsers will ignore this. */
-      width: -webkit-fill-available;  /* Mozilla-based browsers will ignore this. */
-      width: fill-available;
-      height: calc(80vh - 50px);
-    }
-    .content{
-      padding: 5px;
-    }
+.video-js {
+  width: -moz-available;
+  /* WebKit-based browsers will ignore this. */
+  width: -webkit-fill-available;
+  /* Mozilla-based browsers will ignore this. */
+  width: fill-available;
+  height: calc(80vh - 50px); }
 
-    .video-gallery .list-view-items {
-      flex-flow: row wrap;
-      align-items: baseline;
-      justify-content: center;
-  }
-  
-    .player-view-stats{
-      display: flex;
-      flex-flow: row;
-      justify-content: space-around;
-      align-items: flex-end;
-      
-    }
-    .left-stats{
-      float: left;
-    }
-    .right-stats{
-      float: right;
-    }
+.content {
+  padding: 5px; }
 
-    hr{
-      width: 10%;
-      text-align: center;
-      background-color:aqua;
-    }
-    .video-description{
-      text-align: center;
-    }
-    
+.tree-view {
+  height: 95vh;
+  overflow-y: scroll; }
+
+.tree-view::-webkit-scrollbar,
+.video-gallery::-webkit-scrollbar {
+  display: none; }
+
+.video-gallery {
+  flex-flow: row wrap;
+  align-items: baseline;
+  justify-content: center;
+  height: 85vh;
+  overflow-y: scroll; }
+
+.player-view-stats {
+  display: flex;
+  flex-flow: row;
+  justify-content: space-around;
+  align-items: flex-end; }
+
+.left-stats {
+  float: left; }
+
+.right-stats {
+  float: right; }
+
+hr {
+  width: 10%;
+  text-align: center;
+  background-color: aqua; }
+
+.video-description {
+  text-align: center; }
