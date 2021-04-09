@@ -160,23 +160,24 @@ img.muted {
 }
 
 /* Edited by Palash */
-body{
-  background-size: cover;
+body {
+    background-size: cover;
+    overflow: hidden;
 }
 .player-view {
-  padding: 5px;
-  flex-basis: 80%;
-  max-width: 80%;
-  // indivisual scroll 
-  overflow: auto !important;
-  box-sizing: border-box !important;
-  height: min-content;
-  float: left !important;
+padding: 5px;
+flex-basis: 75%;
+max-width: 75%;
+// scroll function
+overflow: auto !important;
+box-sizing: border-box !important;
+height: 100vh;
+float: left !important;
 }
 .subs-view {
   padding: 5px;
-  flex-basis: 20%;
-  max-width: 20%;
+  flex-basis: 25%;
+  max-width: 25%;
   // scroll function
   overflow: auto;
   box-sizing: border-box;
@@ -185,50 +186,85 @@ body{
 }
 
 .video-js {
-  width: -moz-available; /* WebKit-based browsers will ignore this. */
-  width: -webkit-fill-available; /* Mozilla-based browsers will ignore this. */
-  width: fill-available;
-  height: calc(80vh - 50px);
+width: calc(73vw - 7px);
+height: calc(70vh - 34px);
+margin: 3px auto;
 }
 .content {
-  padding: 5px;
+    padding: 5px;
 }
 .tree-view {
-    height: 95vh;
-    overflow-y: scroll;
+overflow-y: scroll;
+height: calc(87vh - 10px);
 }
+
+.player-view::-webkit-scrollbar,
 .tree-view::-webkit-scrollbar,
-.video-gallery::-webkit-scrollbar{
+.video-gallery::-webkit-scrollbar {
     display: none;
 }
+.player-view,
+.tree-view,
+.video-gallery{
+scrollbar-width: none;
+}
+
 .video-gallery {
-    flex-flow: row wrap;
-    align-items: baseline;
-    justify-content: center;
-    height: 85vh;
-    overflow-y: scroll;
+flex-flow: row wrap;
+align-items: baseline;
+justify-content: center;
+height: 85vh;
+overflow-y: scroll;
 }
 
 .player-view-stats {
-  display: flex;
-  flex-flow: row;
-  justify-content: space-around;
-  align-items: flex-end;
+display: flex;
+flex-flow: row;
+justify-content: space-around;
+align-items: flex-end;
 }
 .left-stats {
   float: left;
 }
 
 .right-stats {
-  float: right;
+float: right;
 }
 
 hr {
-  width: 10%;
-  text-align: center;
-  background-color: aqua;
+width: 10%;
+text-align: center;
+background-color: aqua;
 }
 
 .video-description {
   text-align: center;
 }
+
+
+/* Scrollbar Style - disabled in scrollless body */
+/*
+html {
+--scrollbarBG: #CFD8DC;
+--thumbBG: #90A4AE;
+}
+
+body::-webkit-scrollbar {
+width: 11px;
+}
+
+body {
+scrollbar-width: thin;
+scrollbar-color: var(--thumbBG) var(--scrollbarBG);
+}
+
+body::-webkit-scrollbar-track {
+    background: var(--scrollbarBG);
+}
+
+body::-webkit-scrollbar-thumb {
+    background-color: var(--thumbBG);
+    border-radius: 6px;
+    border: 3px solid var(--scrollbarBG);
+}
+*/
