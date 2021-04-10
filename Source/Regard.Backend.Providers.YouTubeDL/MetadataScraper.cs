@@ -26,26 +26,34 @@ namespace Regard.Backend.Providers.YouTubeDL
 
             var doc = web.Load(uri);
 
-            foreach (var metaNode in doc.DocumentNode.SelectNodes("//meta"))
+            var metaNodes = doc.DocumentNode.SelectNodes("//meta");
+            if (metaNodes != null)
             {
-                string name = metaNode.Attributes["name"]?.Value
-                        ?? metaNode.Attributes["property"]?.Value
-                        ?? metaNode.Attributes["itemprop"]?.Value;
-
-                if (name != null)
+                foreach (var metaNode in metaNodes)
                 {
-                    string value = metaNode.Attributes["content"]?.Value;
-                    yield return new KeyValuePair<string, string>(name, value);
+                    string name = metaNode.Attributes["name"]?.Value
+                            ?? metaNode.Attributes["property"]?.Value
+                            ?? metaNode.Attributes["itemprop"]?.Value;
+
+                    if (name != null)
+                    {
+                        string value = metaNode.Attributes["content"]?.Value;
+                        yield return new KeyValuePair<string, string>(name, value);
+                    }
                 }
             }
 
-            foreach (var linkNode in doc.DocumentNode.SelectNodes("//link[@itemprop]"))
+            var linkNodes = doc.DocumentNode.SelectNodes("//link[@itemprop]");
+            if (linkNodes != null)
             {
-                string itemprop = linkNode.Attributes["itemprop"]?.Value;
-                string href = linkNode.Attributes["href"]?.Value;
+                foreach (var linkNode in linkNodes)
+                {
+                    string itemprop = linkNode.Attributes["itemprop"]?.Value;
+                    string href = linkNode.Attributes["href"]?.Value;
 
-                if (itemprop != null)
-                    yield return new KeyValuePair<string, string>("link:" + itemprop, href);
+                    if (itemprop != null)
+                        yield return new KeyValuePair<string, string>("link:" + itemprop, href);
+                }
             }
         }
     }
