@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using Regard.Common.API.Model;
 using Regard.Common.API.Response;
+using Regard.Common.Utils;
 using Regard.Frontend.Services;
 using Regard.Frontend.Shared.Subscription;
 using System;
@@ -121,6 +123,18 @@ namespace Regard.Services
                 else
                     navigationManager.NavigateTo($"/folder/{appState.SelectedSubscription.Right.Id}");
             }
+        }
+
+        public void EditSubscription(Either<ApiSubscription, ApiSubscriptionFolder> subscription)
+        {
+            appState.SelectedSubscription = subscription;
+            if (subscription == null)
+                return;
+
+            if (subscription.IsLeft)
+                navigationManager.NavigateTo($"/subscription/edit/{appState.SelectedSubscription.Left.Id}");
+            else
+                navigationManager.NavigateTo($"/folder/edit/{appState.SelectedSubscription.Right.Id}");
         }
 
         public void Dispose()

@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Regard.Common.API.Model;
 
 namespace Regard.Backend.Controllers
 {
@@ -20,12 +21,17 @@ namespace Regard.Backend.Controllers
         private readonly UserManager<UserAccount> userManager;
         private readonly SubscriptionManager subscriptionManager;
         private readonly ApiResponseFactory responseFactory;
+        private readonly IPreferencesManager preferencesManager;
 
-        public SubscriptionController(UserManager<UserAccount> userManager, SubscriptionManager subscriptionManager, ApiResponseFactory responseFactory)
+        public SubscriptionController(UserManager<UserAccount> userManager,
+                                      SubscriptionManager subscriptionManager,
+                                      ApiResponseFactory responseFactory,
+                                      IPreferencesManager preferencesManager)
         {
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
             this.responseFactory = responseFactory;
+            this.preferencesManager = preferencesManager;
         }
 
         [HttpPost]
@@ -122,13 +128,58 @@ namespace Regard.Backend.Controllers
             if (request.ParentFolderIds != null)
                 query = query.Where(x => request.ParentFolderIds.Contains(x.ParentFolderId));
 
+            var subscriptions = query
+                .OrderBy(x => x.Name)
+                .Select(x => x.ToApi())
+                .ToArray();
+
+            if ((request.Parts & ApiSubscription.Parts.Config) != 0)
+                AddConfigs(subscriptions);
+
+            if ((request.Parts & ApiSubscription.Parts.Stats) != 0)
+                AddStatistics(subscriptions);
+
             return Ok(responseFactory.Success(new SubscriptionListResponse
             {
-                Subscriptions = query
-                    .OrderBy(x => x.Name)
-                    .Select(x => x.ToApi())
-                    .ToArray(),
+                Subscriptions = subscriptions
             }));
+        }
+
+        private void AddConfigs(ApiSubscription[] subscriptions)
+        {
+            foreach (var sub in subscriptions)
+            {
+                sub.Config = new ApiSubscriptionConfig();
+
+                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_AutoDownload, sub.Id, out var autoDownload))
+                    sub.Config.AutoDownload = autoDownload;
+
+                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_MaxCount, sub.Id, out var maxCount))
+                    sub.Config.DownloadMaxCount = maxCount;
+
+                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_DownloadOrder, sub.Id, out var order))
+                    sub.Config.DownloadOrder = order;
+
+                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_AutoDeleteWatched, sub.Id, out var autoDel))
+                    sub.Config.AutomaticDeleteWatched = autoDel;
+
+                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_DownloadPath, sub.Id, out var path))
+                    sub.Config.DownloadPath = path;
+            }
+        }
+
+        private void AddStatistics(ApiSubscription[] subscriptions)
+        {
+            foreach (var sub in subscriptions)
+            {
+                sub.Stats = new ApiSubscriptionStats()
+                {
+                    TotalVideoCount = subscriptionManager.Statistic_TotalVideoCount(sub.Id),
+                    WatchedVideoCount = subscriptionManager.Statistic_WatchedVideoCount(sub.Id),
+                    DownloadedVideoCount = subscriptionManager.Statistic_DownloadedVideoCount(sub.Id),
+                    DiskUsageBytes = subscriptionManager.Statistic_DiskUsage(sub.Id),
+                };
+            }
         }
 
         [HttpPost]

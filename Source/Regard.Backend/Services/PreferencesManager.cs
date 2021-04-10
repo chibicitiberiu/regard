@@ -373,5 +373,10 @@ namespace Regard.Backend.Services
             dbPref.Value = JsonSerializer.Serialize(value);
             dataContext.SaveChanges();
         }
+
+        public bool GetForSubscriptionNoResolve<TValue>(PreferenceDefinition<TValue> pref, int subId, out TValue value)
+        {
+            return GetFromDatabaseSubscription(pref, subId, out value);
+        }
     }
 }

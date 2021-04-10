@@ -1,0 +1,74 @@
+﻿@page "/subscription/edit/{subscriptionId:int}"
+
+<EditForm Model="Request"
+          OnValidSubmit="OnSubmit">
+
+    <RgInputText Id="subscription_name"
+                 @bind-Value="Request.Name"
+                 Label="Name:"
+                 Required="true"
+                 ValidationFor="() => Request.Name"
+                 autocapitalize="none"
+                 autofocus />
+
+    <RgInputTextArea Id="subscription_desc"
+                     @bind-Value="Request.Description"
+                     Label="Description:"
+                     Required="false"
+                     ValidationFor="() => Request.Description"
+                     rows="12"
+                     autocapitalize="none"
+                     autofocus />
+
+    <FolderSelect Id="subscription_parent"
+                  @bind-Value="Request.ParentFolderId"
+                  Label="Parent folder:"
+                  Required="true" />
+
+    <RgSimpleInputSelect Id="subscription_autoDownload"
+                         TKey="bool?"
+                         @bind-Value="Request.AutoDownload"
+                         Label="Automatic download: "
+                         Required="true" />
+
+    @*TODO: <RgInputText Id="subscription_download_maxCount"
+                 @bind-Value="Request.DownloadMaxCount"
+                 Label="Download maximum count:"
+                 Required="true"
+                 ValidationFor="() => Request.DownloadMaxCount"
+                 autocapitalize="none"
+                 autofocus />*@
+
+    <RgSimpleInputSelect Id="subscription_downloadOrder"
+                         TKey="Regard.Model.VideoOrder?"
+                         @bind-Value="Request.DownloadOrder"
+                         Label="Download order: "
+                         Required="true" />
+
+    <RgSimpleInputSelect Id="subscription_autoDeleteWatched"
+                         TKey="bool?"
+                         @bind-Value="Request.AutomaticDeleteWatched"
+                         Label="Automatic delete watched: "
+                         Required="true" />
+
+    <RgInputText Id="subscription_downloadPath"
+                 @bind-Value="Request.DownloadPath"
+                 Label="Download path:"
+                 Required="true"
+                 ValidationFor="() => Request.DownloadPath"
+                 autocapitalize="none"
+                 autofocus />
+
+    <div class="form-group row">
+        <div class="col-xs-12 fg-error">
+            @ValidationMessage
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xs-12 row">
+            <button class="primary ml-auto" type="submit" disabled="@(!SubmitEnabled)">Save</button>
+        </div>
+    </div>
+
+</EditForm>

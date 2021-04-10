@@ -49,6 +49,6 @@ namespace Regard.Common.API.Model
 
         public int DownloadedVideoCount { get; set; }
 
-        public int DiskUsageBytes { get; set; }
+        public long DiskUsageBytes { get; set; }
     }
 }

@@ -12,6 +12,7 @@
     },
 
     addClickOutsideHandler: function (element, dotNetObjectRef) {
+        this.removeClickOutsideHandler(element);
         this.clickOutsideHandlers.push({
             element: element,
             dotNetObjectRef: dotNetObjectRef
@@ -19,6 +20,9 @@
     },
 
     removeClickOutsideHandler: function (element) {
+        if (!(element instanceof Node))
+            return;
+        
         for (var i = 0; i < this.clickOutsideHandlers.length; i++) {
             if (this.clickOutsideHandlers[i].element.isSameNode(element)) {
                 this.clickOutsideHandlers.splice(i, 1);

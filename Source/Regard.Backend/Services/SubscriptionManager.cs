@@ -21,18 +21,21 @@ namespace Regard.Backend.Services
         private readonly IProviderManager providerManager;
         private readonly MessagingService messaging;
         private readonly RegardScheduler scheduler;
+        private readonly IVideoStorageService videoStorageService;
 
         public SubscriptionManager(DataContext dataContext,
                                    IPreferencesManager preferencesManager,
                                    IProviderManager providerManager,
                                    MessagingService messaging,
-                                   RegardScheduler scheduler)
+                                   RegardScheduler scheduler,
+                                   IVideoStorageService videoStorageService)
         {
             this.dataContext = dataContext;
             this.preferencesManager = preferencesManager;
             this.providerManager = providerManager;
             this.messaging = messaging;
             this.scheduler = scheduler;
+            this.videoStorageService = videoStorageService;
         }
 
         public async Task<string> TestUrl(Uri uri)
@@ -261,6 +264,36 @@ namespace Regard.Backend.Services
         public async Task SynchronizeAll()
         {
             await scheduler.ScheduleGlobalSynchronizeNow();
+        }
+
+        public long Statistic_DiskUsage(int subscriptionId)
+        {
+            return dataContext.Videos.AsQueryable()
+                .Where(x => x.SubscriptionId == subscriptionId)
+                .Sum(x => x.DownloadedSize) ?? 0;
+        }
+
+        public int Statistic_WatchedVideoCount(int subscriptionId)
+        {
+            return dataContext.Videos.AsQueryable()
+                .Where(x => x.SubscriptionId == subscriptionId)
+                .Where(x => x.IsWatched)
+                .Count();
+        }
+
+        public int Statistic_TotalVideoCount(int subscriptionId)
+        {
+            return dataContext.Videos.AsQueryable()
+                .Where(x => x.SubscriptionId == subscriptionId)
+                .Count();
+        }
+
+        public int Statistic_DownloadedVideoCount(int subscriptionId)
+        {
+            return dataContext.Videos.AsQueryable()
+                .Where(x => x.SubscriptionId == subscriptionId)
+                .Where(x => x.DownloadedPath != null)
+                .Count();
         }
     }
 }

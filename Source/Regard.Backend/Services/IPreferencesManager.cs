@@ -13,6 +13,8 @@ namespace Regard.Backend.Services
 
         public TValue GetForSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId);
 
+        public bool GetForSubscriptionNoResolve<TValue>(PreferenceDefinition<TValue> pref, int subId, out TValue value);
+
         public void SetGlobal<TValue>(PreferenceDefinition<TValue> pref, TValue value);
 
         public void SetForUser<TValue>(PreferenceDefinition<TValue> pref, string userId, TValue value);

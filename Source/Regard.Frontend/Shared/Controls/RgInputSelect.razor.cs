@@ -12,6 +12,7 @@ namespace Regard.Frontend.Shared.Controls
     public partial class RgInputSelect<TModel, TKey>
     {
         private IEnumerable<TModel> itemsSource = null;
+        private bool initialized = false;
 
         [Parameter] public string Id { get; set; }
 
@@ -42,7 +43,8 @@ namespace Regard.Frontend.Shared.Controls
                 if (itemsSource is INotifyCollectionChanged observableSource)
                     observableSource.CollectionChanged += ObservableSource_CollectionChanged;
 
-                StateHasChanged();
+                if (initialized)
+                    StateHasChanged();
             }
         }
 
@@ -108,8 +110,24 @@ namespace Regard.Frontend.Shared.Controls
                     return false;
                 }
             }
+            else if (typeof(TKey) == typeof(bool?))
+            {
+                if (bool.TryParse(value, out var parsedValue))
+                    result = (TKey)(object)parsedValue;
+                else
+                    result = default;
+
+                validationErrorMessage = null;
+                return true;
+            }
 
             throw new InvalidOperationException($"{GetType()} does not support the type '{typeof(TKey)}'.");
+        }
+
+        protected override void OnInitialized()
+        {
+            base.OnInitialized();
+            initialized = true;
         }
     }
 }

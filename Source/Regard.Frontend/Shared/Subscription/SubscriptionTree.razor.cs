@@ -30,6 +30,8 @@ namespace Regard.Frontend.Shared.Subscription
 
         [Inject] protected SubscriptionManagerService SubscriptionManager { get; set; }
 
+        [Inject] protected AppController AppController { get; set; }
+
         [Parameter] public EventCallback<SubscriptionItemViewModelBase> SelectedItemChanged { get; set; }
 
         protected override async Task OnInitializedAsync()
@@ -203,7 +205,11 @@ namespace Regard.Frontend.Shared.Subscription
 
         protected virtual void OnEditItem(TreeViewNode<SubscriptionItemViewModelBase> item)
         {
-            Console.WriteLine($"TODO: edit item {item.Data.Name}");
+            if (item.Data is SubscriptionViewModel subVM)
+                AppController.EditSubscription(subVM.Subscription);
+
+            else if (item.Data is SubscriptionFolderViewModel subFolderVM)
+                AppController.EditSubscription(subFolderVM.Folder);
         }
 
         protected async Task OnDeleteItem(TreeViewNode<SubscriptionItemViewModelBase> item)

@@ -1,0 +1,21 @@
+﻿@inherits RgInputTextBase
+
+<RgFieldWrapper Id="@Id"
+                Label="@Label"
+                Required="@Required"
+                LabelWidth="@LabelWidth">
+    <Field>
+        <textarea @attributes="AdditionalAttributes"
+                  id="@Id"
+                  class="form-control @CssClass"
+                  @bind="CurrentValueAsString" 
+                  @bind:event="@BindOnAsString"
+                  required="@Required"/>
+    </Field>
+    <HelpText>
+        @HelpText
+    </HelpText>
+    <ValidationText>
+        <ValidationMessage For="@ValidationFor" />
+    </ValidationText>
+</RgFieldWrapper>
