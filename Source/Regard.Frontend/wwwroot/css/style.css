@@ -1261,6 +1261,13 @@ img.muted {
   right: 0.5rem; }
 
 /* Edited by Palash */
+/* -------------------*/
+*::-webkit-scrollbar {
+  display: none; }
+
+* {
+  scrollbar-width: none; }
+
 body {
   background-size: cover;
   overflow: hidden; }
@@ -1273,6 +1280,11 @@ body {
   box-sizing: border-box !important;
   height: 100vh;
   float: left !important; }
+
+.player-view form {
+  max-height: calc(95vh - 75px);
+  overflow-y: scroll;
+  margin: 30px; }
 
 .subs-view {
   padding: 5px;
@@ -1310,7 +1322,8 @@ body {
   align-items: baseline;
   justify-content: center;
   height: 85vh;
-  overflow-y: scroll; }
+  overflow-y: scroll;
+  margin-left: 0.25rem; }
 
 .player-view-stats {
   display: flex;
