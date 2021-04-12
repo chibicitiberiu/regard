@@ -7,6 +7,9 @@ pipeline {
             args '-u root:root'
         }
     }
+    options {
+        copyArtifactPermission('*');
+    }
     stages {
         stage('Backend debug') {
             steps {
