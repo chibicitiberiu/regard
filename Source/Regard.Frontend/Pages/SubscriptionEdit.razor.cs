@@ -23,9 +23,32 @@ namespace Regard.Frontend.Pages
 
         public bool SubmitEnabled { get; set; }
 
+        private string DownloadMaxCountStr 
+        {
+            get => Request.DownloadMaxCount?.ToString() ?? string.Empty;
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    Request.DownloadMaxCount = null;
+                    ValidationMessage = string.Empty;
+                }
+                else if (int.TryParse(value, out int valueInt))
+                {
+                    Request.DownloadMaxCount = valueInt;
+                    ValidationMessage = string.Empty;
+                }
+                else
+                {
+                    ValidationMessage = "Download maximum count must be a number!";
+                }
+            }
+        }
+
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
+            ValidationMessage = "Loading...";
 
             var (resp, httpResp) = await Backend.SubscriptionList(new SubscriptionListRequest() 
             {
@@ -38,6 +61,7 @@ namespace Regard.Frontend.Pages
                 Subscription = resp.Data.Subscriptions.FirstOrDefault();
                 if (Subscription != null)
                 {
+                    Request.Id = SubscriptionId;
                     Request.Name = Subscription.Name;
                     Request.Description = Subscription.Description;
                     Request.ParentFolderId = Subscription.ParentFolderId;
@@ -46,6 +70,8 @@ namespace Regard.Frontend.Pages
                     Request.DownloadOrder = Subscription.Config.DownloadOrder;
                     Request.AutomaticDeleteWatched = Subscription.Config.AutomaticDeleteWatched;
                     Request.DownloadPath = Subscription.Config.DownloadPath;
+                    SubmitEnabled = true;
+                    ValidationMessage = string.Empty;
                 }
                 else
                 {
@@ -58,16 +84,13 @@ namespace Regard.Frontend.Pages
 
         private async Task OnSubmit()
         {
-            //var (resp, httpResp) = await Backend.SubscriptionFolderCreate(Request);
-            //if (httpResp.IsSuccessStatusCode)
-            //{
-            //    await Submitted.InvokeAsync(null);
+            var (resp, httpResp) = await Backend.SubscriptionEdit(Request);
+            if (httpResp.IsSuccessStatusCode)
+            {
+                ValidationMessage = "Success!";
+            }
 
-            //    // clear request
-            //    Request = new SubscriptionFolderCreateRequest();
-            //}
-
-            //ValidationMessage = resp.Message;
+            else ValidationMessage = resp.Message;
         }
     }
 }

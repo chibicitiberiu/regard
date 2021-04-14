@@ -83,7 +83,7 @@ namespace Regard.Backend.Downloader
 
             try
             {
-                await ytdlService.UsingYoutubeDL(async ytdl =>
+                await ytdlService.UsingYoutubeDL(ytdl =>
                 {
                     int resultCode = ytdl.Run(opts,
                         ProcessStdout,
@@ -93,6 +93,8 @@ namespace Regard.Backend.Downloader
 
                     if (resultCode != 0)
                         throw new Exception($"videoId={VideoId}: Download failed!\n");
+
+                    return Task.CompletedTask;
                 });
             }
             catch (OperationCanceledException)

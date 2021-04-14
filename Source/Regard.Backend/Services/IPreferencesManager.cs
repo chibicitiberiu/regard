@@ -22,5 +22,7 @@ namespace Regard.Backend.Services
         public void SetForSubscriptionFolder<TValue>(PreferenceDefinition<TValue> pref, int folderId, TValue value);
 
         public void SetForSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId, TValue value);
+
+        public void UnsetForSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId);
     }
 }

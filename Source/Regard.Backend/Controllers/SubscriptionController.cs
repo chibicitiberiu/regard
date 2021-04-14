@@ -51,7 +51,7 @@ namespace Regard.Backend.Controllers
 
                 if (request.Name != null)
                 {
-                    subscriptionManager.ValidateNameIsAvailable(request.Name, request.ParentFolderId);
+                    subscriptionManager.ValidateName(request.Name, request.ParentFolderId);
                 }
 
                 return Ok(responseFactory.Success(new SubscriptionValidateResponse()
@@ -87,7 +87,7 @@ namespace Regard.Backend.Controllers
                 var url = new Uri(request.Url);
                 var user = await userManager.GetUserAsync(User);
 
-                var result = await subscriptionManager.Create(url, user, request.ParentFolderId);
+                var result = await subscriptionManager.Create(user, url, request.ParentFolderId);
                 return Ok(responseFactory.Success(result.ToApi()));
             }
             catch (UriFormatException)
@@ -104,7 +104,7 @@ namespace Regard.Backend.Controllers
             try
             {
                 var user = await userManager.GetUserAsync(User);
-                var result = await subscriptionManager.CreateEmpty(request.Name, user, request.ParentFolderId);
+                var result = await subscriptionManager.CreateEmpty(user, request.Name, request.ParentFolderId);
                 return Ok(responseFactory.Success(result.ToApi()));
             }
             catch (Exception ex)
@@ -188,7 +188,7 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> Delete([FromBody] SubscriptionDeleteRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            await subscriptionManager.DeleteSubscriptions(user, request.Ids, request.DeleteDownloadedFiles);
+            await subscriptionManager.Delete(user, request.Ids, request.DeleteDownloadedFiles);
             return Ok(responseFactory.Success());
         }
 
@@ -207,6 +207,46 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> SynchronizeAll()
         {
             await subscriptionManager.SynchronizeAll();
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("edit")]
+        [Authorize]
+        public async Task<IActionResult> Edit([FromBody] SubscriptionEditRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+
+            try
+            {
+                await subscriptionManager.Update(user, request.Id, request.Name, request.Description, request.ParentFolderId);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(responseFactory.Error(ex.Message));
+            }
+
+            // Update settings
+            if (request.AutoDownload.HasValue)
+                preferencesManager.SetForSubscription(Preferences.Subscriptions_AutoDownload, request.Id, request.AutoDownload.Value);
+            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_AutoDownload, request.Id);
+
+            if (request.DownloadMaxCount.HasValue)
+                preferencesManager.SetForSubscription(Preferences.Subscriptions_MaxCount, request.Id, request.DownloadMaxCount.Value);
+            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_MaxCount, request.Id);
+
+            if (request.DownloadOrder.HasValue)
+                preferencesManager.SetForSubscription(Preferences.Subscriptions_DownloadOrder, request.Id, request.DownloadOrder.Value);
+            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_DownloadOrder, request.Id);
+
+            if (request.AutomaticDeleteWatched.HasValue)
+                preferencesManager.SetForSubscription(Preferences.Subscriptions_AutoDeleteWatched, request.Id, request.AutomaticDeleteWatched.Value);
+            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_AutoDeleteWatched, request.Id);
+
+            if (!string.IsNullOrEmpty(request.DownloadPath))
+                preferencesManager.SetForSubscription(Preferences.Subscriptions_DownloadPath, request.Id, request.DownloadPath);
+            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_DownloadPath, request.Id);
+
             return Ok(responseFactory.Success());
         }
     }

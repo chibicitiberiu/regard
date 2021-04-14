@@ -8,6 +8,8 @@ namespace Regard.Backend.Services
 
         void Set<TValue>(TKey key, TValue value);
 
+        void Remove(TKey key);
+
         void Invalidate();
 
         void ClearExpired();

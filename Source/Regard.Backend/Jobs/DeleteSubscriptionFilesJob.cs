@@ -38,7 +38,7 @@ namespace Regard.Backend.Jobs
                         .Where(x => x.Id == SubscriptionIds[0])
                         .First();
 
-                await subscriptionManager.DeleteSubscriptionsInternal(firstSub.User, SubscriptionIds);
+                await subscriptionManager.DeleteInternal(firstSub.User, SubscriptionIds);
             }
         }
 

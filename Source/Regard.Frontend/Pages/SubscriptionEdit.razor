@@ -23,38 +23,52 @@
     <FolderSelect Id="subscription_parent"
                   @bind-Value="Request.ParentFolderId"
                   Label="Parent folder:"
-                  Required="true" />
+                  Required="false" />
 
     <RgSimpleInputSelect Id="subscription_autoDownload"
                          TKey="bool?"
                          @bind-Value="Request.AutoDownload"
                          Label="Automatic download: "
-                         Required="true" />
+                         Required="false" />
 
-    @*TODO: <RgInputText Id="subscription_download_maxCount"
-                 @bind-Value="Request.DownloadMaxCount"
+    <RgInputText Id="subscription_downloadMaxCount"
+                 @bind-Value="DownloadMaxCountStr"
                  Label="Download maximum count:"
-                 Required="true"
-                 ValidationFor="() => Request.DownloadMaxCount"
+                 Required="false"
+                 ValidationFor="() => DownloadMaxCountStr"
                  autocapitalize="none"
-                 autofocus />*@
+                 autofocus />
+
+    <!--<RgFieldWrapper Id="subscription_downloadMaxCount"
+                    Label="Download maximum count:"
+                    Required="false">
+        <Field>
+            <InputNumber id="subscription_downloadMaxCount"
+                         class="form-control"
+                         @bind-Value="Request.DownloadMaxCount"
+                         required="false" />
+        </Field>-->
+        @*<ValidationText>
+                <ValidationMessage For="Request.DownloadMaxCount" />
+            </ValidationText>*@
+    <!--</RgFieldWrapper>-->
 
     <RgSimpleInputSelect Id="subscription_downloadOrder"
                          TKey="Regard.Model.VideoOrder?"
                          @bind-Value="Request.DownloadOrder"
                          Label="Download order: "
-                         Required="true" />
+                         Required="false" />
 
     <RgSimpleInputSelect Id="subscription_autoDeleteWatched"
                          TKey="bool?"
                          @bind-Value="Request.AutomaticDeleteWatched"
                          Label="Automatic delete watched: "
-                         Required="true" />
+                         Required="false" />
 
     <RgInputText Id="subscription_downloadPath"
                  @bind-Value="Request.DownloadPath"
                  Label="Download path:"
-                 Required="true"
+                 Required="false"
                  ValidationFor="() => Request.DownloadPath"
                  autocapitalize="none"
                  autofocus />

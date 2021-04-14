@@ -73,5 +73,10 @@ namespace Regard.Backend.Services
             using var @lock = cacheLock.WriterLock();
             cache.Clear();
         }
+
+        public void Remove(TKey key)
+        {
+            cache.Remove(key);
+        }
     }
 }

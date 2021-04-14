@@ -39,7 +39,7 @@ namespace Regard.Backend.Jobs
                     .Where(x => x.Id == SubscriptionFolderIds[0])
                     .First();
 
-                await subscriptionManager.DeleteSubscriptionFoldersInternal(firstFolder.User, SubscriptionFolderIds);
+                await subscriptionManager.DeleteFoldersInternal(firstFolder.User, SubscriptionFolderIds);
             }
         }
 

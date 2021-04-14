@@ -378,5 +378,16 @@ namespace Regard.Backend.Services
         {
             return GetFromDatabaseSubscription(pref, subId, out value);
         }
+
+        public void UnsetForSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId)
+        {
+            subCache.Remove(new SubscriptionCacheKey(subId, pref.Key));
+            var dbPref = dataContext.SubscriptionPreferences.Find(pref.Key, subId);
+            if (dbPref != null)
+            {
+                dataContext.SubscriptionPreferences.Remove(dbPref);
+                dataContext.SaveChanges();
+            }
+        }
     }
 }

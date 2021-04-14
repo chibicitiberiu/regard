@@ -67,7 +67,7 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> Delete([FromBody] SubscriptionFolderDeleteRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            await subscriptionManager.DeleteSubscriptionFolders(user, request.Ids, request.Recursive, request.DeleteDownloadedFiles);
+            await subscriptionManager.DeleteFolders(user, request.Ids, request.Recursive, request.DeleteDownloadedFiles);
             return Ok(responseFactory.Success());
         }
 

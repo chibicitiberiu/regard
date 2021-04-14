@@ -154,6 +154,9 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionSynchronizeAll()
             => Post("api/subscription/synchronize_all", EmptyRequest);
 
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionEdit(SubscriptionEditRequest data)
+            => Post("api/subscription/edit", data);
+
         #endregion
 
         #region Subscription folders

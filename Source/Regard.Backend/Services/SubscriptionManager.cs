@@ -48,16 +48,27 @@ namespace Regard.Backend.Services
             return provider.Id;
         }
 
-        public void ValidateNameIsAvailable(string name, int? parentFolderId)
+        public void ValidateName(string name, int? parentFolderId, int? subscriptionId = null)
         {
-            if (dataContext.Subscriptions.AsQueryable()
+            // Check if name is valid
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Name cannot be empty!");
+
+            // Check if name is unique
+            var query = dataContext.Subscriptions.AsQueryable()
                 .Where(x => x.ParentFolderId == parentFolderId)
-                .Where(x => x.Name.ToLower() == name.ToLower())
-                .Any())
-                throw new Exception("Another subscription with the same name already exists in this folder!");
+                .Where(x => x.Name.ToLower() == name.ToLower());
+
+            if (subscriptionId.HasValue)
+                query = query.Where(x => x.Id != subscriptionId.Value);
+
+            if (query.Any())
+                throw new ArgumentException("Another subscription with the same name already exists in this folder!");
         }
 
-        public async Task<Subscription> Create(Uri uri, UserAccount userAccount, int? parentFolderId)
+        public async Task<Subscription> Create(UserAccount userAccount,
+                                               Uri uri,
+                                               int? parentFolderId)
         {
             // Verify parent folder ID exists
             SubscriptionFolder parent = null;
@@ -86,7 +97,9 @@ namespace Regard.Backend.Services
             return sub;
         }
 
-        public async Task<Subscription> CreateEmpty(string name, UserAccount userAccount, int? parentFolderId)
+        public async Task<Subscription> CreateEmpty(UserAccount userAccount,
+                                                    string name,
+                                                    int? parentFolderId)
         {
             // Verify parent folder ID exists
             SubscriptionFolder parent = null;
@@ -98,10 +111,10 @@ namespace Regard.Backend.Services
             }
 
             // Verify name is unique
-            ValidateNameIsAvailable(name, parentFolderId);
+            ValidateName(name, parentFolderId);
 
             // Create subscription
-            Subscription sub = new Subscription()
+            Subscription sub = new()
             {
                 Name = name,
                 ParentFolder = parent,
@@ -113,7 +126,84 @@ namespace Regard.Backend.Services
             return sub;
         }
 
-        public async Task CreateFolder(UserAccount user, string name, ParentId parentId)
+        private Subscription Get(UserAccount user, int subscriptionId)
+        {
+            return dataContext.Subscriptions.AsQueryable()
+                .Where(x => x.Id == subscriptionId)
+                .Where(x => x.UserId == user.Id)
+                .FirstOrDefault();
+        }
+
+        public IQueryable<Subscription> GetAll(UserAccount userAccount)
+        {
+            return dataContext.Subscriptions.AsQueryable()
+                .Where(x => x.UserId == userAccount.Id);
+        }
+
+        public async Task Update(UserAccount user, 
+                           int subscriptionId,
+                           string newName,
+                           string newDescription,
+                           int? newParentFolderId)
+        {
+            var subscription = Get(user, subscriptionId);
+            if (subscription == null)
+                throw new ArgumentException("Subscription not found");
+
+            subscription.Name = newName;
+            subscription.Description = newDescription;
+            subscription.ParentFolderId = newParentFolderId;
+            ValidateName(subscription.Name, subscription.ParentFolderId, subscriptionId);
+
+            dataContext.SaveChanges();
+            await messaging.NotifySubscriptionUpdated(user, subscription.ToApi());
+        }
+
+        public async Task Delete(UserAccount userAccount,
+                                 int[] ids,
+                                 bool deleteFiles)
+        {
+            if (deleteFiles)
+                await scheduler.ScheduleDeleteSubscriptionFiles(ids, true);
+            else
+                await DeleteInternal(userAccount, ids);
+        }
+
+        public async Task DeleteInternal(UserAccount userAccount,
+                                         int[] ids)
+        {
+            var itemsToDelete = dataContext.Subscriptions.AsQueryable()
+                                .Where(x => x.UserId == userAccount.Id)
+                                .Where(x => ids.Contains(x.Id));
+
+            await DeleteInternal(userAccount, itemsToDelete);
+        }
+
+        public async Task DeleteInternal(UserAccount userAccount,
+                                         IQueryable<Subscription> subs)
+        {
+            var deletedIds = subs.Select(x => x.Id).ToArray();
+
+            dataContext.Subscriptions.RemoveRange(subs);
+            await dataContext.SaveChangesAsync();
+            await messaging.NotifySubscriptionsDeleted(userAccount, deletedIds);
+        }
+
+        public bool GetConfigAutoDownload(int subscriptionId)
+        {
+            return preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDownload, subscriptionId);
+        }
+
+        public bool? GetConfigAutoDownloadNoResolve(int subscriptionId)
+        {
+            if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_AutoDownload, subscriptionId, out var value))
+                return value;
+            return null;
+        }
+
+        public async Task CreateFolder(UserAccount user,
+                                       string name,
+                                       ParentId parentId)
         {
             // Verify if any folder exists
             bool alreadyExists = dataContext.SubscriptionFolders.AsQueryable()
@@ -136,13 +226,7 @@ namespace Regard.Backend.Services
             }
         }
 
-        public IQueryable<Subscription> GetAll(UserAccount userAccount)
-        {
-            return dataContext.Subscriptions.AsQueryable()
-                .Where(x => x.UserId == userAccount.Id);
-        }
-
-        public SubscriptionFolder FindFolder(int id)
+        public SubscriptionFolder GetFolder(int id)
         {
             return dataContext.SubscriptionFolders.Find(id);
         }
@@ -152,40 +236,17 @@ namespace Regard.Backend.Services
             return dataContext.GetSubscriptionsRecursive(root);
         }
 
-        public async Task DeleteSubscriptions(UserAccount userAccount, int[] ids, bool deleteFiles)
-        {
-            if (deleteFiles)
-                await scheduler.ScheduleDeleteSubscriptionFiles(ids, true);
-            else
-                await DeleteSubscriptionsInternal(userAccount, ids);
-        }
-
-        public async Task DeleteSubscriptionsInternal(UserAccount userAccount, int[] ids)
-        {
-            var itemsToDelete = dataContext.Subscriptions.AsQueryable()
-                                .Where(x => x.UserId == userAccount.Id)
-                                .Where(x => ids.Contains(x.Id));
-
-            await DeleteSubscriptionsInternal(userAccount, itemsToDelete);
-        }
-
-        public async Task DeleteSubscriptionsInternal(UserAccount userAccount, IQueryable<Subscription> subs)
-        {
-            var deletedIds = subs.Select(x => x.Id).ToArray();
-
-            dataContext.Subscriptions.RemoveRange(subs);
-            await dataContext.SaveChangesAsync();
-            await messaging.NotifySubscriptionsDeleted(userAccount, deletedIds);
-        }
-
-        public async Task DeleteSubscriptionFolders(UserAccount userAccount, int[] ids, bool recursive, bool deleteFiles)
+        public async Task DeleteFolders(UserAccount userAccount,
+                                        int[] ids,
+                                        bool recursive,
+                                        bool deleteFiles)
         {
             if (recursive)
             {
                 if (deleteFiles)
                     await scheduler.ScheduleDeleteSubscriptionFolderFiles(ids, true);
                 else
-                    await DeleteSubscriptionFoldersInternal(userAccount, ids);
+                    await DeleteFoldersInternal(userAccount, ids);
             }
             else
             {
@@ -226,7 +287,8 @@ namespace Regard.Backend.Services
             }
         }
 
-        public async Task DeleteSubscriptionFoldersInternal(UserAccount userAccount, int[] ids)
+        public async Task DeleteFoldersInternal(UserAccount userAccount,
+                                                int[] ids)
         {
             var folders = dataContext.SubscriptionFolders.AsQueryable()
                 .Where(x => x.UserId == userAccount.Id)
@@ -236,7 +298,7 @@ namespace Regard.Backend.Services
             foreach (var folder in folders)
             {
                 var subsToDelete = dataContext.GetSubscriptionsRecursive(folder);
-                await DeleteSubscriptionsInternal(userAccount, subsToDelete);
+                await DeleteInternal(userAccount, subsToDelete);
             }
 
             var foldersToDelete = folders.SelectMany(dataContext.GetFoldersRecursive).ToArray();
