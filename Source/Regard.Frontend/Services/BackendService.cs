@@ -173,6 +173,9 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderSynchronize(SubscriptionFolderSynchronizeRequest data)
             => Post("api/subscriptionfolder/synchronize", data);
 
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderEdit(SubscriptionFolderEditRequest data)
+            => Post("api/subscriptionfolder/edit", data);
+
         #endregion
 
         #region Videos

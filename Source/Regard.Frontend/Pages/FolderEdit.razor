@@ -1,0 +1,79 @@
+﻿@page "/folder/edit/{folderId:int}"
+
+<EditForm Model="Request"
+          OnValidSubmit="OnSubmit">
+
+    <RgInputText Id="folder_name"
+                 @bind-Value="Request.Name"
+                 Label="Name:"
+                 Required="true"
+                 ValidationFor="() => Request.Name"
+                 autocapitalize="none"
+                 autofocus />
+
+    <FolderSelect Id="folder_parent"
+                  @bind-Value="Request.ParentFolderId"
+                  Label="Parent folder:"
+                  Required="false" />
+
+    <RgSimpleInputSelect Id="folder_autoDownload"
+                         TKey="bool?"
+                         @bind-Value="Request.AutoDownload"
+                         Label="Automatic download: "
+                         Required="false" />
+
+    <RgInputText Id="folder_downloadMaxCount"
+                 @bind-Value="DownloadMaxCountStr"
+                 Label="Download maximum count:"
+                 Required="false"
+                 ValidationFor="() => DownloadMaxCountStr"
+                 autocapitalize="none"
+                 autofocus />
+
+    <!--<RgFieldWrapper Id="folder_downloadMaxCount"
+                    Label="Download maximum count:"
+                    Required="false">
+        <Field>
+            <InputNumber id="folder_downloadMaxCount"
+                         class="form-control"
+                         @bind-Value="Request.DownloadMaxCount"
+                         required="false" />
+        </Field>-->
+        @*<ValidationText>
+                <ValidationMessage For="Request.DownloadMaxCount" />
+            </ValidationText>*@
+    <!--</RgFieldWrapper>-->
+
+    <RgSimpleInputSelect Id="folder_downloadOrder"
+                         TKey="Regard.Model.VideoOrder?"
+                         @bind-Value="Request.DownloadOrder"
+                         Label="Download order: "
+                         Required="false" />
+
+    <RgSimpleInputSelect Id="folder_autoDeleteWatched"
+                         TKey="bool?"
+                         @bind-Value="Request.AutomaticDeleteWatched"
+                         Label="Automatic delete watched: "
+                         Required="false" />
+
+    <RgInputText Id="folder_downloadPath"
+                 @bind-Value="Request.DownloadPath"
+                 Label="Download path:"
+                 Required="false"
+                 ValidationFor="() => Request.DownloadPath"
+                 autocapitalize="none"
+                 autofocus />
+
+    <div class="form-group row">
+        <div class="col-xs-12 fg-error">
+            @ValidationMessage
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xs-12 row">
+            <button class="primary ml-auto" type="submit" disabled="@(!SubmitEnabled)">Save</button>
+        </div>
+    </div>
+
+</EditForm>

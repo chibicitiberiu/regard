@@ -140,11 +140,11 @@ namespace Regard.Backend.Services
                 .Where(x => x.UserId == userAccount.Id);
         }
 
-        public async Task Update(UserAccount user, 
-                           int subscriptionId,
-                           string newName,
-                           string newDescription,
-                           int? newParentFolderId)
+        public async Task Update(UserAccount user,
+                                 int subscriptionId,
+                                 string newName,
+                                 string newDescription,
+                                 int? newParentFolderId)
         {
             var subscription = Get(user, subscriptionId);
             if (subscription == null)
@@ -226,9 +226,12 @@ namespace Regard.Backend.Services
             }
         }
 
-        public SubscriptionFolder GetFolder(int id)
+        public SubscriptionFolder GetFolder(UserAccount user, int id)
         {
-            return dataContext.SubscriptionFolders.Find(id);
+            return dataContext.SubscriptionFolders.AsQueryable()
+                .Where(x => x.Id == id)
+                .Where(x => x.UserId == user.Id)
+                .FirstOrDefault();
         }
 
         public IQueryable<Subscription> GetSubscriptionsRecursive(SubscriptionFolder root)
@@ -306,6 +309,42 @@ namespace Regard.Backend.Services
             await dataContext.SaveChangesAsync();
             await messaging.NotifySubscriptionsFoldersDeleted(userAccount, foldersToDelete.Select(x => x.Id).ToArray());
         }
+
+        public void ValidateFolderName(string name, int? parentFolderId, int? folderId = null)
+        {
+            // Check if name is valid
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Name cannot be empty!");
+
+            // Check if name is unique
+            var query = dataContext.SubscriptionFolders.AsQueryable()
+                .Where(x => x.ParentId == parentFolderId)
+                .Where(x => x.Name.ToLower() == name.ToLower());
+
+            if (folderId.HasValue)
+                query = query.Where(x => x.Id != folderId.Value);
+
+            if (query.Any())
+                throw new ArgumentException("Another folder with the same name already exists in this folder!");
+        }
+
+        public async Task UpdateFolder(UserAccount user,
+                                       int folderId,
+                                       string newName,
+                                       int? newParentFolderId)
+        {
+            var folder = GetFolder(user, folderId);
+            if (folder == null)
+                throw new ArgumentException("Folder not found");
+
+            folder.Name = newName;
+            folder.ParentId = newParentFolderId;
+            ValidateFolderName(folder.Name, folder.ParentId, folderId);
+
+            dataContext.SaveChanges();
+            await messaging.NotifySubscriptionFolderUpdated(user, folder.ToApi());
+        }
+
 
         public IQueryable<SubscriptionFolder> GetAllFolders(UserAccount userAccount)
         {

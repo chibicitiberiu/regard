@@ -90,7 +90,7 @@ namespace Regard.Frontend.Shared.Subscription
 
         private void Folders_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscriptionFolder> e)
         {
-            if (e.Action == NotifyCollectionChangedAction.Reset)
+            if (e.Action == NotifyCollectionChangedAction.Reset || e.Action == NotifyCollectionChangedAction.Replace)
             {
                 RebuildTree();
             }

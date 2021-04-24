@@ -55,7 +55,7 @@ namespace Regard.Backend.Controllers
 
             if (request.SubscriptionFolderId != null)
             {
-                var sub = subscriptionManager.GetFolder(request.SubscriptionFolderId.Value);
+                var sub = subscriptionManager.GetFolder(user, request.SubscriptionFolderId.Value);
                 if (sub == null)
                     return BadRequest(responseFactory.Error("Invalid subscription folder ID."));
 

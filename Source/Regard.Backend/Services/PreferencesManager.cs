@@ -389,5 +389,21 @@ namespace Regard.Backend.Services
                 dataContext.SaveChanges();
             }
         }
+
+        public bool GetForSubscriptionFolderNoResolve<TValue>(PreferenceDefinition<TValue> pref, int folderId, out TValue value)
+        {
+            return GetFromDatabaseFolder(pref, folderId, out value);
+        }
+
+        public void UnsetForSubscriptionFolder<TValue>(PreferenceDefinition<TValue> pref, int folderId)
+        {
+            folderCache.Remove(new SubscriptionFolderCacheKey(folderId, pref.Key));
+            var dbPref = dataContext.SubscriptionFolderPreferences.Find(pref.Key, folderId);
+            if (dbPref != null)
+            {
+                dataContext.SubscriptionFolderPreferences.Remove(dbPref);
+                dataContext.SaveChanges();
+            }
+        }
     }
 }
