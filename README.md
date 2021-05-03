@@ -2,6 +2,12 @@
 
 Regard is a self hosted personal video management platform, which allows you to keep track of, download automatically and watch the content you want to see.
 
+![image](https://user-images.githubusercontent.com/5184913/116914401-5c8dec00-ac53-11eb-8233-a5fa6ba0f061.png)
+
+The project is still in development, many things are buggy and don't work properly.
+
+If you need any help, or would like to discuss with us, you are welcome to [join our Discord](https://discord.gg/XVuRzN7c).
+
 ## Installation (Docker)
 
 The easiest method to install Regard is to use Docker. Check the `docker-compose.yml` file for a full setup example. The `RunDocker.sh` script will perform all the required setup steps, like setting up a database and user.
