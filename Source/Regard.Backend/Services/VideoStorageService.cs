@@ -13,15 +13,15 @@ namespace Regard.Backend.Services
     public class VideoStorageService : IVideoStorageService
     {
         private readonly ILogger log;
-        private readonly IConfiguration configuration;
+        private readonly StorageManager storageManager;
 
-        private string RootPath => configuration["DownloadDirectory"];
+        private string RootPath => storageManager.DownloadDirectory;
 
         public VideoStorageService(ILogger<VideoStorageService> log,
-                                   IConfiguration configuration)
+                                   StorageManager storageManager)
         {
             this.log = log;
-            this.configuration = configuration;
+            this.storageManager = storageManager;
         }
 
         private string GetPath(Video video)

@@ -22,18 +22,21 @@ namespace Regard.Backend.Controllers
         private readonly VideoManager videoManager;
         private readonly SubscriptionManager subscriptionManager;
         private readonly ApiResponseFactory responseFactory;
+        private readonly ApiModelFactory modelFactory;
         private readonly IVideoStorageService videoStorage;
 
         public VideoController(UserManager<UserAccount> userManager,
                                VideoManager videoManager,
                                SubscriptionManager subscriptionManager,
                                ApiResponseFactory responseFactory,
+                               ApiModelFactory modelFactory,
                                IVideoStorageService videoStorage)
         {
             this.userManager = userManager;
             this.videoManager = videoManager;
             this.subscriptionManager = subscriptionManager;
             this.responseFactory = responseFactory;
+            this.modelFactory = modelFactory;
             this.videoStorage = videoStorage;
         }
 
@@ -92,7 +95,7 @@ namespace Regard.Backend.Controllers
 
             foreach (var video in videos)
             {
-                var apiVideo = video.ToApi();
+                var apiVideo = modelFactory.ToApi(video);
                 apiVideo.StreamMimeType = await videoStorage.GetMimeType(video);
                 apiVideos.Add(apiVideo);
             }

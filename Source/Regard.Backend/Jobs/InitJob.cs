@@ -37,10 +37,6 @@ namespace Regard.Backend.Jobs
         {
             log.LogInformation("Running initialization tasks...");
 
-            // Make sure data directory exist
-            var dataDirectory = configuration["DataDirectory"];
-            Directory.CreateDirectory(dataDirectory);
-
             // Initialize providers
             await providerManager.Initialize();
 
@@ -50,6 +46,7 @@ namespace Regard.Backend.Jobs
             var scheduler = new RegardScheduler(log, context.Scheduler);
             await scheduler.ScheduleGlobalSynchronize(configuration["SynchronizationSchedule"]);
             await scheduler.ScheduleYoutubeDLUpdate(DateTimeOffset.Now.AddSeconds(10), TimeSpan.FromDays(1));
+            await scheduler.ScheduleFetchThumbnails(DateTimeOffset.Now.AddSeconds(30), TimeSpan.FromMinutes(30));
             log.LogInformation("Initialization tasks completed!");
         }
     }

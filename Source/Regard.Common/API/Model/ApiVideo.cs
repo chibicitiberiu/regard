@@ -30,7 +30,7 @@ namespace Regard.Common.API.Model
 
         public DateTimeOffset LastUpdated { get; set; }
 
-        public string ThumbnailUrl { get; set; }
+        public Uri ThumbnailUrl { get; set; }
         
         public string UploaderName { get; set; }
 

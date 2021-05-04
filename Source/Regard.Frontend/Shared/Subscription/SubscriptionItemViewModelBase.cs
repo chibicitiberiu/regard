@@ -16,7 +16,7 @@ namespace Regard.Frontend.Shared.Subscription
 
         public abstract int? ParentId { get; }
 
-        public abstract string ThumbnailUrl { get; }
+        public abstract Uri ThumbnailUrl { get; }
 
         public abstract Icons PlaceholderIcon { get; }
 

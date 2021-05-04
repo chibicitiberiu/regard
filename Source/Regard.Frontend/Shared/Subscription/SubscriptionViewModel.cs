@@ -15,7 +15,7 @@ namespace Regard.Frontend.Shared.Subscription
 
         public override int? ParentId => Subscription.ParentFolderId;
 
-        public override string ThumbnailUrl => Subscription.ThumbnailUrl;
+        public override Uri ThumbnailUrl => Subscription.ThumbnailUrl;
 
         public override Icons PlaceholderIcon => Icons.Subscription;
 

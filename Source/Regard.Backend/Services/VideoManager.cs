@@ -15,18 +15,21 @@ namespace Regard.Backend.Services
         private readonly MessagingService messaging;
         private readonly RegardScheduler scheduler;
         private readonly IProviderManager providerManager;
+        private readonly ApiModelFactory modelFactory;
 
         private Dictionary<int, Video> videoProgress;
 
         public VideoManager(DataContext dataContext,
                             MessagingService messaging,
                             RegardScheduler scheduler,
-                            IProviderManager providerManager)
+                            IProviderManager providerManager,
+                            ApiModelFactory modelFactory)
         {
             this.dataContext = dataContext;
             this.messaging = messaging;
             this.scheduler = scheduler;
             this.providerManager = providerManager;
+            this.modelFactory = modelFactory;
         }
 
         public Video Get(int id)
@@ -50,7 +53,7 @@ namespace Regard.Backend.Services
             await dataContext.SaveChangesAsync();
 
             await vids.ToAsyncEnumerable()
-                .ForEachAwaitAsync(async x => await messaging.NotifyVideoUpdated(user, x.ToApi()));
+                .ForEachAwaitAsync(async x => await messaging.NotifyVideoUpdated(user, modelFactory.ToApi(x)));
         }
 
         public async Task Download(UserAccount user, int[] videoIds)

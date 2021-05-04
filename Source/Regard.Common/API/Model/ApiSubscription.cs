@@ -21,7 +21,7 @@ namespace Regard.Common.API.Model
 
         public int? ParentFolderId { get; set; }
 
-        public string ThumbnailUrl { get; set; }
+        public Uri ThumbnailUrl { get; set; }
 
         public ApiSubscriptionConfig Config { get; set; }
 

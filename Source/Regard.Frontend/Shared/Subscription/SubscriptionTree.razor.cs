@@ -126,8 +126,15 @@ namespace Regard.Frontend.Shared.Subscription
             return treeView.Root;
         }
 
+        private void FixRelativeUrl(ApiSubscription sub)
+        {
+            if (!sub.ThumbnailUrl.IsAbsoluteUri)
+                sub.ThumbnailUrl = new Uri(AppState.BackendBase, sub.ThumbnailUrl);
+        }
+
         private void AddSubscription(ApiSubscription sub)
         {
+            FixRelativeUrl(sub);
             var vmSub = new SubscriptionViewModel(sub);
             var tvSub = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(vmSub);
 

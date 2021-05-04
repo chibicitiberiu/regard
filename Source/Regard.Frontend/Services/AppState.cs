@@ -10,6 +10,11 @@ namespace Regard.Services
 {
     public class AppState : NotifyPropertyChangedBase
     {
+        /// <summary>
+        /// Base address of backend
+        /// </summary>
+        public Uri BackendBase { get; set; }
+
         private ServerStatusResponse serverStatus;
 
         /// <summary>

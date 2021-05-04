@@ -25,6 +25,9 @@ using Regard.Backend.Common.Services;
 using Regard.Backend.Providers.Rss;
 using Regard.Backend.Providers.YouTubeDL;
 using Regard.Backend.Downloader;
+using Regard.Backend.Thumbnails;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 namespace Regard.Backend
 {
@@ -144,14 +147,20 @@ namespace Regard.Backend
             // Others
             services.AddScoped<SubscriptionManager>();
             services.AddScoped<VideoManager>();
+            services.AddSingleton<StorageManager>();
+            services.AddSingleton<ThumbnailService>();
             services.AddSingleton<IVideoStorageService, VideoStorageService>();
             services.AddScoped<IVideoDownloaderService, VideoDownloaderService>();
             services.AddSingleton<IYoutubeDlService, YoutubeDLService>();
             services.AddSingleton<ApiResponseFactory>();
+            services.AddSingleton<ApiModelFactory>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, DataContext dataContext)
+        public void Configure(IApplicationBuilder app,
+                              IWebHostEnvironment env,
+                              DataContext dataContext,
+                              StorageManager storageManager)
         {
             app.UseSignalRQueryStringAuth();
 
@@ -177,6 +186,10 @@ namespace Regard.Backend
                 endpoints.MapControllers();
                 endpoints.MapHub<MessagingHub>("/api/message_hub");
             });
+
+            app.UseStaticFiles();
+
+            storageManager.Initialize(app);
 
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("REGARD_MIGRATE")))
                 ApplyMigrations(dataContext);

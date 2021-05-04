@@ -22,13 +22,15 @@ namespace Regard.Backend.Services
         private readonly MessagingService messaging;
         private readonly RegardScheduler scheduler;
         private readonly IVideoStorageService videoStorageService;
+        private readonly ApiModelFactory apiModelFactory;
 
         public SubscriptionManager(DataContext dataContext,
                                    IPreferencesManager preferencesManager,
                                    IProviderManager providerManager,
                                    MessagingService messaging,
                                    RegardScheduler scheduler,
-                                   IVideoStorageService videoStorageService)
+                                   IVideoStorageService videoStorageService,
+                                   ApiModelFactory apiModelFactory)
         {
             this.dataContext = dataContext;
             this.preferencesManager = preferencesManager;
@@ -36,6 +38,7 @@ namespace Regard.Backend.Services
             this.messaging = messaging;
             this.scheduler = scheduler;
             this.videoStorageService = videoStorageService;
+            this.apiModelFactory = apiModelFactory;
         }
 
         public async Task<string> TestUrl(Uri uri)
@@ -89,7 +92,7 @@ namespace Regard.Backend.Services
             sub.ParentFolder = parent;
             dataContext.Subscriptions.Add(sub);
             await dataContext.SaveChangesAsync();
-            await messaging.NotifySubscriptionCreated(userAccount, sub.ToApi());
+            await messaging.NotifySubscriptionCreated(userAccount, apiModelFactory.ToApi(sub));
 
             // Start a sync job
             await scheduler.ScheduleSynchronizeSubscription(sub.Id);
@@ -122,7 +125,7 @@ namespace Regard.Backend.Services
             };
             dataContext.Subscriptions.Add(sub);
             await dataContext.SaveChangesAsync();
-            await messaging.NotifySubscriptionCreated(userAccount, sub.ToApi());
+            await messaging.NotifySubscriptionCreated(userAccount, apiModelFactory.ToApi(sub));
             return sub;
         }
 
@@ -156,7 +159,7 @@ namespace Regard.Backend.Services
             ValidateName(subscription.Name, subscription.ParentFolderId, subscriptionId);
 
             dataContext.SaveChanges();
-            await messaging.NotifySubscriptionUpdated(user, subscription.ToApi());
+            await messaging.NotifySubscriptionUpdated(user, apiModelFactory.ToApi(subscription));
         }
 
         public async Task Delete(UserAccount userAccount,
@@ -222,7 +225,7 @@ namespace Regard.Backend.Services
                 };
                 dataContext.SubscriptionFolders.Add(newFolder);
                 await dataContext.SaveChangesAsync();
-                await messaging.NotifySubscriptionFolderCreated(user, newFolder.ToApi());
+                await messaging.NotifySubscriptionFolderCreated(user, apiModelFactory.ToApi(newFolder));
             }
         }
 
@@ -267,7 +270,7 @@ namespace Regard.Backend.Services
                         .ForEachAwaitAsync(async x => 
                         {
                             x.ParentId = folder.ParentId;
-                            await messaging.NotifySubscriptionFolderUpdated(userAccount, x.ToApi());
+                            await messaging.NotifySubscriptionFolderUpdated(userAccount, apiModelFactory.ToApi(x));
                         });
 
                     await dataContext.Subscriptions.AsQueryable()
@@ -276,7 +279,7 @@ namespace Regard.Backend.Services
                         .ForEachAwaitAsync(async x =>
                         {
                             x.ParentFolderId = folder.ParentId;
-                            await messaging.NotifySubscriptionUpdated(userAccount, x.ToApi());
+                            await messaging.NotifySubscriptionUpdated(userAccount, apiModelFactory.ToApi(x));
                         });
                 }
 
@@ -342,7 +345,7 @@ namespace Regard.Backend.Services
             ValidateFolderName(folder.Name, folder.ParentId, folderId);
 
             dataContext.SaveChanges();
-            await messaging.NotifySubscriptionFolderUpdated(user, folder.ToApi());
+            await messaging.NotifySubscriptionFolderUpdated(user, apiModelFactory.ToApi(folder));
         }
 
 

@@ -20,7 +20,7 @@ namespace Regard.Frontend.Shared.Video
             ApiVideo = apiVideo;
         }
 
-        public string ThumbnailUrl => ApiVideo.ThumbnailUrl;
+        public Uri ThumbnailUrl => ApiVideo.ThumbnailUrl;
 
         public string Name => ApiVideo.Name;
     }

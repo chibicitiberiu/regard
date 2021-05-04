@@ -22,16 +22,19 @@ namespace Regard.Backend.Controllers
         private readonly UserManager<UserAccount> userManager;
         private readonly SubscriptionManager subscriptionManager;
         private readonly ApiResponseFactory responseFactory;
+        private readonly ApiModelFactory modelFactory;
         private readonly IPreferencesManager preferencesManager;
 
         public SubscriptionFolderController(UserManager<UserAccount> userManager,
                                             SubscriptionManager subscriptionManager,
                                             ApiResponseFactory responseFactory,
+                                            ApiModelFactory modelFactory,
                                             IPreferencesManager preferencesManager)
         {
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
             this.responseFactory = responseFactory;
+            this.modelFactory = modelFactory;
             this.preferencesManager = preferencesManager;
         }
 
@@ -62,7 +65,7 @@ namespace Regard.Backend.Controllers
 
             var folders = query
                 .OrderBy(x => x.Name)
-                .Select(x => x.ToApi())
+                .Select(modelFactory.ToApi)
                 .ToArray();
 
             if ((request.Parts & ApiSubscriptionFolder.Parts.Config) != 0)

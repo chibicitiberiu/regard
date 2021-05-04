@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Regard.Common.API.Model;
 using Regard.Common.API.Response;
@@ -20,22 +21,26 @@ namespace Regard.Services
             ("/setup/finished", _ => true)
         };
 
+        private readonly IConfiguration configuration;
         private readonly AppState appState;
         private readonly NavigationManager navigationManager;
         private readonly MessagingService messaging;
         private readonly IServiceProvider serviceProvider;
 
-        public AppController(AppState appState,
+        public AppController(IConfiguration configuration,
+                             AppState appState,
                              NavigationManager navigationManager,
                              MessagingService messaging,
                              IServiceProvider serviceProvider)
         {
+            this.configuration = configuration;
             this.appState = appState;
             this.navigationManager = navigationManager;
             this.messaging = messaging;
             this.serviceProvider = serviceProvider;
 
             appState.PropertyChanged += AppState_PropertyChanged;
+            appState.BackendBase = new Uri(configuration["BACKEND_URL"]);
         }
 
         #region Initialization

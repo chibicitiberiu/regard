@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Quartz;
 using Regard.Backend.Downloader;
 using Regard.Backend.Jobs;
+using Regard.Backend.Thumbnails;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -126,6 +127,22 @@ namespace Regard.Backend.Services
                     .Build());
 
             log.LogInformation("Scheduled youtube-dl update job, interval {0} starting at {1}.", interval, start);
+        }
+
+        public async Task ScheduleFetchThumbnails(DateTimeOffset start, TimeSpan interval)
+        {
+            await GetQuartz();
+
+            await quartz.ScheduleJob(
+                JobBuilder.Create<FetchThumbnailsJob>()
+                    .WithIdentity("Fetch thumbnails")
+                    .Build(),
+                TriggerBuilder.Create()
+                    .WithSimpleSchedule(sched => sched.WithInterval(interval).RepeatForever())
+                    .StartAt(start)
+                    .Build());
+
+            log.LogInformation("Scheduled fetch thumbnails job, interval {0} starting at {1}.", interval, start);
         }
 
         public async Task ScheduleJobRetry(IJobDetail jobDetail, int attempt, TimeSpan retryInterval)

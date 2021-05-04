@@ -21,16 +21,19 @@ namespace Regard.Backend.Controllers
         private readonly UserManager<UserAccount> userManager;
         private readonly SubscriptionManager subscriptionManager;
         private readonly ApiResponseFactory responseFactory;
+        private readonly ApiModelFactory modelFactory;
         private readonly IPreferencesManager preferencesManager;
 
         public SubscriptionController(UserManager<UserAccount> userManager,
                                       SubscriptionManager subscriptionManager,
                                       ApiResponseFactory responseFactory,
+                                      ApiModelFactory modelFactory,
                                       IPreferencesManager preferencesManager)
         {
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
             this.responseFactory = responseFactory;
+            this.modelFactory = modelFactory;
             this.preferencesManager = preferencesManager;
         }
 
@@ -88,7 +91,7 @@ namespace Regard.Backend.Controllers
                 var user = await userManager.GetUserAsync(User);
 
                 var result = await subscriptionManager.Create(user, url, request.ParentFolderId);
-                return Ok(responseFactory.Success(result.ToApi()));
+                return Ok(responseFactory.Success(modelFactory.ToApi(result)));
             }
             catch (UriFormatException)
             {
@@ -105,7 +108,7 @@ namespace Regard.Backend.Controllers
             {
                 var user = await userManager.GetUserAsync(User);
                 var result = await subscriptionManager.CreateEmpty(user, request.Name, request.ParentFolderId);
-                return Ok(responseFactory.Success(result.ToApi()));
+                return Ok(responseFactory.Success(modelFactory.ToApi(result)));
             }
             catch (Exception ex)
             {
@@ -130,7 +133,7 @@ namespace Regard.Backend.Controllers
 
             var subscriptions = query
                 .OrderBy(x => x.Name)
-                .Select(x => x.ToApi())
+                .Select(modelFactory.ToApi)
                 .ToArray();
 
             if ((request.Parts & ApiSubscription.Parts.Config) != 0)

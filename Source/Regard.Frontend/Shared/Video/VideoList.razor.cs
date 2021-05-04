@@ -158,7 +158,7 @@ namespace Regard.Frontend.Shared.Video
                     SubscriptionFolderId = selectedFolder,
                     SubscriptionId = selectedSubscription,
                     Query = query,
-                    IsWatched = (hideWatched) ? (bool?)false : null,
+                    IsWatched = (hideWatched) ? false : null,
                     IsDownloaded = isDownloaded,
                     Order = order,
                     Limit = videosPerPage,
@@ -170,7 +170,10 @@ namespace Regard.Frontend.Shared.Video
                     videos.BeginBatch();
                     videos.Clear();
                     foreach (var video in resp.Data.Videos)
+                    {
+                        FixRelativeUrl(video);
                         videos.Add(new VideoViewModel(video));
+                    }
                     videos.EndBatch();
 
                     totalVideoCount = resp.Data.TotalCount;
@@ -182,6 +185,12 @@ namespace Regard.Frontend.Shared.Video
             }
         }
 
+        private void FixRelativeUrl(ApiVideo apiVideo)
+        {
+            if (!apiVideo.ThumbnailUrl.IsAbsoluteUri)
+                apiVideo.ThumbnailUrl = new Uri(AppState.BackendBase, apiVideo.ThumbnailUrl);
+        }
+
         private void Messaging_VideoUpdated(object sender, ApiVideo e)
         {
             Console.WriteLine($"Video updated: {e.Id}");
@@ -191,6 +200,7 @@ namespace Regard.Frontend.Shared.Video
                 if (videos[i].ApiVideo.Id == e.Id)
                 {
                     videos[i].ApiVideo = e;
+                    FixRelativeUrl(e);
                     break;
                 }
             }
