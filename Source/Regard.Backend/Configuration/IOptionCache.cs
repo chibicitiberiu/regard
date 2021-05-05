@@ -1,8 +1,8 @@
 ﻿using Regard.Backend.Model;
 
-namespace Regard.Backend.Services
+namespace Regard.Backend.Configuration
 {
-    public interface IPreferencesCache<TKey>
+    public interface IOptionCache<TKey>
     {
         bool Get<TValue>(TKey key, out TValue value);
 

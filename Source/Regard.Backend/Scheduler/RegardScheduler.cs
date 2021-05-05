@@ -13,9 +13,9 @@ namespace Regard.Backend.Services
 {
     public class RegardScheduler
     {
-        private ILogger log;
-        private IScheduler quartz;
+        private readonly ILogger log;
         private readonly ISchedulerFactory schedulerFactory;
+        private IScheduler quartz;
 
         public event Action<int> ScheduledVideoDownload;
 

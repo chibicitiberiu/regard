@@ -4,9 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Regard.Backend.Services
+namespace Regard.Backend.Configuration
 {
-    public class PreferencesCache<TKey> : IPreferencesCache<TKey>
+    public class OptionCache<TKey> : IOptionCache<TKey>
     {
         struct CacheEntry
         {

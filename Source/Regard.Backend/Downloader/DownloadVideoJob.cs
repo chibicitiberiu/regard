@@ -19,13 +19,14 @@ using Nito.AsyncEx;
 using Regard.Backend.Jobs;
 using System.Threading;
 using Humanizer.Bytes;
+using Regard.Backend.Configuration;
 
 namespace Regard.Backend.Downloader
 {
     public class DownloadVideoJob : JobBase
     {
         protected readonly IConfiguration configuration;
-        protected readonly IPreferencesManager preferencesManager;
+        protected readonly IOptionManager optionManager;
         protected readonly IYoutubeDlService ytdlService;
         protected readonly IVideoDownloaderService videoDownloader;
         protected readonly IVideoStorageService videoStorage;
@@ -52,13 +53,13 @@ namespace Regard.Backend.Downloader
         public DownloadVideoJob(ILogger<DownloadVideoJob> logger,
                                 DataContext dataContext, 
                                 IConfiguration configuration,
-                                IPreferencesManager preferencesManager,
+                                IOptionManager optionManager,
                                 IYoutubeDlService ytdlService,
                                 IVideoDownloaderService videoDownloader,
                                 IVideoStorageService videoStorage) : base(logger, dataContext)
         {
             this.configuration = configuration;
-            this.preferencesManager = preferencesManager;
+            this.optionManager = optionManager;
             this.ytdlService = ytdlService;
             this.videoDownloader = videoDownloader;
             this.videoStorage = videoStorage;
@@ -198,14 +199,14 @@ namespace Regard.Backend.Downloader
 
             #region Download Options
 
-            string limitRate = preferencesManager.GetForSubscription(Preferences.Ytdl_LimitRate, video.SubscriptionId);
+            string limitRate = optionManager.GetForSubscription(Options.Ytdl_LimitRate, video.SubscriptionId);
             if (limitRate != null)
             {
                 yield return "-r";
                 yield return limitRate;
             }
 
-            string retries = preferencesManager.GetForSubscription(Preferences.Ytdl_Retries, video.SubscriptionId); 
+            string retries = optionManager.GetForSubscription(Options.Ytdl_Retries, video.SubscriptionId); 
             if (retries != null)
             {
                 yield return "-R";
@@ -216,17 +217,17 @@ namespace Regard.Backend.Downloader
 
             #region Filesystem Options
 
-            if (preferencesManager.GetForSubscription(Preferences.Ytdl_WriteDescription, video.SubscriptionId))
+            if (optionManager.GetForSubscription(Options.Ytdl_WriteDescription, video.SubscriptionId))
                 yield return "--write-description";
 
-            if (preferencesManager.GetForSubscription(Preferences.Ytdl_WriteInfoJson, video.SubscriptionId))
+            if (optionManager.GetForSubscription(Options.Ytdl_WriteInfoJson, video.SubscriptionId))
                 yield return "--write-info-json";
 
             #endregion
 
             #region Thumbnail images
 
-            if (preferencesManager.GetForSubscription(Preferences.Ytdl_WriteThumbnail, video.SubscriptionId))
+            if (optionManager.GetForSubscription(Options.Ytdl_WriteThumbnail, video.SubscriptionId))
                 yield return "--write-thumbnail";
 
             #endregion
@@ -235,7 +236,7 @@ namespace Regard.Backend.Downloader
 
             yield return "--newline";
 
-            bool? callHome = preferencesManager.GetGlobal(Preferences.Ytdl_CallHome);
+            bool? callHome = optionManager.GetGlobal(Options.Ytdl_CallHome);
             if (callHome.HasValue)
                 yield return (callHome.Value) ? "-C" : "--no-call-home";
 
@@ -245,20 +246,20 @@ namespace Regard.Backend.Downloader
 
             #region Video Format Options
 
-            string format = preferencesManager.GetForSubscription(Preferences.Ytdl_Format, video.SubscriptionId);
+            string format = optionManager.GetForSubscription(Options.Ytdl_Format, video.SubscriptionId);
             if (format != null)
             {
                 yield return "-f";
                 yield return format;
             }
 
-            if (preferencesManager.GetForSubscription(Preferences.Ytdl_AllFormats, video.SubscriptionId))
+            if (optionManager.GetForSubscription(Options.Ytdl_AllFormats, video.SubscriptionId))
                 yield return "--all-formats";
 
-            if (preferencesManager.GetForSubscription(Preferences.Ytdl_PreferFreeFormats, video.SubscriptionId))
+            if (optionManager.GetForSubscription(Options.Ytdl_PreferFreeFormats, video.SubscriptionId))
                 yield return "--prefer-free-formats";
 
-            string mergeOutputFormat = preferencesManager.GetForSubscription(Preferences.Ytdl_MergeOutputFormat, video.SubscriptionId);
+            string mergeOutputFormat = optionManager.GetForSubscription(Options.Ytdl_MergeOutputFormat, video.SubscriptionId);
             if (mergeOutputFormat != null)
             {
                 yield return "--merge-output-format";
@@ -269,23 +270,23 @@ namespace Regard.Backend.Downloader
 
             #region Subtitle Options
 
-            if (preferencesManager.GetForSubscription(Preferences.Ytdl_WriteSubtitles, video.SubscriptionId))
+            if (optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId))
                 yield return "--write-sub";
 
-            if (preferencesManager.GetForSubscription(Preferences.Ytdl_WriteAutoSub, video.SubscriptionId))
+            if (optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId))
                 yield return "--write-auto-sub";
 
-            if (preferencesManager.GetForSubscription(Preferences.Ytdl_AllSubs, video.SubscriptionId))
+            if (optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId))
                 yield return "--all-subs";
 
-            string subFormat = preferencesManager.GetForSubscription(Preferences.Ytdl_SubFormat, video.SubscriptionId);
+            string subFormat = optionManager.GetForSubscription(Options.Ytdl_SubFormat, video.SubscriptionId);
             if (subFormat != null)
             {
                 yield return "--sub-format";
                 yield return subFormat;
             }
 
-            string subLang = preferencesManager.GetForSubscription(Preferences.Ytdl_SubLang, video.SubscriptionId);
+            string subLang = optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId);
             if (subLang != null)
             {
                 yield return "--sub-lang";
@@ -305,7 +306,7 @@ namespace Regard.Backend.Downloader
         private string ResolveOutputPath(Video video)
         {
             var sub = dataContext.Subscriptions.Find(video.SubscriptionId);
-            string format = preferencesManager.GetForSubscription(Preferences.Subscriptions_DownloadPath, video.SubscriptionId);
+            string format = optionManager.GetForSubscription(Options.Subscriptions_DownloadPath, video.SubscriptionId);
             string path = format.FormatWith(new
             {
                 DataDirectory = configuration["DataDirectory"],

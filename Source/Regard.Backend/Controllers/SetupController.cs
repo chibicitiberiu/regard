@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using MoreLinq;
 using Regard.Backend.Model;
+using Regard.Backend.Configuration;
 using Regard.Backend.Services;
 using Regard.Common.API.Response;
 using System.Collections.Generic;
@@ -16,13 +17,13 @@ namespace Regard.Backend.Controllers
     public class SetupController : ControllerBase
     {
         private readonly UserManager<UserAccount> userManager;
-        private readonly IPreferencesManager preferencesManager;
+        private readonly IOptionManager optionManager;
         private readonly ApiResponseFactory responseFactory;
 
-        public SetupController(UserManager<UserAccount> userManager, IPreferencesManager preferencesManager, ApiResponseFactory responseFactory)
+        public SetupController(UserManager<UserAccount> userManager, IOptionManager optionManager, ApiResponseFactory responseFactory)
         {
             this.userManager = userManager;
-            this.preferencesManager = preferencesManager;
+            this.optionManager = optionManager;
             this.responseFactory = responseFactory;
         }
 
@@ -35,7 +36,7 @@ namespace Regard.Backend.Controllers
 
             return Ok(responseFactory.Success(new ServerStatusResponse()
             {
-                Initialized = preferencesManager.GetGlobal(Preferences.Server_Initialized),
+                Initialized = optionManager.GetGlobal(Options.Server_Initialized),
                 HaveUsers = users.Count > 0,
                 HaveAdmin = admins.Count > 0
             }));
@@ -59,7 +60,7 @@ namespace Regard.Backend.Controllers
             // Complete setup
             if (errors.Count == 0)
             {
-                preferencesManager.SetGlobal(Preferences.Server_Initialized, true);
+                optionManager.SetGlobal(Options.Server_Initialized, true);
                 return Ok(responseFactory.Success());
             }
             else

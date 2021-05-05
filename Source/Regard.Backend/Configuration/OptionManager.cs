@@ -6,9 +6,9 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Regard.Backend.Common.Model;
 
-namespace Regard.Backend.Services
+namespace Regard.Backend.Configuration
 {
-    public class PreferencesManager : IPreferencesManager
+    public class OptionManager : IOptionManager
     {
         public struct UserCacheKey 
         {
@@ -48,17 +48,17 @@ namespace Regard.Backend.Services
 
         private readonly DataContext dataContext;
         private readonly IConfiguration configuration;
-        private readonly IPreferencesCache<string> globalCache;
-        private readonly IPreferencesCache<UserCacheKey> userCache;
-        private readonly IPreferencesCache<SubscriptionCacheKey> subCache;
-        private readonly IPreferencesCache<SubscriptionFolderCacheKey> folderCache;
+        private readonly IOptionCache<string> globalCache;
+        private readonly IOptionCache<UserCacheKey> userCache;
+        private readonly IOptionCache<SubscriptionCacheKey> subCache;
+        private readonly IOptionCache<SubscriptionFolderCacheKey> folderCache;
 
-        public PreferencesManager(DataContext dataContext,
-                                  IConfiguration configuration,
-                                  IPreferencesCache<string> globalCache,
-                                  IPreferencesCache<UserCacheKey> userCache,
-                                  IPreferencesCache<SubscriptionCacheKey> subCache,
-                                  IPreferencesCache<SubscriptionFolderCacheKey> folderCache)
+        public OptionManager(DataContext dataContext,
+                             IConfiguration configuration,
+                             IOptionCache<string> globalCache,
+                             IOptionCache<UserCacheKey> userCache,
+                             IOptionCache<SubscriptionCacheKey> subCache,
+                             IOptionCache<SubscriptionFolderCacheKey> folderCache)
         {
             this.dataContext = dataContext;
             this.configuration = configuration;
@@ -69,15 +69,15 @@ namespace Regard.Backend.Services
         }
 
         /// <summary>
-        /// Gets the value of a global preference.
+        /// Gets the value of a global option.
         /// </summary>
         /// <remarks>
-        /// Preferences are resolved in this order: cache, database, environment variable, appsettings.json, default value
+        /// Options are resolved in this order: cache, database, environment variable, appsettings.json, default value
         /// </remarks>
-        /// <typeparam name="TValue">Data type of preference</typeparam>
-        /// <param name="pref">Preference definition</param>
-        /// <returns>Preference value</returns>
-        public TValue GetGlobal<TValue>(PreferenceDefinition<TValue> pref)
+        /// <typeparam name="TValue">Data type of option</typeparam>
+        /// <param name="pref">Option definition</param>
+        /// <returns>Option value</returns>
+        public TValue GetGlobal<TValue>(OptionDefinition<TValue> pref)
         {
             // Correct order is: database, environment variable, appsettings.json, default
             // No need to update the cache here
@@ -94,18 +94,18 @@ namespace Regard.Backend.Services
         }
 
         /// <summary>
-        /// Gets the value of a user preference.
+        /// Gets the value of a user option.
         /// </summary>
         /// <remarks>
-        /// User preferences are resolved in this order: cache, database, global preference store
+        /// User options are resolved in this order: cache, database, global option store
         /// </remarks>
-        /// <typeparam name="TValue">Data type of preference</typeparam>
-        /// <param name="pref">Preference definition</param>
+        /// <typeparam name="TValue">Data type of option</typeparam>
+        /// <param name="pref">option definition</param>
         /// <param name="userId">User ID</param>
-        /// <returns>Value of preference</returns>
-        public TValue GetForUser<TValue>(PreferenceDefinition<TValue> pref, string userId)
+        /// <returns>Value of option</returns>
+        public TValue GetForUser<TValue>(OptionDefinition<TValue> pref, string userId)
         {
-            if ((pref.Flags & PreferenceFlags.User) != 0 || userId == null)
+            if ((pref.Flags & OptionFlags.User) != 0 || userId == null)
             {
                 // No need to update the cache here
                 if (userCache.Get(new UserCacheKey(userId, pref.Key), out TValue value))
@@ -123,19 +123,19 @@ namespace Regard.Backend.Services
         }
 
         /// <summary>
-        /// Gets the value of a subscription folder preference.
+        /// Gets the value of a subscription folder option.
         /// </summary>
         /// <remarks>
-        /// Folder preferences are inherited from parent folders to child folders. If the preference is not found linked to the
-        /// given folder, it will be retrieved from the parent folder. If the preference is not found 
+        /// Folder options are inherited from parent folders to child folders. If the option is not found linked to the
+        /// given folder, it will be retrieved from the parent folder. If the option is not found 
         /// </remarks>
-        /// <typeparam name="TValue">Data type of preference</typeparam>
-        /// <param name="pref">Preference definition</param>
+        /// <typeparam name="TValue">Data type of option</typeparam>
+        /// <param name="pref">option definition</param>
         /// <param name="folderId">Folder ID</param>
-        /// <returns>Value of preference</returns>
-        public TValue GetForSubscriptionFolder<TValue>(PreferenceDefinition<TValue> pref, int folderId)
+        /// <returns>Value of option</returns>
+        public TValue GetForSubscriptionFolder<TValue>(OptionDefinition<TValue> pref, int folderId)
         {
-            if ((pref.Flags & PreferenceFlags.SubscriptionFolder) != 0)
+            if ((pref.Flags & OptionFlags.SubscriptionFolder) != 0)
             {
                 // No need to update the cache here
                 if (folderCache.Get(new SubscriptionFolderCacheKey(folderId, pref.Key), out TValue value))
@@ -163,19 +163,19 @@ namespace Regard.Backend.Services
         }
 
         /// <summary>
-        /// Gets the value of a subscription folder preference.
+        /// Gets the value of a subscription folder option.
         /// </summary>
         /// <remarks>
-        /// Folder preferences are inherited from parent folders to child folders. If the preference is not found linked to the
-        /// given folder, it will be retrieved from the parent folder. If the preference is not found 
+        /// Folder options are inherited from parent folders to child folders. If the option is not found linked to the
+        /// given folder, it will be retrieved from the parent folder. If the option is not found 
         /// </remarks>
-        /// <typeparam name="TValue">Data type of preference</typeparam>
-        /// <param name="pref">Preference definition</param>
+        /// <typeparam name="TValue">Data type of option</typeparam>
+        /// <param name="pref">option definition</param>
         /// <param name="folderId">Folder ID</param>
-        /// <returns>Value of preference</returns>
-        public TValue GetForSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId)
+        /// <returns>Value of option</returns>
+        public TValue GetForSubscription<TValue>(OptionDefinition<TValue> pref, int subId)
         {
-            if ((pref.Flags & PreferenceFlags.Subscription) != 0)
+            if ((pref.Flags & OptionFlags.Subscription) != 0)
             {
                 // No need to update the cache here
                 if (subCache.Get(new SubscriptionCacheKey(subId, pref.Key), out TValue value))
@@ -205,13 +205,13 @@ namespace Regard.Backend.Services
             }
         }
 
-        private bool GetFromDatabase<TValue>(PreferenceDefinition<TValue> pref, out TValue value)
+        private bool GetFromDatabase<TValue>(OptionDefinition<TValue> pref, out TValue value)
         {
             value = default;
             if (pref.Key == null)
                 return false;
 
-            var dbPref = dataContext.Preferences.Find(pref.Key);
+            var dbPref = dataContext.Options.Find(pref.Key);
             if (dbPref == null)
                 return false;
 
@@ -219,7 +219,7 @@ namespace Regard.Backend.Services
             return true;
         }
 
-        private bool GetFromEnvironment<TValue>(PreferenceDefinition<TValue> pref, out TValue value)
+        private bool GetFromEnvironment<TValue>(OptionDefinition<TValue> pref, out TValue value)
         {
             value = default;
             if (pref.EnvironmentKey == null)
@@ -236,7 +236,7 @@ namespace Regard.Backend.Services
             return true;
         }
 
-        private TValue GetFromConfiguration<TValue>(PreferenceDefinition<TValue> pref, TValue defaultValue)
+        private TValue GetFromConfiguration<TValue>(OptionDefinition<TValue> pref, TValue defaultValue)
         {
             if (pref.ConfigurationKey != null)
                 return configuration.GetValue(pref.ConfigurationKey, defaultValue);
@@ -244,13 +244,13 @@ namespace Regard.Backend.Services
             return defaultValue;
         }
 
-        private bool GetFromDatabaseUser<TValue>(PreferenceDefinition<TValue> pref, string userId, out TValue value)
+        private bool GetFromDatabaseUser<TValue>(OptionDefinition<TValue> pref, string userId, out TValue value)
         {
             value = default;
             if (pref.Key == null)
                 return false;
 
-            var dbPref = dataContext.UserPreferences.Find(pref.Key, userId);
+            var dbPref = dataContext.UserOptions.Find(pref.Key, userId);
             if (dbPref == null)
                 return false;
 
@@ -258,13 +258,13 @@ namespace Regard.Backend.Services
             return true;
         }
 
-        private bool GetFromDatabaseFolder<TValue>(PreferenceDefinition<TValue> pref, int folderId, out TValue value)
+        private bool GetFromDatabaseFolder<TValue>(OptionDefinition<TValue> pref, int folderId, out TValue value)
         {
             value = default;
             if (pref.Key == null)
                 return false;
 
-            var dbPref = dataContext.SubscriptionFolderPreferences.Find(pref.Key, folderId);
+            var dbPref = dataContext.FolderOptions.Find(pref.Key, folderId);
             if (dbPref == null)
                 return false;
 
@@ -272,13 +272,13 @@ namespace Regard.Backend.Services
             return true;
         }
 
-        private bool GetFromDatabaseSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId, out TValue value)
+        private bool GetFromDatabaseSubscription<TValue>(OptionDefinition<TValue> pref, int subId, out TValue value)
         {
             value = default;
             if (pref.Key == null)
                 return false;
 
-            var dbPref = dataContext.SubscriptionPreferences.Find(pref.Key, subId);
+            var dbPref = dataContext.SubscriptionOptions.Find(pref.Key, subId);
             if (dbPref == null)
                 return false;
 
@@ -286,7 +286,7 @@ namespace Regard.Backend.Services
             return true;
         }
 
-        public void SetGlobal<TValue>(PreferenceDefinition<TValue> pref, TValue value)
+        public void SetGlobal<TValue>(OptionDefinition<TValue> pref, TValue value)
         {
             // Keeping track of all the dependencies would make things a lot more complicated,
             // the easier solution is to simply invalidate all the caches which depend on this one
@@ -298,7 +298,7 @@ namespace Regard.Backend.Services
             SetInDatabase(pref, value);
         }
 
-        public void SetForUser<TValue>(PreferenceDefinition<TValue> pref, string userId, TValue value)
+        public void SetForUser<TValue>(OptionDefinition<TValue> pref, string userId, TValue value)
         {
             // Keeping track of all the dependencies would make things a lot more complicated,
             // the easier solution is to simply invalidate all the caches which depend on this one
@@ -309,7 +309,7 @@ namespace Regard.Backend.Services
             SetInDatabaseUser(pref, userId, value);
         }
 
-        public void SetForSubscriptionFolder<TValue>(PreferenceDefinition<TValue> pref, int folderId, TValue value)
+        public void SetForSubscriptionFolder<TValue>(OptionDefinition<TValue> pref, int folderId, TValue value)
         {
             // Keeping track of all the dependencies would make things a lot more complicated,
             // the easier solution is to simply invalidate all the caches which depend on this one
@@ -320,88 +320,88 @@ namespace Regard.Backend.Services
             SetInDatabaseFolder(pref, folderId, value);
         }
 
-        public void SetForSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId, TValue value)
+        public void SetForSubscription<TValue>(OptionDefinition<TValue> pref, int subId, TValue value)
         {
             subCache.Set(new SubscriptionCacheKey(subId, pref.Key), value);
             SetInDatabaseSubscription(pref, subId, value);
         }
 
-        private void SetInDatabase<TValue>(PreferenceDefinition<TValue> pref, TValue value)
+        private void SetInDatabase<TValue>(OptionDefinition<TValue> pref, TValue value)
         {
-            var dbPref = dataContext.Preferences.Find(pref.Key);
+            var dbPref = dataContext.Options.Find(pref.Key);
             if (dbPref == null)
             {
-                dbPref = new Preference() { Key = pref.Key };
-                dataContext.Preferences.Add(dbPref);
+                dbPref = new Option() { Key = pref.Key };
+                dataContext.Options.Add(dbPref);
             }
             dbPref.Value = JsonSerializer.Serialize(value);
             dataContext.SaveChanges();
         }
 
-        private void SetInDatabaseUser<TValue>(PreferenceDefinition<TValue> pref, string userId, TValue value)
+        private void SetInDatabaseUser<TValue>(OptionDefinition<TValue> pref, string userId, TValue value)
         {
-            var dbPref = dataContext.UserPreferences.Find(pref.Key, userId);
+            var dbPref = dataContext.UserOptions.Find(pref.Key, userId);
             if (dbPref == null)
             {
-                dbPref = new UserPreference() { Key = pref.Key, UserId = userId };
-                dataContext.UserPreferences.Add(dbPref);
+                dbPref = new UserOption() { Key = pref.Key, UserId = userId };
+                dataContext.UserOptions.Add(dbPref);
             }
             dbPref.Value = JsonSerializer.Serialize(value);
             dataContext.SaveChanges();
         }
 
-        private void SetInDatabaseFolder<TValue>(PreferenceDefinition<TValue> pref, int folderId, TValue value)
+        private void SetInDatabaseFolder<TValue>(OptionDefinition<TValue> pref, int folderId, TValue value)
         {
-            var dbPref = dataContext.SubscriptionFolderPreferences.Find(pref.Key, folderId);
+            var dbPref = dataContext.FolderOptions.Find(pref.Key, folderId);
             if (dbPref == null)
             {
-                dbPref = new SubscriptionFolderPreference() { Key = pref.Key, SubscriptionFolderId = folderId };
-                dataContext.SubscriptionFolderPreferences.Add(dbPref);
+                dbPref = new SubscriptionFolderOption() { Key = pref.Key, SubscriptionFolderId = folderId };
+                dataContext.FolderOptions.Add(dbPref);
             }
             dbPref.Value = JsonSerializer.Serialize(value);
             dataContext.SaveChanges();
         }
 
-        private void SetInDatabaseSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId, TValue value)
+        private void SetInDatabaseSubscription<TValue>(OptionDefinition<TValue> pref, int subId, TValue value)
         {
-            var dbPref = dataContext.SubscriptionPreferences.Find(pref.Key, subId);
+            var dbPref = dataContext.SubscriptionOptions.Find(pref.Key, subId);
             if (dbPref == null)
             {
-                dbPref = new SubscriptionPreference() { Key = pref.Key, SubscriptionId = subId };
-                dataContext.SubscriptionPreferences.Add(dbPref);
+                dbPref = new SubscriptionOption() { Key = pref.Key, SubscriptionId = subId };
+                dataContext.SubscriptionOptions.Add(dbPref);
             }
             dbPref.Value = JsonSerializer.Serialize(value);
             dataContext.SaveChanges();
         }
 
-        public bool GetForSubscriptionNoResolve<TValue>(PreferenceDefinition<TValue> pref, int subId, out TValue value)
+        public bool GetForSubscriptionNoResolve<TValue>(OptionDefinition<TValue> pref, int subId, out TValue value)
         {
             return GetFromDatabaseSubscription(pref, subId, out value);
         }
 
-        public void UnsetForSubscription<TValue>(PreferenceDefinition<TValue> pref, int subId)
+        public void UnsetForSubscription<TValue>(OptionDefinition<TValue> pref, int subId)
         {
             subCache.Remove(new SubscriptionCacheKey(subId, pref.Key));
-            var dbPref = dataContext.SubscriptionPreferences.Find(pref.Key, subId);
+            var dbPref = dataContext.SubscriptionOptions.Find(pref.Key, subId);
             if (dbPref != null)
             {
-                dataContext.SubscriptionPreferences.Remove(dbPref);
+                dataContext.SubscriptionOptions.Remove(dbPref);
                 dataContext.SaveChanges();
             }
         }
 
-        public bool GetForSubscriptionFolderNoResolve<TValue>(PreferenceDefinition<TValue> pref, int folderId, out TValue value)
+        public bool GetForSubscriptionFolderNoResolve<TValue>(OptionDefinition<TValue> pref, int folderId, out TValue value)
         {
             return GetFromDatabaseFolder(pref, folderId, out value);
         }
 
-        public void UnsetForSubscriptionFolder<TValue>(PreferenceDefinition<TValue> pref, int folderId)
+        public void UnsetForSubscriptionFolder<TValue>(OptionDefinition<TValue> pref, int folderId)
         {
             folderCache.Remove(new SubscriptionFolderCacheKey(folderId, pref.Key));
-            var dbPref = dataContext.SubscriptionFolderPreferences.Find(pref.Key, folderId);
+            var dbPref = dataContext.FolderOptions.Find(pref.Key, folderId);
             if (dbPref != null)
             {
-                dataContext.SubscriptionFolderPreferences.Remove(dbPref);
+                dataContext.FolderOptions.Remove(dbPref);
                 dataContext.SaveChanges();
             }
         }

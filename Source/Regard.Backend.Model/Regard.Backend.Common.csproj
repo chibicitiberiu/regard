@@ -5,10 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Model\Preferences\Preferences.cs">
+    <None Include="Configuration\Options.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>Preferences.tt</DependentUpon>
+      <DependentUpon>Options.tt</DependentUpon>
     </None>
   </ItemGroup>
 
@@ -24,9 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Model\Preferences\Preferences.tt">
+    <None Update="Configuration\Options.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>Preferences.cs</LastGenOutput>
+      <LastGenOutput>Options.cs</LastGenOutput>
     </None>
   </ItemGroup>
 
@@ -35,7 +35,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Model\Preferences\Preferences.cs">
+    <Compile Update="Configuration\Options.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Options.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Configuration\Preferences.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Preferences.tt</DependentUpon>

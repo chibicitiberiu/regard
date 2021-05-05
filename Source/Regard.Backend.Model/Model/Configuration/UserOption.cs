@@ -2,7 +2,7 @@
 
 namespace Regard.Backend.Model
 {
-    public class UserPreference : IPreference
+    public class UserOption : IOption
     {
         public string Key { get; set; }
 

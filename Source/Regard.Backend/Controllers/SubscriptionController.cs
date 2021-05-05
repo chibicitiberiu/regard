@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Regard.Common.API.Model;
+using Regard.Backend.Configuration;
 
 namespace Regard.Backend.Controllers
 {
@@ -22,19 +23,19 @@ namespace Regard.Backend.Controllers
         private readonly SubscriptionManager subscriptionManager;
         private readonly ApiResponseFactory responseFactory;
         private readonly ApiModelFactory modelFactory;
-        private readonly IPreferencesManager preferencesManager;
+        private readonly IOptionManager optionManager;
 
         public SubscriptionController(UserManager<UserAccount> userManager,
                                       SubscriptionManager subscriptionManager,
                                       ApiResponseFactory responseFactory,
                                       ApiModelFactory modelFactory,
-                                      IPreferencesManager preferencesManager)
+                                      IOptionManager optionManager)
         {
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
             this.responseFactory = responseFactory;
             this.modelFactory = modelFactory;
-            this.preferencesManager = preferencesManager;
+            this.optionManager = optionManager;
         }
 
         [HttpPost]
@@ -154,19 +155,19 @@ namespace Regard.Backend.Controllers
             {
                 sub.Config = new ApiSubscriptionConfig();
 
-                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_AutoDownload, sub.Id, out var autoDownload))
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_AutoDownload, sub.Id, out var autoDownload))
                     sub.Config.AutoDownload = autoDownload;
 
-                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_MaxCount, sub.Id, out var maxCount))
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_MaxCount, sub.Id, out var maxCount))
                     sub.Config.DownloadMaxCount = maxCount;
 
-                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_DownloadOrder, sub.Id, out var order))
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_DownloadOrder, sub.Id, out var order))
                     sub.Config.DownloadOrder = order;
 
-                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_AutoDeleteWatched, sub.Id, out var autoDel))
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_AutoDeleteWatched, sub.Id, out var autoDel))
                     sub.Config.AutomaticDeleteWatched = autoDel;
 
-                if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_DownloadPath, sub.Id, out var path))
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_DownloadPath, sub.Id, out var path))
                     sub.Config.DownloadPath = path;
             }
         }
@@ -231,24 +232,24 @@ namespace Regard.Backend.Controllers
 
             // Update settings
             if (request.AutoDownload.HasValue)
-                preferencesManager.SetForSubscription(Preferences.Subscriptions_AutoDownload, request.Id, request.AutoDownload.Value);
-            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_AutoDownload, request.Id);
+                optionManager.SetForSubscription(Options.Subscriptions_AutoDownload, request.Id, request.AutoDownload.Value);
+            else optionManager.UnsetForSubscription(Options.Subscriptions_AutoDownload, request.Id);
 
             if (request.DownloadMaxCount.HasValue)
-                preferencesManager.SetForSubscription(Preferences.Subscriptions_MaxCount, request.Id, request.DownloadMaxCount.Value);
-            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_MaxCount, request.Id);
+                optionManager.SetForSubscription(Options.Subscriptions_MaxCount, request.Id, request.DownloadMaxCount.Value);
+            else optionManager.UnsetForSubscription(Options.Subscriptions_MaxCount, request.Id);
 
             if (request.DownloadOrder.HasValue)
-                preferencesManager.SetForSubscription(Preferences.Subscriptions_DownloadOrder, request.Id, request.DownloadOrder.Value);
-            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_DownloadOrder, request.Id);
+                optionManager.SetForSubscription(Options.Subscriptions_DownloadOrder, request.Id, request.DownloadOrder.Value);
+            else optionManager.UnsetForSubscription(Options.Subscriptions_DownloadOrder, request.Id);
 
             if (request.AutomaticDeleteWatched.HasValue)
-                preferencesManager.SetForSubscription(Preferences.Subscriptions_AutoDeleteWatched, request.Id, request.AutomaticDeleteWatched.Value);
-            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_AutoDeleteWatched, request.Id);
+                optionManager.SetForSubscription(Options.Subscriptions_AutoDeleteWatched, request.Id, request.AutomaticDeleteWatched.Value);
+            else optionManager.UnsetForSubscription(Options.Subscriptions_AutoDeleteWatched, request.Id);
 
             if (!string.IsNullOrEmpty(request.DownloadPath))
-                preferencesManager.SetForSubscription(Preferences.Subscriptions_DownloadPath, request.Id, request.DownloadPath);
-            else preferencesManager.UnsetForSubscription(Preferences.Subscriptions_DownloadPath, request.Id);
+                optionManager.SetForSubscription(Options.Subscriptions_DownloadPath, request.Id, request.DownloadPath);
+            else optionManager.UnsetForSubscription(Options.Subscriptions_DownloadPath, request.Id);
 
             return Ok(responseFactory.Success());
         }

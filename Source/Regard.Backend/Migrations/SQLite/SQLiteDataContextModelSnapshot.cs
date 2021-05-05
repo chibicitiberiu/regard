@@ -173,43 +173,7 @@ namespace Regard.Backend.Migrations.SQLite
                     b.ToTable("Messages");
                 });
 
-            modelBuilder.Entity("Regard.Backend.Common.Model.SubscriptionFolderPreference", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SubscriptionFolderId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Value")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Key", "SubscriptionFolderId");
-
-                    b.HasIndex("SubscriptionFolderId");
-
-                    b.ToTable("SubscriptionFolderPreferences");
-                });
-
-            modelBuilder.Entity("Regard.Backend.Common.Model.SubscriptionPreference", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SubscriptionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Value")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Key", "SubscriptionId");
-
-                    b.HasIndex("SubscriptionId");
-
-                    b.ToTable("SubscriptionPreferences");
-                });
-
-            modelBuilder.Entity("Regard.Backend.Model.Preference", b =>
+            modelBuilder.Entity("Regard.Backend.Model.Option", b =>
                 {
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
@@ -219,7 +183,7 @@ namespace Regard.Backend.Migrations.SQLite
 
                     b.HasKey("Key");
 
-                    b.ToTable("Preferences");
+                    b.ToTable("Options");
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.ProviderConfiguration", b =>
@@ -314,6 +278,42 @@ namespace Regard.Backend.Migrations.SQLite
                     b.ToTable("SubscriptionFolders");
                 });
 
+            modelBuilder.Entity("Regard.Backend.Model.SubscriptionFolderOption", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SubscriptionFolderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key", "SubscriptionFolderId");
+
+                    b.HasIndex("SubscriptionFolderId");
+
+                    b.ToTable("FolderOptions");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Model.SubscriptionOption", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SubscriptionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key", "SubscriptionId");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.ToTable("SubscriptionOptions");
+                });
+
             modelBuilder.Entity("Regard.Backend.Model.UserAccount", b =>
                 {
                     b.Property<string>("Id")
@@ -384,7 +384,7 @@ namespace Regard.Backend.Migrations.SQLite
                     b.ToTable("AspNetUsers");
                 });
 
-            modelBuilder.Entity("Regard.Backend.Model.UserPreference", b =>
+            modelBuilder.Entity("Regard.Backend.Model.UserOption", b =>
                 {
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
@@ -399,7 +399,7 @@ namespace Regard.Backend.Migrations.SQLite
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserPreferences");
+                    b.ToTable("UserOptions");
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.Video", b =>
@@ -545,28 +545,6 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Regard.Backend.Common.Model.SubscriptionFolderPreference", b =>
-                {
-                    b.HasOne("Regard.Backend.Model.SubscriptionFolder", "SubscriptionFolder")
-                        .WithMany()
-                        .HasForeignKey("SubscriptionFolderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SubscriptionFolder");
-                });
-
-            modelBuilder.Entity("Regard.Backend.Common.Model.SubscriptionPreference", b =>
-                {
-                    b.HasOne("Regard.Backend.Model.Subscription", "Subscription")
-                        .WithMany()
-                        .HasForeignKey("SubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Subscription");
-                });
-
             modelBuilder.Entity("Regard.Backend.Model.Subscription", b =>
                 {
                     b.HasOne("Regard.Backend.Model.SubscriptionFolder", "ParentFolder")
@@ -603,7 +581,29 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Regard.Backend.Model.UserPreference", b =>
+            modelBuilder.Entity("Regard.Backend.Model.SubscriptionFolderOption", b =>
+                {
+                    b.HasOne("Regard.Backend.Model.SubscriptionFolder", "SubscriptionFolder")
+                        .WithMany()
+                        .HasForeignKey("SubscriptionFolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SubscriptionFolder");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Model.SubscriptionOption", b =>
+                {
+                    b.HasOne("Regard.Backend.Model.Subscription", "Subscription")
+                        .WithMany()
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subscription");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Model.UserOption", b =>
                 {
                     b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()

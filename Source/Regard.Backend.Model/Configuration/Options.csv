@@ -1,4 +1,4 @@
-﻿Preference,Description,Data type,Default value,DB Key,appsettings.json key,Environment variable,Users,Folders,Subs
+﻿Option,Description,Data type,Default value,DB Key,appsettings.json key,Environment variable,Users,Folders,Subs
 Server_Initialized,Indicates if the first time setup was performed.,bool,false,server.initialized,,,,,
 Server_AllowRegistrations,Allow user registrations from the frontend.,bool,true,server.allow_registrations,AllowRegistrations,REGARD_ALLOW_REGISTRATIONS,,,
 Server_Debug,Send debugging information to the frontend,bool,false,server.debug,Debug,REGARD_DEBUG,,,

@@ -1,4 +1,5 @@
 ﻿using Regard.Backend.Common.Utils;
+using Regard.Backend.Configuration;
 using Regard.Backend.DB;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
@@ -19,7 +20,7 @@ namespace Regard.Backend.Downloader
         }
 
         private readonly DataContext dataContext;
-        private readonly IPreferencesManager preferencesManager;
+        private readonly IOptionManager optionManager;
         private readonly RegardScheduler scheduler;
         private static readonly IDictionary<int, VideoState> videos = new Dictionary<int, VideoState>();
         private static event EventHandler<VideoDownloadStateChangedEventArgs> videoStateChanged;
@@ -34,11 +35,11 @@ namespace Regard.Backend.Downloader
         /// Constructor
         /// </summary>
         public VideoDownloaderService(DataContext dataContext,
-                                      IPreferencesManager preferencesManager,
+                                      IOptionManager optionManager,
                                       RegardScheduler scheduler)
         {
             this.dataContext = dataContext;
-            this.preferencesManager = preferencesManager;
+            this.optionManager = optionManager;
             this.scheduler = scheduler;
             this.scheduler.ScheduledVideoDownload += OnVideoQueued;
         }
@@ -101,8 +102,8 @@ namespace Regard.Backend.Downloader
         {
             int result = int.MaxValue;
 
-            int userLimit = preferencesManager.GetForUser(Preferences.User_MaxCount, sub.UserId);
-            int userQuota = preferencesManager.GetForUser(Preferences.User_CountQuota, sub.UserId);
+            int userLimit = optionManager.GetForUser(Options.User_MaxCount, sub.UserId);
+            int userQuota = optionManager.GetForUser(Options.User_CountQuota, sub.UserId);
             if (userLimit >= 0 || userQuota >= 0)
             {
                 int globalLimit = (userLimit >= 0 && userQuota >= 0)
@@ -119,7 +120,7 @@ namespace Regard.Backend.Downloader
                 result = Math.Min(result, canDownload);
             }
 
-            int subLimit = preferencesManager.GetForSubscription(Preferences.Subscriptions_MaxCount, sub.Id);
+            int subLimit = optionManager.GetForSubscription(Options.Subscriptions_MaxCount, sub.Id);
             if (subLimit >= 0)
             {
                 var downloadedCount = dataContext.Videos
@@ -139,8 +140,8 @@ namespace Regard.Backend.Downloader
         {
             long result = long.MaxValue;
 
-            long userLimit = preferencesManager.GetForUser(Preferences.User_MaxSize, sub.UserId);
-            long userQuota = preferencesManager.GetForUser(Preferences.User_SizeQuota, sub.UserId);
+            long userLimit = optionManager.GetForUser(Options.User_MaxSize, sub.UserId);
+            long userQuota = optionManager.GetForUser(Options.User_SizeQuota, sub.UserId);
             if (userLimit >= 0 || userQuota >= 0)
             {
                 long globalLimit = (userLimit >= 0 && userQuota >= 0)
@@ -157,7 +158,7 @@ namespace Regard.Backend.Downloader
                 result = Math.Min(result, canDownload);
             }
 
-            long subLimit = preferencesManager.GetForSubscription(Preferences.Subscriptions_MaxSize, sub.Id);
+            long subLimit = optionManager.GetForSubscription(Options.Subscriptions_MaxSize, sub.Id);
             if (subLimit >= 0)
             {
                 var downloadedSize = dataContext.Videos
@@ -176,10 +177,10 @@ namespace Regard.Backend.Downloader
         public async Task ProcessDownloadRules(Subscription sub)
         {
             // Check auto download value
-            if (!preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDownload, sub.Id))
+            if (!optionManager.GetForSubscription(Options.Subscriptions_AutoDownload, sub.Id))
                 return;
 
-            VideoOrder order = preferencesManager.GetForSubscription(Preferences.Subscriptions_DownloadOrder, sub.Id);
+            VideoOrder order = optionManager.GetForSubscription(Options.Subscriptions_DownloadOrder, sub.Id);
 
             var downloadCandidates = dataContext.Videos
                 .AsQueryable()

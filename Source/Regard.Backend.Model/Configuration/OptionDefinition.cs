@@ -1,16 +1,16 @@
 ﻿using System;
 
-namespace Regard.Backend.Services
+namespace Regard.Backend.Configuration
 {
     [Flags]
-    public enum PreferenceFlags
+    public enum OptionFlags
     {
         User,
         SubscriptionFolder,
         Subscription,
     }
 
-    public class PreferenceDefinition<TValue>
+    public class OptionDefinition<TValue>
     {
         /// <summary>
         /// Key which is used in database
@@ -35,9 +35,9 @@ namespace Regard.Backend.Services
         /// <summary>
         /// Flags
         /// </summary>
-        public PreferenceFlags Flags { get; set; }
+        public OptionFlags Flags { get; set; }
 
-        public PreferenceDefinition(TValue defaultValue, string key, string configurationKey, string environmentKey, PreferenceFlags flags = 0)
+        public OptionDefinition(TValue defaultValue, string key, string configurationKey, string environmentKey, OptionFlags flags = 0)
         {
             Key = key;
             DefaultValue = defaultValue;

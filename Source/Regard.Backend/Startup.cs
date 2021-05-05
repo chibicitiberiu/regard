@@ -14,7 +14,6 @@ using Microsoft.IdentityModel.Tokens;
 using Quartz;
 using Regard.Backend.Hubs;
 using Regard.Backend.Model;
-using Regard.Backend.Providers;
 using Regard.Backend.Providers.YouTube;
 using Regard.Backend.Services;
 using Regard.Backend.DB;
@@ -26,8 +25,7 @@ using Regard.Backend.Providers.Rss;
 using Regard.Backend.Providers.YouTubeDL;
 using Regard.Backend.Downloader;
 using Regard.Backend.Thumbnails;
-using Microsoft.Extensions.FileProviders;
-using System.IO;
+using Regard.Backend.Configuration;
 
 namespace Regard.Backend
 {
@@ -84,7 +82,7 @@ namespace Regard.Backend
             {
                 options.SaveToken = true;
                 options.RequireHttpsMetadata = false;
-                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+                options.TokenValidationParameters = new TokenValidationParameters()
                 {
                     ValidateIssuer = false,
                     ValidateAudience = false,
@@ -108,9 +106,9 @@ namespace Regard.Backend
                 });
             });
 
-            // Preferences
-            services.AddScoped<IPreferencesManager, PreferencesManager>();
-            services.AddSingleton(typeof(IPreferencesCache<>), typeof(PreferencesCache<>));
+            // Options
+            services.AddScoped<IOptionManager, OptionManager>();
+            services.AddSingleton(typeof(IOptionCache<>), typeof(OptionCache<>));
 
             // Scheduler
             services.AddQuartz(q =>

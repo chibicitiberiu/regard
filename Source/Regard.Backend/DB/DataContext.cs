@@ -25,13 +25,13 @@ namespace Regard.Backend.DB
 
         public DbSet<Video> Videos { get; set; }
 
-        public DbSet<Preference> Preferences { get; set; }
+        public DbSet<Option> Options { get; set; }
 
-        public DbSet<UserPreference> UserPreferences { get; set; }
+        public DbSet<UserOption> UserOptions { get; set; }
 
-        public DbSet<SubscriptionPreference> SubscriptionPreferences { get; set; }
+        public DbSet<SubscriptionOption> SubscriptionOptions { get; set; }
 
-        public DbSet<SubscriptionFolderPreference> SubscriptionFolderPreferences { get; set; }
+        public DbSet<SubscriptionFolderOption> FolderOptions { get; set; }
 
         public DbSet<Message> Messages { get; set; }
 
@@ -78,32 +78,32 @@ namespace Regard.Backend.DB
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Preferences
-            modelBuilder.Entity<Preference>()
+            // Options
+            modelBuilder.Entity<Option>()
                 .HasKey(c => new { c.Key });
 
-            modelBuilder.Entity<UserPreference>()
+            modelBuilder.Entity<UserOption>()
                 .HasKey(c => new { c.Key, c.UserId });
 
-            modelBuilder.Entity<UserPreference>()
+            modelBuilder.Entity<UserOption>()
                 .HasOne(x => x.User).WithMany()
                 .HasForeignKey(x => x.UserId)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<SubscriptionPreference>()
+            modelBuilder.Entity<SubscriptionOption>()
                 .HasKey(c => new { c.Key, c.SubscriptionId });
 
-            modelBuilder.Entity<SubscriptionPreference> ()
+            modelBuilder.Entity<SubscriptionOption> ()
                 .HasOne(x => x.Subscription).WithMany()
                 .HasForeignKey(x => x.SubscriptionId)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<SubscriptionFolderPreference>()
+            modelBuilder.Entity<SubscriptionFolderOption>()
                 .HasKey(c => new { c.Key, c.SubscriptionFolderId });
 
-            modelBuilder.Entity<SubscriptionFolderPreference>()
+            modelBuilder.Entity<SubscriptionFolderOption>()
                 .HasOne(x => x.SubscriptionFolder).WithMany()
                 .HasForeignKey(x => x.SubscriptionFolderId)
                 .IsRequired(true)

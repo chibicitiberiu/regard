@@ -11,13 +11,14 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Regard.Backend.Common.Providers;
 using Regard.Model;
+using Regard.Backend.Configuration;
 
 namespace Regard.Backend.Services
 {
     public class SubscriptionManager 
     {
         private readonly DataContext dataContext;
-        private readonly IPreferencesManager preferencesManager;
+        private readonly IOptionManager optionManager;
         private readonly IProviderManager providerManager;
         private readonly MessagingService messaging;
         private readonly RegardScheduler scheduler;
@@ -25,7 +26,7 @@ namespace Regard.Backend.Services
         private readonly ApiModelFactory apiModelFactory;
 
         public SubscriptionManager(DataContext dataContext,
-                                   IPreferencesManager preferencesManager,
+                                   IOptionManager optionManager,
                                    IProviderManager providerManager,
                                    MessagingService messaging,
                                    RegardScheduler scheduler,
@@ -33,7 +34,7 @@ namespace Regard.Backend.Services
                                    ApiModelFactory apiModelFactory)
         {
             this.dataContext = dataContext;
-            this.preferencesManager = preferencesManager;
+            this.optionManager = optionManager;
             this.providerManager = providerManager;
             this.messaging = messaging;
             this.scheduler = scheduler;
@@ -194,12 +195,12 @@ namespace Regard.Backend.Services
 
         public bool GetConfigAutoDownload(int subscriptionId)
         {
-            return preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDownload, subscriptionId);
+            return optionManager.GetForSubscription(Options.Subscriptions_AutoDownload, subscriptionId);
         }
 
         public bool? GetConfigAutoDownloadNoResolve(int subscriptionId)
         {
-            if (preferencesManager.GetForSubscriptionNoResolve(Preferences.Subscriptions_AutoDownload, subscriptionId, out var value))
+            if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_AutoDownload, subscriptionId, out var value))
                 return value;
             return null;
         }

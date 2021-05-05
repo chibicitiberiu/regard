@@ -2,6 +2,7 @@
 using Quartz;
 using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Utils;
+using Regard.Backend.Configuration;
 using Regard.Backend.DB;
 using Regard.Backend.Downloader;
 using Regard.Backend.Model;
@@ -19,7 +20,7 @@ namespace Regard.Backend.Jobs
     [DisallowConcurrentExecution]
     public class SynchronizeJob : JobBase
     {
-        private readonly IPreferencesManager preferencesManager;
+        private readonly IOptionManager optionManager;
         private readonly IProviderManager providerManager;
         private readonly IVideoStorageService videoStorageService;
         private readonly IVideoDownloaderService videoDownloader;
@@ -43,12 +44,12 @@ namespace Regard.Backend.Jobs
 
         public SynchronizeJob(ILogger<SynchronizeJob> log,
                               DataContext dataContext,
-                              IPreferencesManager preferencesManager,
+                              IOptionManager optionManager,
                               IProviderManager providerManager,
                               IVideoStorageService videoStorageService,
                               IVideoDownloaderService videoDownloader) : base(log, dataContext)
         {
-            this.preferencesManager = preferencesManager;
+            this.optionManager = optionManager;
             this.providerManager = providerManager;
             this.videoStorageService = videoStorageService;
             this.videoDownloader = videoDownloader;
@@ -244,7 +245,7 @@ namespace Regard.Backend.Jobs
             video.DownloadedPath = null;
             video.DownloadedSize = null;
 
-            if (preferencesManager.GetForSubscription(Preferences.Subscriptions_AutoDeleteWatched, sub.Id))
+            if (optionManager.GetForSubscription(Options.Subscriptions_AutoDeleteWatched, sub.Id))
             {
                 video.IsWatched = true;
                 log.LogInformation("Deleted video {0} marked as watched.", video);
