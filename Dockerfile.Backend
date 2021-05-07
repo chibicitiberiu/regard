@@ -21,6 +21,8 @@ RUN apt-get update && \
 RUN useradd -ms /bin/bash regard
 
 ENV DB_MSSQL ""
+ENV DB_TYPE "SqlServer"
+ENV REGARD_JWT_SECRET "ThisIsMySecretuiq34yt089htdlkrgnsope4ht;dgnpo54uin"
 ENV REGARD_DATA_DIR "/data"
 ENV REGARD_DOWNLOAD_DIR "/data/download"
 ENV REGARD_MIGRATE 1
