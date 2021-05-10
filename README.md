@@ -6,7 +6,7 @@ Regard is a self hosted personal video management platform, which allows you to 
 
 The project is still in development, many things are buggy and don't work properly.
 
-If you need any help, or would like to discuss with us, you are welcome to [join our Discord](https://discord.gg/XVuRzN7c).
+If you need any help, or would like to discuss with us, you are welcome to [join our Discord](https://discord.gg/mZgjdXEfY6).
 
 ## Installation (Docker)
 
