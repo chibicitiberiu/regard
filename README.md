@@ -19,6 +19,7 @@ There are 3 things needed for Regard to work:
 - the backend `chibicitiberiu/regard-backend:latest`. For the backend, you need to setup the following environment variables:
 
   - `DB_MSSQL` - contains the Microsoft SQL connection string
+  - `REGARD_JWT_SECRET` - Signing key for user authentication tokens. This should be a long, random, alphanumeric string. If in dout, [use this handy website](https://www.grc.com/passwords.htm) to generate one.
   - `REGARD_DATA_DIR` - data directory that will be used for storing application data. This directory should be mounted as a volume to prevent data loss. Default: `/data/`
   - `REGARD_DOWNLOAD_DIR` - directory where videos downloads will be stored. This directory should be mounted as a volume to prevent data loss. Default: `/data/downloads` 
 
