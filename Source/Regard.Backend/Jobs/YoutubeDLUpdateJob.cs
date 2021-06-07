@@ -4,8 +4,6 @@ using Regard.Backend.Common.Services;
 using Regard.Backend.DB;
 using Regard.Backend.Services;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Regard.Backend.Jobs
@@ -16,14 +14,21 @@ namespace Regard.Backend.Jobs
 
         public YoutubeDLUpdateJob(ILogger<YoutubeDLUpdateJob> logger,
                                   DataContext dataContext,
-                                  IYoutubeDlService ytdlService) : base(logger, dataContext)
+                                  JobTrackerService jobTrackerService,
+                                  IYoutubeDlService ytdlService) : base(logger, dataContext, jobTrackerService)
         {
             this.ytdlService = ytdlService;
         }
 
-        protected override int RetryCount => 10;
-
-        protected override TimeSpan RetryInterval => TimeSpan.FromMinutes(3 * (Attempt + 1));
+        public static Task<DateTimeOffset> Schedule(RegardScheduler scheduler, DateTimeOffset start, TimeSpan interval)
+        {
+            return scheduler.Schedule<YoutubeDLUpdateJob>(
+                name: "Update youtube-dl",
+                start: start,
+                repeatInterval: interval,
+                retryCount: 10,
+                retryIntervalSecs: 10 * 60);
+        }
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {

@@ -1,45 +1,124 @@
 ﻿using MoreLinq;
-using Regard.Backend.Common.Utils;
 using Regard.Backend.Model;
-using Regard.Backend.Providers;
 using Regard.Common.API.Model;
 using Regard.Backend.DB;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Regard.Backend.Common.Providers;
-using Regard.Model;
 using Regard.Backend.Configuration;
+using Regard.Backend.Jobs;
 
 namespace Regard.Backend.Services
 {
+    #region Events
+
+    public class SubscriptionCreatedEventArgs
+    {
+        /// <summary>
+        /// User account which initiated this operation
+        /// </summary>
+        public UserAccount User { get; set; }
+
+        /// <summary>
+        /// Subscription created
+        /// </summary>
+        public Subscription Subscription { get; set; }
+    }
+
+    public class SubscriptionUpdatedEventArgs
+    {
+        /// <summary>
+        /// User account which initiated this operation
+        /// </summary>
+        public UserAccount User { get; set; }
+
+        /// <summary>
+        /// Subscription added
+        /// </summary>
+        public Subscription Subscription { get; set; }
+    }
+
+    public class SubscriptionsDeletedEventArgs
+    {
+        /// <summary>
+        /// User account which initiated this operation
+        /// </summary>
+        public UserAccount User { get; set; }
+
+        /// <summary>
+        /// Subscription IDs that were deleted
+        /// </summary>
+        public int[] SubscriptionIds { get; set; }
+    }
+
+    public class SubscriptionFolderCreatedEventArgs
+    {
+        /// <summary>
+        /// User account which initiated this operation
+        /// </summary>
+        public UserAccount User { get; set; }
+
+        /// <summary>
+        /// Folder created
+        /// </summary>
+        public SubscriptionFolder Folder { get; set; }
+    }
+
+    public class SubscriptionFolderUpdatedEventArgs
+    {
+        /// <summary>
+        /// User account which initiated this operation
+        /// </summary>
+        public UserAccount User { get; set; }
+
+        /// <summary>
+        /// Folder updated
+        /// </summary>
+        public SubscriptionFolder Folder { get; set; }
+    }
+
+    public class SubscriptionFoldersDeletedEventArgs
+    {
+        /// <summary>
+        /// User account which initiated this operation
+        /// </summary>
+        public UserAccount User { get; set; }
+
+        /// <summary>
+        /// Subscription folder IDs that were deleted
+        /// </summary>
+        public int[] FolderIds { get; set; }
+    }
+
+    #endregion
+
     public class SubscriptionManager 
     {
         private readonly DataContext dataContext;
         private readonly IOptionManager optionManager;
         private readonly IProviderManager providerManager;
-        private readonly MessagingService messaging;
         private readonly RegardScheduler scheduler;
         private readonly IVideoStorageService videoStorageService;
-        private readonly ApiModelFactory apiModelFactory;
+
+        public event EventHandler<SubscriptionCreatedEventArgs> SubscriptionCreated;
+        public event EventHandler<SubscriptionUpdatedEventArgs> SubscriptionUpdated;
+        public event EventHandler<SubscriptionsDeletedEventArgs> SubscriptionsDeleted;
+        public event EventHandler<SubscriptionFolderCreatedEventArgs> FolderCreated;
+        public event EventHandler<SubscriptionFolderUpdatedEventArgs> FolderUpdated;
+        public event EventHandler<SubscriptionFoldersDeletedEventArgs> FoldersDeleted;
 
         public SubscriptionManager(DataContext dataContext,
                                    IOptionManager optionManager,
                                    IProviderManager providerManager,
-                                   MessagingService messaging,
                                    RegardScheduler scheduler,
-                                   IVideoStorageService videoStorageService,
-                                   ApiModelFactory apiModelFactory)
+                                   IVideoStorageService videoStorageService)
         {
             this.dataContext = dataContext;
             this.optionManager = optionManager;
             this.providerManager = providerManager;
-            this.messaging = messaging;
             this.scheduler = scheduler;
             this.videoStorageService = videoStorageService;
-            this.apiModelFactory = apiModelFactory;
         }
 
         public async Task<string> TestUrl(Uri uri)
@@ -92,18 +171,18 @@ namespace Regard.Backend.Services
             sub.User = userAccount;
             sub.ParentFolder = parent;
             dataContext.Subscriptions.Add(sub);
-            await dataContext.SaveChangesAsync();
-            await messaging.NotifySubscriptionCreated(userAccount, apiModelFactory.ToApi(sub));
+            dataContext.SaveChanges();
+
+            SubscriptionCreated?.Invoke(this, new SubscriptionCreatedEventArgs() { User = userAccount, Subscription = sub });
 
             // Start a sync job
-            await scheduler.ScheduleSynchronizeSubscription(sub.Id);
-
+            await SynchronizeSubscription(sub);
             return sub;
         }
 
-        public async Task<Subscription> CreateEmpty(UserAccount userAccount,
-                                                    string name,
-                                                    int? parentFolderId)
+        public Subscription CreateEmpty(UserAccount userAccount,
+                                        string name,
+                                        int? parentFolderId)
         {
             // Verify parent folder ID exists
             SubscriptionFolder parent = null;
@@ -125,12 +204,13 @@ namespace Regard.Backend.Services
                 User = userAccount,
             };
             dataContext.Subscriptions.Add(sub);
-            await dataContext.SaveChangesAsync();
-            await messaging.NotifySubscriptionCreated(userAccount, apiModelFactory.ToApi(sub));
+            dataContext.SaveChanges();
+
+            SubscriptionCreated?.Invoke(this, new SubscriptionCreatedEventArgs() { User = userAccount, Subscription = sub });
             return sub;
         }
 
-        private Subscription Get(UserAccount user, int subscriptionId)
+        public Subscription Get(UserAccount user, int subscriptionId)
         {
             return dataContext.Subscriptions.AsQueryable()
                 .Where(x => x.Id == subscriptionId)
@@ -144,11 +224,11 @@ namespace Regard.Backend.Services
                 .Where(x => x.UserId == userAccount.Id);
         }
 
-        public async Task Update(UserAccount user,
-                                 int subscriptionId,
-                                 string newName,
-                                 string newDescription,
-                                 int? newParentFolderId)
+        public void Update(UserAccount user,
+                           int subscriptionId,
+                           string newName,
+                           string newDescription,
+                           int? newParentFolderId)
         {
             var subscription = Get(user, subscriptionId);
             if (subscription == null)
@@ -160,7 +240,8 @@ namespace Regard.Backend.Services
             ValidateName(subscription.Name, subscription.ParentFolderId, subscriptionId);
 
             dataContext.SaveChanges();
-            await messaging.NotifySubscriptionUpdated(user, apiModelFactory.ToApi(subscription));
+
+            SubscriptionUpdated?.Invoke(this, new SubscriptionUpdatedEventArgs() { User = user, Subscription = subscription });
         }
 
         public async Task Delete(UserAccount userAccount,
@@ -168,29 +249,30 @@ namespace Regard.Backend.Services
                                  bool deleteFiles)
         {
             if (deleteFiles)
-                await scheduler.ScheduleDeleteSubscriptionFiles(ids, true);
+                await DeleteSubscriptionFilesJob.Schedule(scheduler, ids, true);
             else
-                await DeleteInternal(userAccount, ids);
+                DeleteInternal(userAccount, ids);
         }
 
-        public async Task DeleteInternal(UserAccount userAccount,
-                                         int[] ids)
+        public void DeleteInternal(UserAccount userAccount,
+                                   int[] ids)
         {
             var itemsToDelete = dataContext.Subscriptions.AsQueryable()
                                 .Where(x => x.UserId == userAccount.Id)
                                 .Where(x => ids.Contains(x.Id));
 
-            await DeleteInternal(userAccount, itemsToDelete);
+            DeleteInternal(userAccount, itemsToDelete);
         }
 
-        public async Task DeleteInternal(UserAccount userAccount,
-                                         IQueryable<Subscription> subs)
+        public void DeleteInternal(UserAccount userAccount,
+                                   IQueryable<Subscription> subs)
         {
             var deletedIds = subs.Select(x => x.Id).ToArray();
 
             dataContext.Subscriptions.RemoveRange(subs);
-            await dataContext.SaveChangesAsync();
-            await messaging.NotifySubscriptionsDeleted(userAccount, deletedIds);
+            dataContext.SaveChanges();
+            
+            SubscriptionsDeleted?.Invoke(this, new SubscriptionsDeletedEventArgs() { User = userAccount, SubscriptionIds = deletedIds });
         }
 
         public bool GetConfigAutoDownload(int subscriptionId)
@@ -205,9 +287,9 @@ namespace Regard.Backend.Services
             return null;
         }
 
-        public async Task CreateFolder(UserAccount user,
-                                       string name,
-                                       ParentId parentId)
+        public void CreateFolder(UserAccount user,
+                                 string name,
+                                 ParentId parentId)
         {
             // Verify if any folder exists
             bool alreadyExists = dataContext.SubscriptionFolders.AsQueryable()
@@ -225,8 +307,9 @@ namespace Regard.Backend.Services
                     Name = name
                 };
                 dataContext.SubscriptionFolders.Add(newFolder);
-                await dataContext.SaveChangesAsync();
-                await messaging.NotifySubscriptionFolderCreated(user, apiModelFactory.ToApi(newFolder));
+                dataContext.SaveChanges();
+
+                FolderCreated?.Invoke(this, new SubscriptionFolderCreatedEventArgs() { User = user, Folder = newFolder });
             }
         }
 
@@ -251,9 +334,9 @@ namespace Regard.Backend.Services
             if (recursive)
             {
                 if (deleteFiles)
-                    await scheduler.ScheduleDeleteSubscriptionFolderFiles(ids, true);
+                    await DeleteSubscriptionFolderFilesJob.Schedule(scheduler, ids, true);
                 else
-                    await DeleteFoldersInternal(userAccount, ids);
+                    DeleteFoldersInternal(userAccount, ids);
             }
             else
             {
@@ -265,22 +348,20 @@ namespace Regard.Backend.Services
 
                 foreach (var folder in folders)
                 {
-                    await dataContext.SubscriptionFolders.AsQueryable()
+                    dataContext.SubscriptionFolders.AsQueryable()
                         .Where(x => x.ParentId.HasValue && x.ParentId.Value == folder.Id)
-                        .ToAsyncEnumerable()
-                        .ForEachAwaitAsync(async x => 
+                        .ForEach(x => 
                         {
                             x.ParentId = folder.ParentId;
-                            await messaging.NotifySubscriptionFolderUpdated(userAccount, apiModelFactory.ToApi(x));
+                            FolderUpdated?.Invoke(this, new SubscriptionFolderUpdatedEventArgs() { User = userAccount, Folder = x });
                         });
 
-                    await dataContext.Subscriptions.AsQueryable()
+                    dataContext.Subscriptions.AsQueryable()
                         .Where(x => x.ParentFolderId.HasValue && x.ParentFolderId.Value == folder.Id)
-                        .ToAsyncEnumerable()
-                        .ForEachAwaitAsync(async x =>
+                        .ForEach(x =>
                         {
                             x.ParentFolderId = folder.ParentId;
-                            await messaging.NotifySubscriptionUpdated(userAccount, apiModelFactory.ToApi(x));
+                            SubscriptionUpdated?.Invoke(this, new SubscriptionUpdatedEventArgs() { User = userAccount, Subscription = x });
                         });
                 }
 
@@ -289,13 +370,14 @@ namespace Regard.Backend.Services
                     .Where(x => ids.Contains(x.Id));
 
                 dataContext.SubscriptionFolders.RemoveRange(foldersToDelete);
-                await dataContext.SaveChangesAsync();
-                await messaging.NotifySubscriptionsFoldersDeleted(userAccount, ids);
+                dataContext.SaveChanges();
+
+                FoldersDeleted?.Invoke(this, new SubscriptionFoldersDeletedEventArgs() { User = userAccount, FolderIds = ids });
             }
         }
 
-        public async Task DeleteFoldersInternal(UserAccount userAccount,
-                                                int[] ids)
+        public void DeleteFoldersInternal(UserAccount userAccount,
+                                          int[] ids)
         {
             var folders = dataContext.SubscriptionFolders.AsQueryable()
                 .Where(x => x.UserId == userAccount.Id)
@@ -305,13 +387,18 @@ namespace Regard.Backend.Services
             foreach (var folder in folders)
             {
                 var subsToDelete = dataContext.GetSubscriptionsRecursive(folder);
-                await DeleteInternal(userAccount, subsToDelete);
+                DeleteInternal(userAccount, subsToDelete);
             }
 
             var foldersToDelete = folders.SelectMany(dataContext.GetFoldersRecursive).ToArray();
             dataContext.SubscriptionFolders.RemoveRange(foldersToDelete);
-            await dataContext.SaveChangesAsync();
-            await messaging.NotifySubscriptionsFoldersDeleted(userAccount, foldersToDelete.Select(x => x.Id).ToArray());
+            dataContext.SaveChanges();
+
+            FoldersDeleted?.Invoke(this, new SubscriptionFoldersDeletedEventArgs() 
+            {
+                User = userAccount, 
+                FolderIds = foldersToDelete.Select(x => x.Id).ToArray() 
+            });
         }
 
         public void ValidateFolderName(string name, int? parentFolderId, int? folderId = null)
@@ -332,10 +419,10 @@ namespace Regard.Backend.Services
                 throw new ArgumentException("Another folder with the same name already exists in this folder!");
         }
 
-        public async Task UpdateFolder(UserAccount user,
-                                       int folderId,
-                                       string newName,
-                                       int? newParentFolderId)
+        public void UpdateFolder(UserAccount user,
+                                 int folderId,
+                                 string newName,
+                                 int? newParentFolderId)
         {
             var folder = GetFolder(user, folderId);
             if (folder == null)
@@ -346,9 +433,9 @@ namespace Regard.Backend.Services
             ValidateFolderName(folder.Name, folder.ParentId, folderId);
 
             dataContext.SaveChanges();
-            await messaging.NotifySubscriptionFolderUpdated(user, apiModelFactory.ToApi(folder));
-        }
 
+            FolderUpdated?.Invoke(this, new SubscriptionFolderUpdatedEventArgs() { User = user, Folder = folder });
+        }
 
         public IQueryable<SubscriptionFolder> GetAllFolders(UserAccount userAccount)
         {
@@ -356,19 +443,19 @@ namespace Regard.Backend.Services
                 .Where(x => x.UserId == userAccount.Id);
         }
 
-        public async Task SynchronizeSubscription(int subscriptionId)
-        {   
-            await scheduler.ScheduleSynchronizeSubscription(subscriptionId);
+        public Task SynchronizeSubscription(Subscription subscription)
+        {
+            return SynchronizeJob.Schedule(scheduler, subscription);
         }
 
-        public async Task SynchronizeFolder(int folderId)
+        public Task SynchronizeFolder(SubscriptionFolder folder)
         {
-            await scheduler.ScheduleSynchronizeFolder(folderId);
+            return SynchronizeJob.Schedule(scheduler, folder);
         }
 
-        public async Task SynchronizeAll()
+        public Task SynchronizeAll()
         {
-            await scheduler.ScheduleGlobalSynchronizeNow();
+            return SynchronizeJob.ScheduleGlobal(scheduler);
         }
 
         public long Statistic_DiskUsage(int subscriptionId)

@@ -36,27 +36,25 @@ namespace Regard.Backend.Downloader
         private readonly Regex AlreadyDownloadedRegex = new Regex(@"\[download\] (.*) has already been downloaded");
         private readonly Regex DestinationRegex = new Regex(@"Destination: (.*)");
 
-        bool shouldRetry = false;
+        private static readonly string Data_VideoId = nameof(VideoId);
+
         private string outputPath = null;
         private Video video = null;
         private AsyncLock videoMutex = new AsyncLock();
         private CancellationTokenSource cancellationTokenSrc = new CancellationTokenSource();
         private bool limitsChecked = false;
 
-        protected override int RetryCount => (shouldRetry ? 3 : 0);
-
-        protected override TimeSpan RetryInterval => TimeSpan.FromMinutes(15);
-
         public int VideoId { get; set; }
 
 
         public DownloadVideoJob(ILogger<DownloadVideoJob> logger,
-                                DataContext dataContext, 
+                                DataContext dataContext,
+                                JobTrackerService jobTrackerService,
                                 IConfiguration configuration,
                                 IOptionManager optionManager,
                                 IYoutubeDlService ytdlService,
                                 IVideoDownloaderService videoDownloader,
-                                IVideoStorageService videoStorage) : base(logger, dataContext)
+                                IVideoStorageService videoStorage) : base(logger, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
             this.optionManager = optionManager;
@@ -65,20 +63,38 @@ namespace Regard.Backend.Downloader
             this.videoStorage = videoStorage;
         }
 
+        public static Task Schedule(RegardScheduler scheduler, Video video)
+        {
+            return scheduler.Schedule<DownloadVideoJob>(
+                name: $"Download video {video}",
+                jobData: new Dictionary<string, object>()
+                {
+                    { Data_VideoId, video.Id }
+                },
+                retryCount: 3,
+                retryIntervalSecs: 15 * 60);
+        }
+
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
-            VideoId = context.MergedJobDataMap.GetInt("VideoId");
-            shouldRetry = false;
+            if (Job.JobData.TryGetValue(Data_VideoId, out object videoId))
+                VideoId = (int)videoId;
 
             video = dataContext.Videos.Find(VideoId);
+
             if (video == null)
+            {
+                Job.RetryCount = 0;
                 throw new ArgumentException($"Download failed - invalid video id {VideoId}.");
+            }
 
             if (video.DownloadedPath != null)
+            {
+                Job.RetryCount = 0;
                 throw new ArgumentException($"Download failed - video {VideoId} is already downloaded!");
+            }
 
             var opts = ResolveDownloadOptions(video).ToArray();
-            shouldRetry = true;
 
             log.LogInformation("Running youtube-dl with arguments: {0}", string.Join(" ", opts));
 
@@ -100,7 +116,7 @@ namespace Regard.Backend.Downloader
             }
             catch (OperationCanceledException)
             {
-                shouldRetry = false;
+                Job.RetryCount = 0;
                 log.LogInformation("Video download was canceled!");
                 throw;
             }

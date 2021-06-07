@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Regard.Backend.Common.Utils;
@@ -7,7 +6,6 @@ using Regard.Backend.Services;
 using Regard.Common.API.Subscriptions;
 using Regard.Backend.Model;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Regard.Common.API.Model;
@@ -108,7 +106,7 @@ namespace Regard.Backend.Controllers
             try
             {
                 var user = await userManager.GetUserAsync(User);
-                var result = await subscriptionManager.CreateEmpty(user, request.Name, request.ParentFolderId);
+                var result = subscriptionManager.CreateEmpty(user, request.Name, request.ParentFolderId);
                 return Ok(responseFactory.Success(modelFactory.ToApi(result)));
             }
             catch (Exception ex)
@@ -201,7 +199,9 @@ namespace Regard.Backend.Controllers
         [Authorize]
         public async Task<IActionResult> Synchronize([FromBody] SubscriptionSynchronizeRequest request)
         {
-            await subscriptionManager.SynchronizeSubscription(request.Id);
+            var user = await userManager.GetUserAsync(User);
+            var sub = subscriptionManager.Get(user, request.Id);
+            await subscriptionManager.SynchronizeSubscription(sub);
             return Ok(responseFactory.Success());
         }
 
@@ -223,7 +223,7 @@ namespace Regard.Backend.Controllers
 
             try
             {
-                await subscriptionManager.Update(user, request.Id, request.Name, request.Description, request.ParentFolderId);
+                subscriptionManager.Update(user, request.Id, request.Name, request.Description, request.ParentFolderId);
             }
             catch (Exception ex)
             {

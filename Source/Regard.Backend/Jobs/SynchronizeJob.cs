@@ -8,10 +8,8 @@ using Regard.Backend.Downloader;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.Utils;
-using Regard.Model;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -20,64 +18,85 @@ namespace Regard.Backend.Jobs
     [DisallowConcurrentExecution]
     public class SynchronizeJob : JobBase
     {
+        public static readonly string Data_FolderId = "FolderId";
+        public static readonly string Data_SubscriptionId = "SubscriptionId";
+
         private readonly IOptionManager optionManager;
         private readonly IProviderManager providerManager;
         private readonly IVideoStorageService videoStorageService;
         private readonly IVideoDownloaderService videoDownloader;
-        private IJobExecutionContext context;
         private RegardScheduler scheduler;
-
-        /// <summary>
-        /// If set, synchronization will only be done for the subscriptions in the given folder (and all its subfolders).
-        /// </summary>
-        public int? FolderId { get; set; }
-
-        /// <summary>
-        /// If set, synchronization will only be done for the given subscription ID
-        /// </summary>
-        public int? SubscriptionId { get; set; }
-
-        // Don't retry, since synchronization job runs pretty frequently anyway
-        protected override int RetryCount => 0;
-
-        protected override TimeSpan RetryInterval => TimeSpan.Zero;
 
         public SynchronizeJob(ILogger<SynchronizeJob> log,
                               DataContext dataContext,
+                              JobTrackerService jobTrackerService,
                               IOptionManager optionManager,
                               IProviderManager providerManager,
                               IVideoStorageService videoStorageService,
-                              IVideoDownloaderService videoDownloader) : base(log, dataContext)
+                              IVideoDownloaderService videoDownloader,
+                              RegardScheduler scheduler) : base(log, dataContext, jobTrackerService)
         {
             this.optionManager = optionManager;
             this.providerManager = providerManager;
             this.videoStorageService = videoStorageService;
             this.videoDownloader = videoDownloader;
+            this.scheduler = scheduler;
+        }
+
+        public static Task<DateTimeOffset> ScheduleGlobal(RegardScheduler scheduler, string cron)
+        {
+            return scheduler.Schedule<SynchronizeJob>(
+                cronSchedule: cron,
+                name: $"Global synchronization",
+                retryCount: 0,
+                retryIntervalSecs: 0
+            );
+        }
+
+        public static Task<DateTimeOffset> ScheduleGlobal(RegardScheduler scheduler)
+        {
+            return scheduler.Schedule<SynchronizeJob>(
+                name: $"Global synchronization",
+                retryCount: 0,
+                retryIntervalSecs: 0
+            );
+        }
+
+        public static Task<DateTimeOffset> Schedule(RegardScheduler scheduler, Subscription subscription)
+        {
+            return scheduler.Schedule<SynchronizeJob>(
+                name: $"Synchronize subscription {subscription.Name}", 
+                jobData: new Dictionary<string, object> { [Data_SubscriptionId] = subscription.Id },
+                retryCount: 0,
+                retryIntervalSecs: 0
+            );
+        }
+
+        public static Task<DateTimeOffset> Schedule(RegardScheduler scheduler, SubscriptionFolder folder)
+        {
+            return scheduler.Schedule<SynchronizeJob>(
+                name: $"Synchronize subscriptions in folder {folder.Name}",
+                jobData: new Dictionary<string, object> { [Data_FolderId] = folder.Id },
+                retryCount: 0,
+                retryIntervalSecs: 0
+            );
         }
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
-            this.context = context;
-            this.scheduler = new RegardScheduler(log, context.Scheduler);
-            
-            if (context.MergedJobDataMap.ContainsKey("SubscriptionId"))
-                this.SubscriptionId =  context.MergedJobDataMap.GetInt("SubscriptionId");
-            
-            if (context.MergedJobDataMap.ContainsKey("FolderId"))
-                this.FolderId = context.MergedJobDataMap.GetInt("FolderId");
-
-            if (SubscriptionId.HasValue)
+            if (Job.JobData.TryGetValue(Data_SubscriptionId, out object subscriptionId))
             {
-                var sub = dataContext.Subscriptions.Find(SubscriptionId.Value);
+                var sub = dataContext.Subscriptions.Find(subscriptionId);
                 if (sub != null)
                 {
                     log.LogInformation($"Synchronization started for subscription {sub}.");
                     await Synchronize(sub);
                 }
             }
-            else if (FolderId.HasValue)
+
+            else if (Job.JobData.TryGetValue(Data_FolderId, out object folderId))
             {
-                var folder = dataContext.SubscriptionFolders.Find(FolderId.Value);
+                var folder = dataContext.SubscriptionFolders.Find(folderId);
                 if (folder != null)
                 {
                     log.LogInformation($"Synchronization started for folder {folder}.");
@@ -87,6 +106,7 @@ namespace Regard.Backend.Jobs
                           .ForEachAwaitAsync(Synchronize);
                 }
             }
+
             else
             {
                 log.LogInformation($"Synchronization started.");

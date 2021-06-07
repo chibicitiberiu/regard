@@ -15,29 +15,40 @@ namespace Regard.Backend.Jobs
 {
     public class DeleteFilesJob : JobBase
     {
+        protected static readonly string Data_VideoIds = nameof(VideoIds);
+
         protected readonly IVideoStorageService videoStorage;
         protected readonly SubscriptionManager subscriptionManager;
         protected readonly List<Video> videosToDelete = new List<Video>();
-
-        protected override int RetryCount => 3;
-
-        protected override TimeSpan RetryInterval => TimeSpan.FromMinutes(10);
 
         public int[] VideoIds { get; set; }
 
         public DeleteFilesJob(IVideoStorageService videoStorage,
                               SubscriptionManager subscriptionManager,
+                              JobTrackerService jobTrackerService,
                               ILogger<DeleteFilesJob> logger,
                               DataContext dataContext)
-            : base(logger, dataContext)
+            : base(logger, dataContext, jobTrackerService)
         {
             this.videoStorage = videoStorage;
             this.subscriptionManager = subscriptionManager;
         }
 
+        public static Task Schedule(RegardScheduler scheduler, int[] videoIds)
+        {
+            return scheduler.Schedule<DeleteFilesJob>(
+                name: "Delete files",
+                jobData: new Dictionary<string, object>()
+                {
+                    { Data_VideoIds, videoIds }
+                },
+                retryCount: 3,
+                retryIntervalSecs: 10 * 60);
+        }
+
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
-            VideoIds = (int[])context.MergedJobDataMap.Get("VideoIds");
+            VideoIds = (int[])Job.JobData[Data_VideoIds];
             LogBegin();
 
             videosToDelete.Clear();

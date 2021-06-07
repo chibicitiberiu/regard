@@ -45,7 +45,7 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> Create([FromBody] SubscriptionFolderCreateRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            await subscriptionManager.CreateFolder(user, request.Name, request.ParentId);
+            subscriptionManager.CreateFolder(user, request.Name, request.ParentId);
             return Ok(responseFactory.Success());
         }
 
@@ -134,7 +134,9 @@ namespace Regard.Backend.Controllers
         [Authorize]
         public async Task<IActionResult> Synchronize([FromBody] SubscriptionFolderSynchronizeRequest request)
         {
-            await subscriptionManager.SynchronizeFolder(request.Id);
+            var user = await userManager.GetUserAsync(User);
+            var folder = subscriptionManager.GetFolder(user, request.Id);
+            await subscriptionManager.SynchronizeFolder(folder);
             return Ok(responseFactory.Success());
         }
 
@@ -147,7 +149,7 @@ namespace Regard.Backend.Controllers
 
             try
             {
-                await subscriptionManager.UpdateFolder(user, request.Id, request.Name, request.ParentFolderId);
+                subscriptionManager.UpdateFolder(user, request.Id, request.Name, request.ParentFolderId);
             }
             catch (Exception ex)
             {

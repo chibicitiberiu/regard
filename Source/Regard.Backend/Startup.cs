@@ -26,6 +26,7 @@ using Regard.Backend.Providers.YouTubeDL;
 using Regard.Backend.Downloader;
 using Regard.Backend.Thumbnails;
 using Regard.Backend.Configuration;
+using Regard.Backend.Logging;
 
 namespace Regard.Backend
 {
@@ -126,6 +127,8 @@ namespace Regard.Backend
                 opts.WaitForJobsToComplete = true;
             });
             services.AddScoped<RegardScheduler>();
+            services.AddSingleton<JobTrackerService>();
+            services.AddSingleton<UserLogger>();
 
             services.AddScoped<DeleteFilesJob>();
             services.AddScoped<DeleteSubscriptionFilesJob>();

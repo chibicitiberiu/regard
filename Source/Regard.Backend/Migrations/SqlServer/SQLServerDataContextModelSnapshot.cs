@@ -150,6 +150,56 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.ToTable("AspNetUserTokens");
                 });
 
+            modelBuilder.Entity("Regard.Backend.Common.Model.JobInfo", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<DateTimeOffset?>("Completed")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("JobDataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("NextRun")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RetryInterval")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("Started")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("TrackWhenScheduled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Jobs");
+                });
+
             modelBuilder.Entity("Regard.Backend.Common.Model.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -164,6 +214,9 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.Property<string>("Details")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<long?>("JobId")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("Severity")
                         .HasColumnType("int");
 
@@ -174,6 +227,8 @@ namespace Regard.Backend.Migrations.SqlServer
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("JobId");
 
                     b.HasIndex("UserId");
 
@@ -546,12 +601,28 @@ namespace Regard.Backend.Migrations.SqlServer
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Regard.Backend.Common.Model.Message", b =>
+            modelBuilder.Entity("Regard.Backend.Common.Model.JobInfo", b =>
                 {
                     b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Common.Model.Message", b =>
+                {
+                    b.HasOne("Regard.Backend.Common.Model.JobInfo", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId");
+
+                    b.HasOne("Regard.Backend.Model.UserAccount", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Job");
 
                     b.Navigation("User");
                 });

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Quartz;
+using Regard.Backend.Common.Model;
 using Regard.Backend.DB;
 using Regard.Backend.Services;
 using System;
@@ -13,40 +14,39 @@ namespace Regard.Backend.Jobs
     {
         protected readonly ILogger log;
         protected readonly DataContext dataContext;
+        protected readonly JobTrackerService jobTrackerService;
 
-        public int Attempt { get; set; } = 0;
+        protected JobInfo Job { get; set; }
 
-        protected abstract int RetryCount { get; }
-
-        protected abstract TimeSpan RetryInterval { get; }
-
-        public JobBase(ILogger log, DataContext dataContext)
+        public JobBase(ILogger log,
+                       DataContext dataContext,
+                       JobTrackerService jobTrackerService)
         {
             this.log = log;
             this.dataContext = dataContext;
+            this.jobTrackerService = jobTrackerService;
         }
 
         public async Task Execute(IJobExecutionContext context)
         {
-            if (context.MergedJobDataMap.ContainsKey("Attempt"))
-                Attempt = context.MergedJobDataMap.GetInt("Attempt");
+            if (context.MergedJobDataMap.ContainsKey("JobId"))
+                Job = dataContext.Jobs.Find(context.MergedJobDataMap.GetLong("JobId"));
+
+            if (Job == null)
+                throw new ArgumentException("Invalid job ID");
+
+            jobTrackerService.OnJobStarted(Job);
 
             try
             {
                 await ExecuteJob(context);
+                jobTrackerService.OnJobCompleted(Job);
             }
             catch (Exception ex)
             {
                 log.LogError(ex, "{0} failed with exception!", GetType().Name);
-                if (Attempt < RetryCount)
-                    await ScheduleRetry(context);
+                jobTrackerService.OnJobFailed(Job, ex.Message);
             }
-        }
-
-        private async Task ScheduleRetry(IJobExecutionContext context)
-        {
-            var scheduler = new RegardScheduler(log, context.Scheduler);
-            await scheduler.ScheduleJobRetry(context.JobDetail, Attempt + 1, RetryInterval);
         }
 
         protected abstract Task ExecuteJob(IJobExecutionContext context);

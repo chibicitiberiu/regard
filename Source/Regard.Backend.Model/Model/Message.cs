@@ -8,7 +8,6 @@ namespace Regard.Backend.Common.Model
     public enum MessageSeverity
     {
         Info,
-        Notice,
         Warning,
         Error
     }
@@ -30,5 +29,9 @@ namespace Regard.Backend.Common.Model
         public UserAccount User { get; set; }
 
         public string UserId { get; set; }
+
+        public JobInfo Job { get; set; }
+
+        public long? JobId { get; set; }
     }
 }

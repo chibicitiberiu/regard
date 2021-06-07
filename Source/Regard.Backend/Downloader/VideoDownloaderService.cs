@@ -41,7 +41,7 @@ namespace Regard.Backend.Downloader
             this.dataContext = dataContext;
             this.optionManager = optionManager;
             this.scheduler = scheduler;
-            this.scheduler.ScheduledVideoDownload += OnVideoQueued;
+            //this.scheduler.ScheduledVideoDownload += OnVideoQueued;
         }
 
         public void OnDownloadFinished(int videoId)
@@ -198,7 +198,7 @@ namespace Regard.Backend.Downloader
                 return;
 
             foreach (var video in downloadCandidates)
-                await scheduler.ScheduleDownloadVideo(video.Id);
+                await DownloadVideoJob.Schedule(scheduler, video);
         }
     }
 }

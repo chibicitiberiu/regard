@@ -1,34 +1,38 @@
-﻿using Humanizer;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Quartz;
-using Regard.Backend.Downloader;
+using Regard.Backend.Common.Model;
+using Regard.Backend.DB;
 using Regard.Backend.Jobs;
-using Regard.Backend.Thumbnails;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Regard.Backend.Services
 {
-    public class RegardScheduler
+    public class RegardScheduler : IDisposable
     {
         private readonly ILogger log;
         private readonly ISchedulerFactory schedulerFactory;
+        private readonly JobTrackerService jobTrackerService;
+        private readonly DataContext dataContext;
+
         private IScheduler quartz;
 
-        public event Action<int> ScheduledVideoDownload;
-
-        public RegardScheduler(ILogger log, IScheduler quartz)
-        {
-            this.log = log;
-            this.quartz = quartz;
-        }
-
-        public RegardScheduler(ILogger<RegardScheduler> log, ISchedulerFactory schedulerFactory)
+        public RegardScheduler(ILogger<RegardScheduler> log,
+                               ISchedulerFactory schedulerFactory,
+                               JobTrackerService jobTrackerService,
+                               DataContext dataContext)
         {
             this.log = log;
             this.schedulerFactory = schedulerFactory;
+            this.jobTrackerService = jobTrackerService;
+            this.dataContext = dataContext;
+            jobTrackerService.JobFailed += JobTrackerService_JobFailed;
+        }
+
+        public void Dispose()
+        {
+            jobTrackerService.JobFailed -= JobTrackerService_JobFailed;
         }
 
         private async Task GetQuartz()
@@ -37,226 +41,160 @@ namespace Regard.Backend.Services
                 quartz = await schedulerFactory.GetScheduler();
         }
 
-        public async Task ScheduleGlobalSynchronize(string cronSchedule)
+        public async Task<DateTimeOffset> Schedule<TJob>(Action<TriggerBuilder> triggerBuilder,
+                                                         string name,
+                                                         string userId = null,
+                                                         bool trackWhenScheduled = false,
+                                                         IDictionary<string, object> jobData = null,
+                                                         int retryCount = 0,
+                                                         int retryIntervalSecs = 600) where TJob : JobBase
         {
-            await GetQuartz();
-
-            await quartz.ScheduleJob(
-                JobBuilder.Create<SynchronizeJob>()
-                    .WithIdentity("Global synchronization")
-                    .Build(),
-                TriggerBuilder.Create()
-                    .WithCronSchedule(cronSchedule)
-                    .Build());
-
-            log.LogInformation("Scheduled global synchronization job (schedule {0}).", cronSchedule);
-        }
-
-        public async Task ScheduleGlobalSynchronizeNow()
-        {
-            await GetQuartz();
-
-            var job = JobBuilder.Create<SynchronizeJob>()
-                    .WithIdentity("Global synchronize now")
-                    .Build();
-
-            var trigger = TriggerBuilder.Create()
-                    .StartNow()
-                    .Build();
-
-            if (!await quartz.CheckExists(job.Key))
-            {
-                await quartz.ScheduleJob(job, trigger);
-                log.LogInformation("Scheduled global synchronization job.");
-            }
-            else log.LogInformation("Did not schedule global synchronization job - already scheduled.");
-        }
-
-        public async Task ScheduleSynchronizeSubscription(int subscriptionId)
-        {
-            await GetQuartz();
-
-            var job = JobBuilder.Create<SynchronizeJob>()
-                    .WithIdentity($"Synchronize subscription {subscriptionId}")
-                    .UsingJobData("SubscriptionId", subscriptionId)
-                    .Build();
-            var trigger = TriggerBuilder.Create()
-                    .StartNow()
-                    .Build();
-
-            if (!await quartz.CheckExists(job.Key))
-            {
-                await quartz.ScheduleJob(job, trigger);
-                log.LogInformation("Scheduled synchronization job for subscription {0}.", subscriptionId);
-            }
-            else log.LogInformation("Did not schedule synchronization job for subscription {0} - already scheduled.", subscriptionId);
-        }
-
-        public async Task ScheduleSynchronizeFolder(int folderId)
-        {
-            await GetQuartz();
-
-            var job = JobBuilder.Create<SynchronizeJob>()
-                    .WithIdentity($"Synchronize folder {folderId}")
-                    .UsingJobData("FolderId", folderId)
-                    .Build();
-
-            var trigger = TriggerBuilder.Create()
-                    .StartNow()
-                    .Build();
-
-            if (!await quartz.CheckExists(job.Key))
-            {
-                await quartz.ScheduleJob(job, trigger);
-                log.LogInformation("Scheduled synchronization job for folder {0}.", folderId);
-            }
-            else log.LogInformation("Did not Schedulee synchronization job for folder {0} - already scheduled.", folderId);
-        }
-
-        public async Task ScheduleYoutubeDLUpdate(DateTimeOffset start, TimeSpan interval)
-        {
-            await GetQuartz();
-
-            await quartz.ScheduleJob(
-                JobBuilder.Create<YoutubeDLUpdateJob>()
-                    .WithIdentity("YoutubeDL update")
-                    .Build(),
-                TriggerBuilder.Create()
-                    .WithSimpleSchedule(sched => sched.WithInterval(interval).RepeatForever())
-                    .StartAt(start)
-                    .Build());
-
-            log.LogInformation("Scheduled youtube-dl update job, interval {0} starting at {1}.", interval, start);
-        }
-
-        public async Task ScheduleFetchThumbnails(DateTimeOffset start, TimeSpan interval)
-        {
-            await GetQuartz();
-
-            await quartz.ScheduleJob(
-                JobBuilder.Create<FetchThumbnailsJob>()
-                    .WithIdentity("Fetch thumbnails")
-                    .Build(),
-                TriggerBuilder.Create()
-                    .WithSimpleSchedule(sched => sched.WithInterval(interval).RepeatForever())
-                    .StartAt(start)
-                    .Build());
-
-            log.LogInformation("Scheduled fetch thumbnails job, interval {0} starting at {1}.", interval, start);
-        }
-
-        public async Task ScheduleJobRetry(IJobDetail jobDetail, int attempt, TimeSpan retryInterval)
-        {
-            await GetQuartz();
-
-            var retryJob = jobDetail.GetJobBuilder()
-                .WithIdentity($"{jobDetail.Key.Name}-{attempt}", jobDetail.Key.Group)
-                .UsingJobData("Attempt", attempt)
-                .Build();
-
-            var retryTrigger = TriggerBuilder.Create()
-                .StartAt(DateTimeOffset.Now.Add(retryInterval))
-                .Build();
+            var job = jobTrackerService.CreateJob(name, userId, trackWhenScheduled, jobData, retryCount, retryIntervalSecs);
 
             try
             {
-                await quartz.ScheduleJob(retryJob, retryTrigger);
-            } 
-            catch (ObjectAlreadyExistsException)
-            {
-                // NOOP
-            }
+                await GetQuartz();
 
-            log.LogInformation($"Scheduled attempt #{attempt} for job {jobDetail.Key.Name}, which will be done in {retryInterval}.");
+                // Create quartz job
+                var jobKey = JobKey.Create(typeof(TJob).Name);
+                job.Key = jobKey.Name;
+
+                if (!await quartz.CheckExists(jobKey))
+                {
+                    await quartz.AddJob(JobBuilder.Create<TJob>()
+                        .WithIdentity(typeof(TJob).Name)
+                        .StoreDurably(true)
+                        .Build(), true);
+                }
+
+                // Create job data map
+                var builder = TriggerBuilder.Create()
+                    .ForJob(jobKey)
+                    .UsingJobData("JobId", job.Id);
+
+                triggerBuilder(builder);
+
+                // Create trigger
+                var nextRun = await quartz.ScheduleJob(builder.Build());
+                jobTrackerService.OnJobScheduled(job, nextRun);
+
+                return nextRun;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Error creating job");
+                jobTrackerService.OnJobFailed(job, "Job creation failed", "Check logs for more information.");
+                throw;
+            }
         }
 
-        public async Task ScheduleDownloadVideo(int videoId)
+        /// <summary>
+        /// Schedules tracked job for immediate execution
+        /// </summary>
+        /// <typeparam name="TJob">Job type</typeparam>
+        /// <param name="name">User friendly job name</param>
+        /// <param name="jobData">Dictionary containing data to be passed to job</param>
+        /// <param name="retryCount">How many times the job will be attempted again on failure</param>
+        /// <param name="retryIntervalSecs">How long to wait until trying again</param>
+        /// <returns></returns>
+        public Task<DateTimeOffset> Schedule<TJob>(string name,
+                                                   string userId = null,
+                                                   IDictionary<string, object> jobData = null,
+                                                   int retryCount = 0,
+                                                   int retryIntervalSecs = 600) where TJob : JobBase
         {
-            await GetQuartz();
+            return Schedule<TJob>(triggerBuilder: tb => tb.StartNow(),
+                                  name: name,
+                                  userId: userId,
+                                  trackWhenScheduled: true,
+                                  jobData: jobData,
+                                  retryCount: retryCount,
+                                  retryIntervalSecs: retryIntervalSecs);
+        }
 
-            var job = JobBuilder.Create<DownloadVideoJob>()
-                    .WithIdentity($"Download video {videoId}")
-                    .UsingJobData("VideoId", videoId)
+        /// <summary>
+        /// Schedules tracked job execution based on a cron expression
+        /// </summary>
+        /// <typeparam name="TJob">Job type</typeparam>
+        /// <param name="cronSchedule">Cron expression</param>
+        /// <param name="name">User friendly job name</param>
+        /// <param name="jobData">Dictionary containing data to be passed to job</param>
+        /// <param name="retryCount">How many times the job will be attempted again on failure</param>
+        /// <param name="retryIntervalSecs">How long to wait until trying again</param>
+        /// <returns></returns>
+        public Task<DateTimeOffset> Schedule<TJob>(string cronSchedule,
+                                                   string name,
+                                                   string userId = null,
+                                                   IDictionary<string, object> jobData = null,
+                                                   int retryCount = 0,
+                                                   int retryIntervalSecs = 600) where TJob : JobBase
+        {
+            return Schedule<TJob>(triggerBuilder: tb => tb.WithCronSchedule(cronSchedule),
+                                  name: name,
+                                  userId: userId,
+                                  jobData: jobData,
+                                  retryCount: retryCount,
+                                  retryIntervalSecs: retryIntervalSecs);
+        }
+
+        /// <summary>
+        /// Schedules tracked job execution based on a cron expression
+        /// </summary>
+        /// <typeparam name="TJob">Job type</typeparam>
+        /// <param name="start">When job will be executed</param>
+        /// <param name="name">User friendly job name</param>
+        /// <param name="jobData">Dictionary containing data to be passed to job</param>
+        /// <param name="retryCount">How many times the job will be attempted again on failure</param>
+        /// <param name="retryIntervalSecs">How long to wait until trying again</param>
+        /// <returns></returns>
+        public Task<DateTimeOffset> Schedule<TJob>(DateTimeOffset start,
+                                                   TimeSpan repeatInterval,
+                                                   string name,
+                                                   string userId = null,
+                                                   IDictionary<string, object> jobData = null,
+                                                   int retryCount = 0,
+                                                   int retryIntervalSecs = 600) where TJob : JobBase
+        {
+            return Schedule<TJob>(triggerBuilder: builder => builder.WithSimpleSchedule(sched => sched.WithInterval(repeatInterval).RepeatForever())
+                                                                    .StartAt(start),
+                                  name: name,
+                                  userId: userId,
+                                  jobData: jobData,
+                                  retryCount: retryCount,
+                                  retryIntervalSecs: retryIntervalSecs);
+        }
+
+        private async void JobTrackerService_JobFailed(object sender, JobFailedEventArgs e)
+        {
+            if (e.Job.RetryCount > 0)
+                await ScheduleJobRetry(e.Job);
+        }
+
+        private async Task ScheduleJobRetry(JobInfo job)
+        {
+            job.RetryCount--;
+            dataContext.SaveChanges();
+
+            try
+            {
+                await GetQuartz();
+
+                var jobKey = JobKey.Create(job.Key);
+
+                var trigger = TriggerBuilder.Create()
+                    .ForJob(jobKey)
+                    .UsingJobData("JobId", job.Id)
+                    .StartAt(DateTimeOffset.Now.AddSeconds(job.RetryInterval))
                     .Build();
 
-            var trigger = TriggerBuilder.Create()
-                    .StartNow()
-                    .Build();
-
-            if (!await quartz.CheckExists(job.Key))
-            {
-                await quartz.ScheduleJob(job, trigger);
-                log.LogInformation("Scheduled download job for video {0}.", videoId);
-                ScheduledVideoDownload?.Invoke(videoId);
+                var nextRun = await quartz.ScheduleJob(trigger);
+                jobTrackerService.OnJobScheduled(job, nextRun);
             }
-            else log.LogInformation("Did not schedule download job for video {0} - already scheduled.", videoId);
-        }
-
-        public async Task ScheduleDeleteFiles(int[] videoIds)
-        {
-            await GetQuartz();
-
-            var jobDataMap = new JobDataMap
+            catch (Exception ex)
             {
-                { "VideoIds", videoIds },
-            };
-
-            await quartz.ScheduleJob(
-                JobBuilder.Create<DeleteFilesJob>()
-                    .WithIdentity($"Delete files {Guid.NewGuid()}")
-                    .UsingJobData(jobDataMap)
-                    .Build(),
-                TriggerBuilder.Create()
-                    .StartNow()
-                    .Build());
-
-            log.LogInformation("Scheduled delete files job for videos {0}.", videoIds.Humanize());
-        }
-
-        public async Task ScheduleDeleteSubscriptionFiles(int[] subscriptionIds, bool deleteSubscriptions)
-        {
-            await GetQuartz();
-
-            var jobDataMap = new JobDataMap
-            {
-                { "SubscriptionIds", subscriptionIds },
-                { "DeleteSubscriptions", deleteSubscriptions }
-            };
-
-            await quartz.ScheduleJob(
-                JobBuilder.Create<DeleteSubscriptionFilesJob>()
-                    .WithIdentity($"Delete subscription files {Guid.NewGuid()}")
-                    .UsingJobData(jobDataMap)
-                    .Build(),
-                TriggerBuilder.Create()
-                    .StartNow()
-                    .Build());
-
-            log.LogInformation("Scheduled delete files job for subscriptions {0}, will {1}delete subscriptions.", 
-                subscriptionIds.Humanize(), deleteSubscriptions ? "" : "not ");
-        }
-
-        public async Task ScheduleDeleteSubscriptionFolderFiles(int[] subscriptionFolderIds, bool deleteFolders)
-        {
-            await GetQuartz();
-
-            var jobDataMap = new JobDataMap
-            {
-                { "SubscriptionFolderIds", subscriptionFolderIds },
-                { "DeleteFolders", deleteFolders }
-            };
-
-            await quartz.ScheduleJob(
-                JobBuilder.Create<DeleteSubscriptionFolderFilesJob>()
-                    .WithIdentity($"Delete subscription folder files {Guid.NewGuid()}")
-                    .UsingJobData(jobDataMap)
-                    .Build(),
-                TriggerBuilder.Create()
-                    .StartNow()
-                    .Build());
-
-            log.LogInformation("Scheduled delete files job for folders {0}, will {1}delete folders.",
-                subscriptionFolderIds.Humanize(), deleteFolders ? "" : "not ");
+                log.LogError(ex, "Error creating job");
+                jobTrackerService.OnJobFailed(job, "Job creation failed", "Check logs for more information.");
+            }
         }
     }
 }

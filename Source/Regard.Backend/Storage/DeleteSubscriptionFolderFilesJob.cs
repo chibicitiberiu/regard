@@ -13,22 +13,39 @@ namespace Regard.Backend.Jobs
 {
     public class DeleteSubscriptionFolderFilesJob : DeleteFilesJob
     {
+        private static readonly string Data_SubscriptionFolderIds = nameof(SubscriptionFolderIds);
+        private static readonly string Data_DeleteFolders = nameof(DeleteFolders);
+
         public int[] SubscriptionFolderIds { get; set; }
 
         public bool DeleteFolders { get; set; }
 
         public DeleteSubscriptionFolderFilesJob(IVideoStorageService videoStorage,
                                                 SubscriptionManager subscriptionManager,
+                                                JobTrackerService jobTrackerService,
                                                 ILogger<DeleteFilesJob> logger,
                                                 DataContext dataContext)
-            : base(videoStorage, subscriptionManager, logger, dataContext)
+            : base(videoStorage, subscriptionManager, jobTrackerService, logger, dataContext)
         {
+        }
+
+        public static Task Schedule(RegardScheduler scheduler, int[] subscriptionFolderIds, bool deleteFolders)
+        {
+            return scheduler.Schedule<DeleteSubscriptionFolderFilesJob>(
+                name: "Delete files",
+                jobData: new Dictionary<string, object>()
+                {
+                    { Data_SubscriptionFolderIds, subscriptionFolderIds },
+                    { Data_DeleteFolders, deleteFolders }
+                },
+                retryCount: 3,
+                retryIntervalSecs: 10 * 60);
         }
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
-            SubscriptionFolderIds = (int[])context.MergedJobDataMap.Get("SubscriptionFolderIds");
-            DeleteFolders = context.MergedJobDataMap.GetBoolean("DeleteFolders");
+            SubscriptionFolderIds = (int[])Job.JobData[Data_SubscriptionFolderIds];
+            DeleteFolders = (bool)Job.JobData[Data_DeleteFolders];
 
             await base.ExecuteJob(context);
 
@@ -39,7 +56,7 @@ namespace Regard.Backend.Jobs
                     .Where(x => x.Id == SubscriptionFolderIds[0])
                     .First();
 
-                await subscriptionManager.DeleteFoldersInternal(firstFolder.User, SubscriptionFolderIds);
+                subscriptionManager.DeleteFoldersInternal(firstFolder.User, SubscriptionFolderIds);
             }
         }
 

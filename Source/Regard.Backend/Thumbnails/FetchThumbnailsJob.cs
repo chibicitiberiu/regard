@@ -2,6 +2,7 @@
 using Quartz;
 using Regard.Backend.DB;
 using Regard.Backend.Jobs;
+using Regard.Backend.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,16 +13,22 @@ namespace Regard.Backend.Thumbnails
     {
         protected readonly ThumbnailService thumbnailService;
 
-        protected override int RetryCount => throw new NotImplementedException();
-
-        protected override TimeSpan RetryInterval => throw new NotImplementedException();
-
         public FetchThumbnailsJob(ILogger<FetchThumbnailsJob> logger,
                                   DataContext dataContext,
+                                  JobTrackerService jobTrackerService,
                                   ThumbnailService thumbnailService)
-            : base(logger, dataContext)
+            : base(logger, dataContext, jobTrackerService)
         {
             this.thumbnailService = thumbnailService;
+        }
+
+        public static Task Schedule(RegardScheduler scheduler, DateTimeOffset start, TimeSpan interval)
+        {
+            return scheduler.Schedule<FetchThumbnailsJob>(
+                name: "Fetch thumbnails",
+                start: start,
+                repeatInterval: interval,
+                retryCount: 0);
         }
 
         protected override async Task ExecuteJob(IJobExecutionContext context)

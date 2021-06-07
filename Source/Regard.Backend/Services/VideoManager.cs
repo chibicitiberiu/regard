@@ -1,6 +1,8 @@
 ﻿using MoreLinq;
 using Regard.Backend.Common.Utils;
 using Regard.Backend.DB;
+using Regard.Backend.Downloader;
+using Regard.Backend.Jobs;
 using Regard.Backend.Model;
 using System;
 using System.Collections.Generic;
@@ -9,27 +11,39 @@ using System.Threading.Tasks;
 
 namespace Regard.Backend.Services
 {
+    #region Events
+
+    public class VideoUpdatedEventArgs
+    { 
+        /// <summary>
+        /// User who initiated the operation
+        /// </summary>
+        public UserAccount User { get; set; }
+
+        /// <summary>
+        /// Updated video
+        /// </summary>
+        public Video Video { get; set; }
+    }
+
+
+    #endregion
+
     public class VideoManager
     {
         private readonly DataContext dataContext;
-        private readonly MessagingService messaging;
         private readonly RegardScheduler scheduler;
         private readonly IProviderManager providerManager;
-        private readonly ApiModelFactory modelFactory;
 
-        private Dictionary<int, Video> videoProgress;
+        public event EventHandler<VideoUpdatedEventArgs> VideoUpdated;
 
         public VideoManager(DataContext dataContext,
-                            MessagingService messaging,
                             RegardScheduler scheduler,
-                            IProviderManager providerManager,
-                            ApiModelFactory modelFactory)
+                            IProviderManager providerManager)
         {
             this.dataContext = dataContext;
-            this.messaging = messaging;
             this.scheduler = scheduler;
             this.providerManager = providerManager;
-            this.modelFactory = modelFactory;
         }
 
         public Video Get(int id)
@@ -43,17 +57,20 @@ namespace Regard.Backend.Services
                 .Where(x => x.Subscription.UserId == userAccount.Id);
         }
 
-        public async Task Update(UserAccount user, int[] videoIds, Action<Video> updateMethod)
+        public void Update(UserAccount user, int[] videoIds, Action<Video> updateMethod)
         {
             var vids = dataContext.Videos.AsQueryable()
                 .Where(v => videoIds.Contains(v.Id))
                 .Where(v => v.Subscription.UserId == user.Id);
                 
             vids.ForEach(updateMethod);
-            await dataContext.SaveChangesAsync();
+            dataContext.SaveChanges();
 
-            await vids.ToAsyncEnumerable()
-                .ForEachAwaitAsync(async x => await messaging.NotifyVideoUpdated(user, modelFactory.ToApi(x)));
+            if (VideoUpdated != null)
+            {
+                foreach (var video in vids)
+                    VideoUpdated.Invoke(this, new VideoUpdatedEventArgs() { User = user, Video = video });
+            }
         }
 
         public async Task Download(UserAccount user, int[] videoIds)
@@ -62,9 +79,8 @@ namespace Regard.Backend.Services
             await dataContext.Videos.AsQueryable()
                 .Where(v => videoIds.Contains(v.Id))
                 .Where(v => v.Subscription.UserId == user.Id)
-                .Select(x => x.Id)
                 .ToAsyncEnumerable()
-                .ForEachAwaitAsync(scheduler.ScheduleDownloadVideo);
+                .ForEachAwaitAsync(v => DownloadVideoJob.Schedule(scheduler, v));
         }
 
         public async Task DeleteFiles(UserAccount user, int[] videoIds)
@@ -76,7 +92,7 @@ namespace Regard.Backend.Services
                 .Select(x => x.Id)
                 .ToArray();
 
-            await scheduler.ScheduleDeleteFiles(vids);
+            await DeleteFilesJob.Schedule(scheduler, vids);
         }
 
         public async Task Add(UserAccount user, Uri url, int subscriptionId)

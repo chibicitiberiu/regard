@@ -35,6 +35,8 @@ namespace Regard.Backend.DB
 
         public DbSet<Message> Messages { get; set; }
 
+        public DbSet<JobInfo> Jobs { get; set; }
+
         protected DataContext(IConfiguration configuration)
         {
             this.Configuration = configuration;
@@ -117,8 +119,13 @@ namespace Regard.Backend.DB
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
-
-
+            // Jobs
+            modelBuilder.Entity<JobInfo>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

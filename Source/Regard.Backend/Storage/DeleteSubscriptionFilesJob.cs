@@ -13,22 +13,39 @@ namespace Regard.Backend.Jobs
 {
     public class DeleteSubscriptionFilesJob : DeleteFilesJob
     {
+        private static readonly string Data_SubscriptionIds = nameof(SubscriptionIds);
+        private static readonly string Data_DeleteSubscriptions = nameof(DeleteSubscriptions);
+
         public int[] SubscriptionIds { get; set; }
 
         public bool DeleteSubscriptions { get; set; }
 
         public DeleteSubscriptionFilesJob(IVideoStorageService videoStorage,
                                           SubscriptionManager subscriptionManager,
+                                          JobTrackerService jobTrackerService,
                                           ILogger<DeleteFilesJob> logger,
                                           DataContext dataContext)
-            : base(videoStorage, subscriptionManager, logger, dataContext)
+            : base(videoStorage, subscriptionManager, jobTrackerService, logger, dataContext)
         {
+        }
+
+        public static Task Schedule(RegardScheduler scheduler, int[] subscriptionIds, bool deleteSubscriptions)
+        {
+            return scheduler.Schedule<DeleteSubscriptionFilesJob>(
+                name: "Delete files",
+                jobData: new Dictionary<string, object>()
+                {
+                    { Data_SubscriptionIds, subscriptionIds },
+                    { Data_DeleteSubscriptions, deleteSubscriptions }
+                },
+                retryCount: 3,
+                retryIntervalSecs: 10 * 60);
         }
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
-            SubscriptionIds = (int[])context.MergedJobDataMap.Get("SubscriptionIds");
-            DeleteSubscriptions = context.MergedJobDataMap.GetBoolean("DeleteSubscriptions");
+            SubscriptionIds = (int[])Job.JobData[Data_SubscriptionIds];
+            DeleteSubscriptions = (bool)Job.JobData[Data_DeleteSubscriptions];
             await base.ExecuteJob(context);
 
             if (DeleteSubscriptions && SubscriptionIds != null && SubscriptionIds.Length > 0)
@@ -38,7 +55,7 @@ namespace Regard.Backend.Jobs
                         .Where(x => x.Id == SubscriptionIds[0])
                         .First();
 
-                await subscriptionManager.DeleteInternal(firstSub.User, SubscriptionIds);
+                subscriptionManager.DeleteInternal(firstSub.User, SubscriptionIds);
             }
         }
 

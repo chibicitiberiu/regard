@@ -133,7 +133,7 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> MarkWatched([FromBody] VideoMarkWatchedRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            await videoManager.Update(user, request.VideoIds, video => video.IsWatched = true);
+            videoManager.Update(user, request.VideoIds, video => video.IsWatched = true);
             return Ok(responseFactory.Success());
         }
 
@@ -143,7 +143,7 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> MarkNotWatched([FromBody] VideoMarkNotWatchedRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            await videoManager.Update(user, request.VideoIds, video => video.IsWatched = false);
+            videoManager.Update(user, request.VideoIds, video => video.IsWatched = false);
             return Ok(responseFactory.Success());
         }
 
