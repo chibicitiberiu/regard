@@ -5,10 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.51.0.2238" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.54.0.2414" />
     <PackageReference Include="morelinq" Version="3.3.2" />
     <PackageReference Include="System.Linq.Async" Version="5.0.0" />
-    <PackageReference Include="System.Text.Json" Version="5.0.1" />
+    <PackageReference Include="System.Text.Json" Version="5.0.2" />
   </ItemGroup>
 
   <ItemGroup>
