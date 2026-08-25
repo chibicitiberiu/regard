@@ -182,11 +182,13 @@ namespace Regard.Backend.Downloader
 
             VideoOrder order = optionManager.GetForSubscription(Options.Subscriptions_DownloadOrder, sub.Id);
 
+            // Filter server-side, then order client-side: EF Core's SQLite provider
+            // cannot translate ORDER BY on DateTimeOffset (Published).
             var downloadCandidates = dataContext.Videos
-                .AsQueryable()
                 .Where(x => x.SubscriptionId == sub.Id)
                 .Where(x => x.DownloadedPath == null)
                 .Where(x => !x.IsWatched)
+                .AsEnumerable()
                 .OrderBy(order);
 
             int? limit = DetermineMaximumVideoCount(sub);

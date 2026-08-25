@@ -101,13 +101,14 @@ namespace YoutubeDLWrapper
         /// <summary>
         /// Opt: The date (YYYYMMDD) when the video was released.
         /// </summary>
-        [JsonProperty("release_date")]
+        [JsonProperty("release_date", NullValueHandling = NullValueHandling.Ignore)]
         [JsonConverter(typeof(YoutubeDLDateConverter))]
         public DateTime ReleaseDate { get; set; }
 
         /// <summary>
         /// Opt: UNIX timestamp of the moment the video became available.
         /// </summary>
+        [JsonProperty("timestamp", NullValueHandling = NullValueHandling.Ignore)]
         [JsonConverter(typeof(UnixDateTimeConverter))]
         public DateTime Timestamp { get; set; }
 
@@ -115,7 +116,7 @@ namespace YoutubeDLWrapper
         /// Opt: Video upload date (YYYYMMDD). 
         /// If not explicitly set, calculated from timestamp.
         /// </summary>
-        [JsonProperty("upload_date")]
+        [JsonProperty("upload_date", NullValueHandling = NullValueHandling.Ignore)]
         [JsonConverter(typeof(YoutubeDLDateConverter))]
         public DateTime UploadDate { get; set; }
 

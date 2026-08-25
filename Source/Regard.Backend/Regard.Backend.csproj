@@ -33,7 +33,6 @@
     <ProjectReference Include="..\Regard.Backend.Model\Regard.Backend.Common.csproj" />
     <ProjectReference Include="..\Regard.Backend.Providers.Rss\Regard.Backend.Providers.Rss.csproj" />
     <ProjectReference Include="..\Regard.Backend.Providers.YouTubeDL\Regard.Backend.Providers.YouTubeDL.csproj" />
-    <ProjectReference Include="..\Regard.Backend.Providers.YouTube\Regard.Backend.Providers.YouTube.csproj" />
     <ProjectReference Include="..\Regard.Common\Regard.Common.csproj" />
     <ProjectReference Include="..\YoutubeDLWrapper\YoutubeDLWrapper.csproj" />
   </ItemGroup>

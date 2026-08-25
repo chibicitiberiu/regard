@@ -84,13 +84,14 @@ namespace Regard.Backend.Controllers
             // Get the item count here, before applying the limit and offset
             int itemCount = query.Count();
 
-            // Sorting, limit and offset
-            query = query.OrderBy(request.Order)
+            // Sorting (client-side: EF Core's SQLite provider cannot ORDER BY DateTimeOffset),
+            // then limit and offset.
+            var videos = query
+                .AsEnumerable()
+                .OrderBy(request.Order)
                 .Skip(request.Offset ?? 0)
-                .Take(request.Limit ?? 50);
-
-            // Obtain mime types
-            var videos = query.ToArray();
+                .Take(request.Limit ?? 50)
+                .ToArray();
             var apiVideos = new List<ApiVideo>();
 
             foreach (var video in videos)

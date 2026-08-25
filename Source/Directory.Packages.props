@@ -35,7 +35,6 @@
     <!-- Third-party -->
     <PackageVersion Include="Quartz.AspNetCore" Version="3.19.1" />
     <PackageVersion Include="NLog.Web.AspNetCore" Version="6.2.0" />
-    <PackageVersion Include="Google.Apis.YouTube.v3" Version="1.76.0.4249" />
     <PackageVersion Include="HtmlAgilityPack" Version="1.13.0" />
     <PackageVersion Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />

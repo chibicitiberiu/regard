@@ -86,7 +86,7 @@ namespace Regard.Backend.Jobs
         {
             if (Job.JobData.TryGetValue(Data_SubscriptionId, out object subscriptionId))
             {
-                var sub = dataContext.Subscriptions.Find(subscriptionId);
+                var sub = dataContext.Subscriptions.Find(Convert.ToInt32(subscriptionId));
                 if (sub != null)
                 {
                     log.LogInformation($"Synchronization started for subscription {sub}.");
@@ -96,7 +96,7 @@ namespace Regard.Backend.Jobs
 
             else if (Job.JobData.TryGetValue(Data_FolderId, out object folderId))
             {
-                var folder = dataContext.SubscriptionFolders.Find(folderId);
+                var folder = dataContext.SubscriptionFolders.Find(Convert.ToInt32(folderId));
                 if (folder != null)
                 {
                     log.LogInformation($"Synchronization started for folder {folder}.");

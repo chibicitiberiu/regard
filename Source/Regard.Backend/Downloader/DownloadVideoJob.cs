@@ -78,7 +78,7 @@ namespace Regard.Backend.Downloader
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
             if (Job.JobData.TryGetValue(Data_VideoId, out object videoId))
-                VideoId = (int)videoId;
+                VideoId = Convert.ToInt32(videoId);
 
             video = dataContext.Videos.Find(VideoId);
 
@@ -208,7 +208,8 @@ namespace Regard.Backend.Downloader
 
         private IEnumerable<string> ResolveDownloadOptions(Video video)
         {
-            yield return "--no-color";
+            yield return "--color";
+            yield return "no_color";
 
             // TODO: Network Options
             // TODO: Geo Restriction
@@ -252,10 +253,6 @@ namespace Regard.Backend.Downloader
 
             yield return "--newline";
 
-            bool? callHome = optionManager.GetGlobal(Options.Ytdl_CallHome);
-            if (callHome.HasValue)
-                yield return (callHome.Value) ? "-C" : "--no-call-home";
-
             #endregion
 
             // TODO: workarounds
@@ -268,9 +265,6 @@ namespace Regard.Backend.Downloader
                 yield return "-f";
                 yield return format;
             }
-
-            if (optionManager.GetForSubscription(Options.Ytdl_AllFormats, video.SubscriptionId))
-                yield return "--all-formats";
 
             if (optionManager.GetForSubscription(Options.Ytdl_PreferFreeFormats, video.SubscriptionId))
                 yield return "--prefer-free-formats";
@@ -287,13 +281,16 @@ namespace Regard.Backend.Downloader
             #region Subtitle Options
 
             if (optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId))
-                yield return "--write-sub";
+                yield return "--write-subs";
 
             if (optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId))
-                yield return "--write-auto-sub";
+                yield return "--write-auto-subs";
 
             if (optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId))
-                yield return "--all-subs";
+            {
+                yield return "--sub-langs";
+                yield return "all";
+            }
 
             string subFormat = optionManager.GetForSubscription(Options.Ytdl_SubFormat, video.SubscriptionId);
             if (subFormat != null)
@@ -305,7 +302,7 @@ namespace Regard.Backend.Downloader
             string subLang = optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId);
             if (subLang != null)
             {
-                yield return "--sub-lang";
+                yield return "--sub-langs";
                 yield return subLang;
             }
 

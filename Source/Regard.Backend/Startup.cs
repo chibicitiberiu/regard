@@ -15,7 +15,6 @@ using Quartz;
 using Quartz.AspNetCore;
 using Regard.Backend.Hubs;
 using Regard.Backend.Model;
-using Regard.Backend.Providers.YouTube;
 using Regard.Backend.Services;
 using Regard.Backend.DB;
 using Regard.Backend.Middleware;
@@ -143,7 +142,6 @@ namespace Regard.Backend
 
             // Providers
             services.AddSingleton<IProvider, RssSubscriptionProvider>();
-            services.AddSingleton<IProvider, YouTubeAPIProvider>();
             services.AddSingleton<IProvider, YouTubeDLProvider>();
             services.AddSingleton<IProviderManager, ProviderManager>();
 

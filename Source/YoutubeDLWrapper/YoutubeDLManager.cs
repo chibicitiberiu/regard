@@ -16,7 +16,7 @@ namespace YoutubeDLWrapper
 
         public string StorePath { get; set; }
 
-        public string LatestUrl { get; set; } = "https://youtube-dl.org/downloads/latest/youtube-dl";
+        public string LatestUrl { get; set; } = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
 
         public string PythonPath { get; private set; }
 
@@ -34,8 +34,8 @@ namespace YoutubeDLWrapper
 
         private async Task<bool> IsYoutubeDl(string path)
         {
-            // check if filename starts with youtube-dl (we store them as youtube-dl-<version>)
-            bool filenameOk = Path.GetFileName(path).ToLower().StartsWith("youtube-dl");
+            // check if filename starts with yt-dlp (we store them as yt-dlp-<version>)
+            bool filenameOk = Path.GetFileName(path).ToLower().StartsWith("yt-dlp");
             
             // check if file contains python shebang
             var firstLine = await Task.Run(() => File.ReadLines(path).FirstOrDefault() ?? "");
@@ -84,7 +84,7 @@ namespace YoutubeDLWrapper
 
         private async Task<string> DownloadLatest()
         {
-            string targetFile = Path.Combine(StorePath, "youtube-dl-tmp");
+            string targetFile = Path.Combine(StorePath, "yt-dlp-tmp");
             using var client = new HttpClient();
             using var downloadStream = await client.GetStreamAsync(LatestUrl);
             using var fileOut = File.OpenWrite(targetFile);
@@ -94,7 +94,7 @@ namespace YoutubeDLWrapper
 
         public async Task<bool> DownloadLatestVersion()
         {
-            logger.LogInformation("Downloading latest youtube-dl...");
+            logger.LogInformation("Downloading latest yt-dlp...");
 
             var tmpFile = await DownloadLatest();
             var ytdl = new YoutubeDL(ytdlLogger, tmpFile, PythonPath, Debug, DebugPath);

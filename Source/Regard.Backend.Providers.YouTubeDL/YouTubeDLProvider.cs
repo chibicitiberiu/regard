@@ -186,7 +186,7 @@ namespace Regard.Backend.Providers.YouTubeDL
                     video.Description = info.Description;
                     video.Published = info.Timestamp;
                     video.LastUpdated = DateTimeOffset.Now;
-                    video.ThumbnailPath = info.Thumbnail.ToString();
+                    video.ThumbnailPath = info.Thumbnail?.ToString();
                     video.UploaderName = info.Uploader;
                 }
 
