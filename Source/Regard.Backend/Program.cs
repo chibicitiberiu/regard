@@ -41,7 +41,7 @@ namespace Regard.Backend
 
             GlobalDiagnosticsContext.Set("DataDirectory", config["DataDirectory"]);
 
-            return NLogBuilder.ConfigureNLog(LogManager.Configuration).GetCurrentClassLogger();
+            return LogManager.Setup().GetCurrentClassLogger();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

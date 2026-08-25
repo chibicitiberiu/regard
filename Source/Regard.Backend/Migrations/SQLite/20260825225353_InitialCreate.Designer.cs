@@ -6,17 +6,19 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Regard.Backend.DB;
 
+#nullable disable
+
 namespace Regard.Backend.Migrations.SQLite
 {
     [DbContext(typeof(SQLiteDataContext))]
-    [Migration("20210505215636_RenamePreferenceToOption")]
-    partial class RenamePreferenceToOption
+    [Migration("20260825225353_InitialCreate")]
+    partial class InitialCreate
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "5.0.4");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -41,7 +43,7 @@ namespace Regard.Backend.Migrations.SQLite
                         .IsUnique()
                         .HasDatabaseName("RoleNameIndex");
 
-                    b.ToTable("AspNetRoles");
+                    b.ToTable("AspNetRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -64,7 +66,7 @@ namespace Regard.Backend.Migrations.SQLite
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims");
+                    b.ToTable("AspNetRoleClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -87,7 +89,7 @@ namespace Regard.Backend.Migrations.SQLite
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims");
+                    b.ToTable("AspNetUserClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -109,7 +111,7 @@ namespace Regard.Backend.Migrations.SQLite
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins");
+                    b.ToTable("AspNetUserLogins", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -124,7 +126,7 @@ namespace Regard.Backend.Migrations.SQLite
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles");
+                    b.ToTable("AspNetUserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -143,7 +145,56 @@ namespace Regard.Backend.Migrations.SQLite
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens");
+                    b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Regard.Backend.Common.Model.JobInfo", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("Completed")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("JobDataJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("NextRun")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RetryInterval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("Started")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("TrackWhenScheduled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Jobs");
                 });
 
             modelBuilder.Entity("Regard.Backend.Common.Model.Message", b =>
@@ -159,6 +210,9 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<string>("Details")
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("JobId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Severity")
                         .HasColumnType("INTEGER");
 
@@ -169,6 +223,8 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("JobId");
 
                     b.HasIndex("UserId");
 
@@ -383,7 +439,7 @@ namespace Regard.Backend.Migrations.SQLite
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("AspNetUsers");
+                    b.ToTable("AspNetUsers", (string)null);
                 });
 
             modelBuilder.Entity("Regard.Backend.Model.UserOption", b =>
@@ -537,12 +593,28 @@ namespace Regard.Backend.Migrations.SQLite
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Regard.Backend.Common.Model.Message", b =>
+            modelBuilder.Entity("Regard.Backend.Common.Model.JobInfo", b =>
                 {
                     b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Common.Model.Message", b =>
+                {
+                    b.HasOne("Regard.Backend.Common.Model.JobInfo", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId");
+
+                    b.HasOne("Regard.Backend.Model.UserAccount", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Job");
 
                     b.Navigation("User");
                 });

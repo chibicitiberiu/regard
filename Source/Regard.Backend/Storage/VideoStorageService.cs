@@ -78,8 +78,8 @@ namespace Regard.Backend.Services
         public async Task<long> CalculateSize(Video video)
         {
             return await GetFiles(video)
-                .Select(file => new FileInfo(file))
-                .SumAsync(fileInfo => fileInfo.Length);
+                .Select(file => new FileInfo(file).Length)
+                .SumAsync();
         }
 
         public async Task<string> GetMimeType(Video video)

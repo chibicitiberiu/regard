@@ -1,21 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-  </PropertyGroup>
-
   <ItemGroup>
-    <None Include="Configuration\Options.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Options.tt</DependentUpon>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="5.0.9" />
-    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,27 +9,16 @@
     <ProjectReference Include="..\YoutubeDLWrapper\YoutubeDLWrapper.csproj" />
   </ItemGroup>
 
+  <!-- T4-generated options (Options.cs is checked in; the .tt only runs in Visual Studio). -->
   <ItemGroup>
     <None Update="Configuration\Options.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Options.cs</LastGenOutput>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Compile Update="Configuration\Options.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Options.tt</DependentUpon>
-    </Compile>
-    <Compile Update="Configuration\Preferences.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Preferences.tt</DependentUpon>
     </Compile>
   </ItemGroup>
 

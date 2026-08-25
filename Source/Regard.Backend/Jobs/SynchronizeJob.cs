@@ -100,20 +100,16 @@ namespace Regard.Backend.Jobs
                 if (folder != null)
                 {
                     log.LogInformation($"Synchronization started for folder {folder}.");
-                    await dataContext.GetSubscriptionsRecursive(folder)
-                          .ToList()
-                          .ToAsyncEnumerable()
-                          .ForEachAwaitAsync(Synchronize);
+                    foreach (var sub in dataContext.GetSubscriptionsRecursive(folder).ToList())
+                        await Synchronize(sub);
                 }
             }
 
             else
             {
                 log.LogInformation($"Synchronization started.");
-                await dataContext.Subscriptions
-                    .ToList()
-                    .ToAsyncEnumerable()
-                    .ForEachAwaitAsync(Synchronize);
+                foreach (var sub in dataContext.Subscriptions.ToList())
+                    await Synchronize(sub);
             }
 
             log.LogInformation("Synchronization finished.");

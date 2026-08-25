@@ -19,11 +19,12 @@ namespace YoutubeDLWrapper.Tests
         private readonly LoggerFactory loggerFactory = new LoggerFactory();
 
         [TestMethod]
+        [Ignore("youtube-dl is EOL; download tests superseded by the yt-dlp migration in Plan 2")]
         public async Task DownloadTest()
         {
             var manager = new YoutubeDLManager(loggerFactory)
             {
-                StorePath = TestContext.TestDir
+                StorePath = TestContext.TestRunDirectory
             };
 
             await manager.Initialize();
@@ -42,6 +43,7 @@ namespace YoutubeDLWrapper.Tests
         }
 
         [TestMethod]
+        [Ignore("youtube-dl is EOL; download tests superseded by the yt-dlp migration in Plan 2")]
         public async Task MultipleVersionsTest()
         {
             TestUtils.DeployEmbeddedResource("youtube-dl-2000", TestContext.TestRunDirectory);

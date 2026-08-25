@@ -17,7 +17,17 @@ namespace Regard.Backend.DB
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite(Configuration?.GetConnectionString("SQLite"));
+            var connectionString = Configuration?.GetConnectionString("SQLite");
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                // No explicit SQLite connection string: default to a file under DataDirectory.
+                var dataDir = Configuration?["DataDirectory"];
+                if (string.IsNullOrEmpty(dataDir))
+                    dataDir = Directory.GetCurrentDirectory();
+                Directory.CreateDirectory(dataDir);
+                connectionString = $"Data Source={Path.Combine(dataDir, "Regard.db")}";
+            }
+            optionsBuilder.UseSqlite(connectionString);
         }
     }
 

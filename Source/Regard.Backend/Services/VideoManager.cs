@@ -76,11 +76,12 @@ namespace Regard.Backend.Services
         public async Task Download(UserAccount user, int[] videoIds)
         {
             // This verifies that only user's videos are downloaded
-            await dataContext.Videos.AsQueryable()
+            var videosToDownload = dataContext.Videos.AsQueryable()
                 .Where(v => videoIds.Contains(v.Id))
                 .Where(v => v.Subscription.UserId == user.Id)
-                .ToAsyncEnumerable()
-                .ForEachAwaitAsync(v => DownloadVideoJob.Schedule(scheduler, v));
+                .ToList();
+            foreach (var video in videosToDownload)
+                await DownloadVideoJob.Schedule(scheduler, video);
         }
 
         public async Task DeleteFiles(UserAccount user, int[] videoIds)

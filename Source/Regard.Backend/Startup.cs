@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Quartz;
+using Quartz.AspNetCore;
 using Regard.Backend.Hubs;
 using Regard.Backend.Model;
 using Regard.Backend.Providers.YouTube;
@@ -44,12 +45,12 @@ namespace Regard.Backend
         {
             services.AddControllers();
 
-            // Setup database
+            // Setup database: SQLite is the default (no configuration required);
+            // SQL Server is used only when its connection string is explicitly set.
             if (Configuration.GetConnectionString("SqlServer") != null)
                 services.AddDbContext<DataContext, SQLServerDataContext>();
-            else if (Configuration.GetConnectionString("SQLite") != null)
+            else
                 services.AddDbContext<DataContext, SQLiteDataContext>();
-            else throw new ArgumentException("No supported database added!");
 
             // Messaging
             services.AddSignalR();
@@ -114,7 +115,8 @@ namespace Regard.Backend
             // Scheduler
             services.AddQuartz(q =>
             {
-                q.UseMicrosoftDependencyInjectionScopedJobFactory();
+                // Scoped job factory is the default in modern Quartz; the old
+                // UseMicrosoftDependencyInjectionScopedJobFactory() call was removed.
                 q.UseSimpleTypeLoader();
                 q.UseInMemoryStore();
                 q.UseDefaultThreadPool();

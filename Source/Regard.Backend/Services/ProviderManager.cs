@@ -80,22 +80,22 @@ namespace Regard.Backend.Services
             return config;
         }
 
-        public IAsyncEnumerable<ISubscriptionProvider> FindFromSubscriptionUrl(Uri uri)
+        public async IAsyncEnumerable<ISubscriptionProvider> FindFromSubscriptionUrl(Uri uri)
         {
-            return providers.Values
-                .ToAsyncEnumerable()
-                .Where(x => x is ISubscriptionProvider)
-                .Cast<ISubscriptionProvider>()
-                .WhereAwait(async x => await x.CanHandleSubscriptionUrl(uri));
+            foreach (var provider in providers.Values)
+            {
+                if (provider is ISubscriptionProvider sp && await sp.CanHandleSubscriptionUrl(uri))
+                    yield return sp;
+            }
         }
 
-        public IAsyncEnumerable<IVideoProvider> FindForVideo(Video video)
+        public async IAsyncEnumerable<IVideoProvider> FindForVideo(Video video)
         {
-            return providers.Values
-                .ToAsyncEnumerable()
-                .Where(x => x is IVideoProvider)
-                .Cast<IVideoProvider>()
-                .WhereAwait(async x => await x.CanHandleVideo(video));
+            foreach (var provider in providers.Values)
+            {
+                if (provider is IVideoProvider vp && await vp.CanHandleVideo(video))
+                    yield return vp;
+            }
         }
     }
 }
