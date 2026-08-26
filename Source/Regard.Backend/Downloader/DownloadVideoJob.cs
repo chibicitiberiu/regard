@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Regard.Common.Utils;
 using Nito.AsyncEx;
 using Regard.Backend.Jobs;
+using Regard.Backend.Metadata;
 using System.Threading;
 using Humanizer.Bytes;
 using Regard.Backend.Configuration;
@@ -30,6 +31,7 @@ namespace Regard.Backend.Downloader
         protected readonly IYoutubeDlService ytdlService;
         protected readonly IVideoDownloaderService videoDownloader;
         protected readonly IVideoStorageService videoStorage;
+        protected readonly MetadataService metadataService;
 
         private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of ~?([\d\.]+)([KMG]i?B)");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
@@ -54,13 +56,15 @@ namespace Regard.Backend.Downloader
                                 IOptionManager optionManager,
                                 IYoutubeDlService ytdlService,
                                 IVideoDownloaderService videoDownloader,
-                                IVideoStorageService videoStorage) : base(logger, dataContext, jobTrackerService)
+                                IVideoStorageService videoStorage,
+                                MetadataService metadataService) : base(logger, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
             this.optionManager = optionManager;
             this.ytdlService = ytdlService;
             this.videoDownloader = videoDownloader;
             this.videoStorage = videoStorage;
+            this.metadataService = metadataService;
         }
 
         public static Task Schedule(RegardScheduler scheduler, Video video)
@@ -131,8 +135,35 @@ namespace Regard.Backend.Downloader
                 video.DownloadedSize = await videoStorage.CalculateSize(video);
                 await dataContext.SaveChangesAsync();
             }
-            
+
+            if (configuration.GetValue<bool>("Metadata:Enabled"))
+                await WriteEpisodeMetadata();
+
             log.LogInformation($"videoId={VideoId}: Download completed!");
+        }
+
+        /// <summary>
+        /// Writes the Jellyfin episode NFO next to the downloaded file and renames yt-dlp's
+        /// thumbnail (written via --write-thumbnail) to the &lt;basename&gt;-thumb.jpg convention.
+        /// Best-effort: never fails the (already-committed) download.
+        /// </summary>
+        private async Task WriteEpisodeMetadata()
+        {
+            try
+            {
+                var sub = dataContext.Subscriptions.Find(video.SubscriptionId);
+                await metadataService.WriteEpisodeNfo(video, sub, outputPath);
+
+                var thumbSrc = new[] { ".jpg", ".jpeg", ".png", ".webp" }
+                    .Select(ext => outputPath + ext)
+                    .FirstOrDefault(File.Exists);
+                if (thumbSrc != null)
+                    File.Move(thumbSrc, outputPath + "-thumb" + Path.GetExtension(thumbSrc), overwrite: true);
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "videoId={0}: failed to write Jellyfin metadata.", VideoId);
+            }
         }
 
         private async Task UpdateOutputPath(string newOutputPath)
@@ -244,8 +275,17 @@ namespace Regard.Backend.Downloader
 
             #region Thumbnail images
 
-            if (optionManager.GetForSubscription(Options.Ytdl_WriteThumbnail, video.SubscriptionId))
+            bool metadataEnabled = configuration.GetValue<bool>("Metadata:Enabled");
+
+            if (optionManager.GetForSubscription(Options.Ytdl_WriteThumbnail, video.SubscriptionId) || metadataEnabled)
                 yield return "--write-thumbnail";
+
+            if (metadataEnabled)
+            {
+                // Jellyfin episode images must be JPEG; convert whatever YouTube serves (often webp).
+                yield return "--convert-thumbnails";
+                yield return "jpg";
+            }
 
             #endregion
 
@@ -327,6 +367,7 @@ namespace Regard.Backend.Downloader
                 Video = video,
                 Subscription = sub,
                 FolderPath = GetFolderPath(sub),
+                EpisodeCode = metadataService.EpisodeCode(video),
                 Env = Environment.GetEnvironmentVariables(),
             }, MissingKeyBehaviour.ThrowException);
 

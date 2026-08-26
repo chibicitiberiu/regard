@@ -50,6 +50,16 @@ namespace Regard.Backend.Jobs
             await SynchronizeJob.ScheduleGlobal(scheduler, configuration["SynchronizationSchedule"]);
             await YoutubeDLUpdateJob.Schedule(scheduler, DateTimeOffset.Now.AddSeconds(10), TimeSpan.FromDays(1));
             await FetchThumbnailsJob.Schedule(scheduler, DateTimeOffset.Now.AddSeconds(30), TimeSpan.FromMinutes(30));
+
+            // Jellyfin watched-sync (opt-in). Guard + validate the cron: RegardScheduler.Schedule
+            // re-throws on an invalid/empty cron, which would fail the whole init.
+            var jellyfinCron = configuration["Jellyfin:PollSchedule"];
+            if (configuration.GetValue<bool>("Jellyfin:Enabled") && Quartz.CronExpression.IsValidExpression(jellyfinCron))
+            {
+                try { await JellyfinSyncJob.Schedule(scheduler, jellyfinCron); }
+                catch (Exception ex) { log.LogError(ex, "Failed to schedule Jellyfin sync."); }
+            }
+
             log.LogInformation("Initialization tasks completed!");
         }
     }

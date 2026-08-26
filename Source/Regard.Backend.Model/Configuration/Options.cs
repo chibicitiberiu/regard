@@ -114,7 +114,7 @@ namespace Regard.Backend.Configuration
         /// Pattern indicating where files are downloaded automatically.
         /// </summary>
         public static readonly OptionDefinition<string> Subscriptions_DownloadPath = new OptionDefinition<string>(
-            "{DownloadDirectory}/{FolderPath}/{Subscription.Name}/{Video.PlaylistIndex}-{Video.Name}",
+            "{DownloadDirectory}/{FolderPath}/{Subscription.Name}/{EpisodeCode} - {Video.Name}",
             "subscriptions.download_path",
             "Subscriptions:DownloadPath",
             null,

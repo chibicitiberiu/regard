@@ -34,6 +34,27 @@ namespace Regard.Backend.Thumbnails
             return Path.Combine(storageManager.ThumbnailsDirectory, subscription.ThumbnailPath);
         }
 
+        /// <summary>
+        /// Returns the absolute path of the locally-cached thumbnail file, or null if the
+        /// thumbnail hasn't been fetched yet (still a remote URL) or isn't on disk.
+        /// </summary>
+        public string TryGetLocalFile(Subscription subscription)
+        {
+            if (subscription.ThumbnailPath == null || subscription.ThumbnailPath.StartsWith("http"))
+                return null;
+            var path = GetThumbnailPath(subscription);
+            return File.Exists(path) ? path : null;
+        }
+
+        /// <inheritdoc cref="TryGetLocalFile(Subscription)"/>
+        public string TryGetLocalFile(Video video)
+        {
+            if (video.ThumbnailPath == null || video.ThumbnailPath.StartsWith("http"))
+                return null;
+            var path = GetThumbnailPath(video);
+            return File.Exists(path) ? path : null;
+        }
+
         public Uri GetThumbnail(Subscription subscription)
         {
             if (subscription.ThumbnailPath == null)

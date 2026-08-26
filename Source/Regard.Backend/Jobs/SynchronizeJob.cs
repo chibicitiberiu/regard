@@ -1,15 +1,18 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Quartz;
 using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Utils;
 using Regard.Backend.Configuration;
 using Regard.Backend.DB;
 using Regard.Backend.Downloader;
+using Regard.Backend.Metadata;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.Utils;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,25 +24,31 @@ namespace Regard.Backend.Jobs
         public static readonly string Data_FolderId = "FolderId";
         public static readonly string Data_SubscriptionId = "SubscriptionId";
 
+        private readonly IConfiguration configuration;
         private readonly IOptionManager optionManager;
         private readonly IProviderManager providerManager;
         private readonly IVideoStorageService videoStorageService;
         private readonly IVideoDownloaderService videoDownloader;
+        private readonly MetadataService metadataService;
         private RegardScheduler scheduler;
 
         public SynchronizeJob(ILogger<SynchronizeJob> log,
                               DataContext dataContext,
                               JobTrackerService jobTrackerService,
+                              IConfiguration configuration,
                               IOptionManager optionManager,
                               IProviderManager providerManager,
                               IVideoStorageService videoStorageService,
                               IVideoDownloaderService videoDownloader,
+                              MetadataService metadataService,
                               RegardScheduler scheduler) : base(log, dataContext, jobTrackerService)
         {
+            this.configuration = configuration;
             this.optionManager = optionManager;
             this.providerManager = providerManager;
             this.videoStorageService = videoStorageService;
             this.videoDownloader = videoDownloader;
+            this.metadataService = metadataService;
             this.scheduler = scheduler;
         }
 
@@ -125,11 +134,34 @@ namespace Regard.Backend.Jobs
                 }
                 await CheckFiles(sub);
                 await videoDownloader.ProcessDownloadRules(sub);
+
+                if (configuration.GetValue<bool>("Metadata:Enabled"))
+                    await WriteShowMetadata(sub);
             }
             catch (Exception ex)
             {
                 log.LogError(ex, $"Synchronization failed for subscription {sub}");
             }
+        }
+
+        /// <summary>
+        /// Refreshes the show-level tvshow.nfo + poster for a subscription. The show directory is
+        /// taken from any already-downloaded video (skipped entirely if nothing is downloaded yet,
+        /// so no empty directories are created and the template path isn't re-derived).
+        /// </summary>
+        private async Task WriteShowMetadata(Subscription sub)
+        {
+            var downloadedPath = dataContext.Videos.AsQueryable()
+                .Where(v => v.SubscriptionId == sub.Id && v.DownloadedPath != null)
+                .Select(v => v.DownloadedPath)
+                .FirstOrDefault();
+
+            if (string.IsNullOrEmpty(downloadedPath))
+                return;
+
+            var showDir = Path.GetDirectoryName(downloadedPath);
+            if (!string.IsNullOrEmpty(showDir))
+                await metadataService.WriteShowMetadata(sub, showDir);
         }
 
         private async Task CheckForNewVideos(Subscription sub)

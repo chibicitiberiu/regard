@@ -27,6 +27,7 @@ using Regard.Backend.Downloader;
 using Regard.Backend.Thumbnails;
 using Regard.Backend.Configuration;
 using Regard.Backend.Logging;
+using Regard.Backend.Metadata;
 
 namespace Regard.Backend
 {
@@ -140,8 +141,12 @@ namespace Regard.Backend
             services.AddScoped<DownloadVideoJob>();
             services.AddScoped<FetchThumbnailsJob>();
             services.AddScoped<InitJob>();
+            services.AddScoped<JellyfinSyncJob>();
             services.AddScoped<SynchronizeJob>();
             services.AddScoped<YoutubeDLUpdateJob>();
+
+            // Jellyfin watched-sync client (introduces IHttpClientFactory)
+            services.AddHttpClient<Jellyfin.IJellyfinClient, Jellyfin.JellyfinClient>();
 
             // Providers
             services.AddSingleton<IProvider, RssSubscriptionProvider>();
@@ -153,6 +158,7 @@ namespace Regard.Backend
             services.AddScoped<VideoManager>();
             services.AddSingleton<StorageManager>();
             services.AddSingleton<ThumbnailService>();
+            services.AddScoped<MetadataService>();
             services.AddSingleton<IVideoStorageService, VideoStorageService>();
             services.AddScoped<IVideoDownloaderService, VideoDownloaderService>();
             services.AddSingleton<IYoutubeDlService, YoutubeDLService>();
