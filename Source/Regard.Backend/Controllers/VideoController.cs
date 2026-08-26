@@ -134,7 +134,7 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> MarkWatched([FromBody] VideoMarkWatchedRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            videoManager.Update(user, request.VideoIds, video => video.IsWatched = true);
+            await videoManager.MarkWatched(user, request.VideoIds);
             return Ok(responseFactory.Success());
         }
 

@@ -44,8 +44,8 @@ namespace Regard.Backend.Jobs
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
-            SubscriptionIds = (int[])Job.JobData[Data_SubscriptionIds];
-            DeleteSubscriptions = (bool)Job.JobData[Data_DeleteSubscriptions];
+            SubscriptionIds = ReadIntArray(Job.JobData[Data_SubscriptionIds]);
+            DeleteSubscriptions = Convert.ToBoolean(Job.JobData[Data_DeleteSubscriptions]);
             await base.ExecuteJob(context);
 
             if (DeleteSubscriptions && SubscriptionIds != null && SubscriptionIds.Length > 0)

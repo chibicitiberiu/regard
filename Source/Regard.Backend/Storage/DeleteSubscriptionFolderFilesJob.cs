@@ -44,8 +44,8 @@ namespace Regard.Backend.Jobs
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
-            SubscriptionFolderIds = (int[])Job.JobData[Data_SubscriptionFolderIds];
-            DeleteFolders = (bool)Job.JobData[Data_DeleteFolders];
+            SubscriptionFolderIds = ReadIntArray(Job.JobData[Data_SubscriptionFolderIds]);
+            DeleteFolders = Convert.ToBoolean(Job.JobData[Data_DeleteFolders]);
 
             await base.ExecuteJob(context);
 

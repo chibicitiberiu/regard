@@ -46,9 +46,20 @@ namespace Regard.Backend.Jobs
                 retryIntervalSecs: 10 * 60);
         }
 
+        /// <summary>
+        /// Job data round-trips through JSON, so an id array comes back as a JArray, not int[].
+        /// Read it defensively (cf. DownloadVideoJob's Convert.ToInt32 on the scalar id).
+        /// </summary>
+        protected static int[] ReadIntArray(object value) => value switch
+        {
+            int[] a => a,
+            System.Collections.IEnumerable e => e.Cast<object>().Select(Convert.ToInt32).ToArray(),
+            _ => Array.Empty<int>()
+        };
+
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
-            VideoIds = (int[])Job.JobData[Data_VideoIds];
+            VideoIds = ReadIntArray(Job.JobData[Data_VideoIds]);
             LogBegin();
 
             videosToDelete.Clear();

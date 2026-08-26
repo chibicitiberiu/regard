@@ -261,7 +261,7 @@ namespace Regard.Backend.Jobs
             video.DownloadedPath = null;
             video.DownloadedSize = null;
 
-            if (optionManager.GetForSubscription(Options.Subscriptions_AutoDeleteWatched, sub.Id))
+            if (optionManager.GetForSubscription(Options.Subscriptions_MarkDeletedAsWatched, sub.Id))
             {
                 video.IsWatched = true;
                 log.LogInformation("Deleted video {0} marked as watched.", video);

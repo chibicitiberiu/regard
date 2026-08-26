@@ -88,12 +88,24 @@ namespace Regard.Backend.Configuration
         );
 
         /// <summary>
-        /// When videos are marked as watched, they are deleted automatically from disk.
+        /// Forward: when a video is marked as watched, delete its downloaded files from disk.
         /// </summary>
-        public static readonly OptionDefinition<bool> Subscriptions_AutoDeleteWatched = new OptionDefinition<bool>(
+        public static readonly OptionDefinition<bool> Subscriptions_DeleteWatched = new OptionDefinition<bool>(
             true,
-            "subscriptions.auto_delete_watched",
-            "Subscriptions:AutoDeleteWatched",
+            "subscriptions.delete_watched",
+            "Subscriptions:DeleteWatched",
+            null,
+            OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
+        );
+
+        /// <summary>
+        /// Reverse: when a downloaded video's files are deleted (manually or externally),
+        /// mark the video as watched so it isn't re-downloaded.
+        /// </summary>
+        public static readonly OptionDefinition<bool> Subscriptions_MarkDeletedAsWatched = new OptionDefinition<bool>(
+            true,
+            "subscriptions.mark_deleted_as_watched",
+            "Subscriptions:MarkDeletedAsWatched",
             null,
             OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
         );
@@ -113,7 +125,7 @@ namespace Regard.Backend.Configuration
         /// Maximum number of downloaded videos to keep per user (-1 = no limit). This setting only applies to the automatic downloader, the user can download more videos than this limit. Use the User_CountQuota option for a hard limit.
         /// </summary>
         public static readonly OptionDefinition<int> User_MaxCount = new OptionDefinition<int>(
-            10,
+            -1,
             "user.max_count",
             "User:MaxCount",
             null,

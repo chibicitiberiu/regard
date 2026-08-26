@@ -39,9 +39,18 @@ namespace Regard.Backend.Logging
             {
                 if (messageQueue.TryDequeue(out Message message))
                 {
-                    dataContext.Add(message);
-                    dataContext.SaveChanges();
-                    MessageCreated?.Invoke(this, message);
+                    try
+                    {
+                        dataContext.Add(message);
+                        dataContext.SaveChanges();
+                        MessageCreated?.Invoke(this, message);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Never let a logging failure crash the process.
+                        Console.Error.WriteLine($"UserLogger: failed to persist message: {ex.Message}");
+                        dataContext.ChangeTracker.Clear();
+                    }
                 }
                 else
                 {

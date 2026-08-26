@@ -141,7 +141,9 @@ namespace Regard.Backend.Downloader
             long result = long.MaxValue;
 
             long userLimit = optionManager.GetForUser(Options.User_MaxSize, sub.UserId);
+            if (userLimit >= 0) userLimit *= 1024L * 1024L;   // option is in MB, sizes are in bytes
             long userQuota = optionManager.GetForUser(Options.User_SizeQuota, sub.UserId);
+            if (userQuota >= 0) userQuota *= 1024L * 1024L;
             if (userLimit >= 0 || userQuota >= 0)
             {
                 long globalLimit = (userLimit >= 0 && userQuota >= 0)
@@ -159,6 +161,7 @@ namespace Regard.Backend.Downloader
             }
 
             long subLimit = optionManager.GetForSubscription(Options.Subscriptions_MaxSize, sub.Id);
+            if (subLimit >= 0) subLimit *= 1024L * 1024L;   // option is in MB, sizes are in bytes
             if (subLimit >= 0)
             {
                 var downloadedSize = dataContext.Videos

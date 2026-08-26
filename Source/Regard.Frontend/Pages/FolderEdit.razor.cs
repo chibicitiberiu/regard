@@ -67,7 +67,8 @@ namespace Regard.Frontend.Pages
                     Request.AutoDownload = Folder.Config.AutoDownload;
                     Request.DownloadMaxCount = Folder.Config.DownloadMaxCount;
                     Request.DownloadOrder = Folder.Config.DownloadOrder;
-                    Request.AutomaticDeleteWatched = Folder.Config.AutomaticDeleteWatched;
+                    Request.DeleteWatched = Folder.Config.DeleteWatched;
+                    Request.MarkDeletedAsWatched = Folder.Config.MarkDeletedAsWatched;
                     Request.DownloadPath = Folder.Config.DownloadPath;
                     SubmitEnabled = true;
                     ValidationMessage = string.Empty;

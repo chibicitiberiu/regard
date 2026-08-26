@@ -68,7 +68,8 @@ namespace Regard.Frontend.Pages
                     Request.AutoDownload = Subscription.Config.AutoDownload;
                     Request.DownloadMaxCount = Subscription.Config.DownloadMaxCount;
                     Request.DownloadOrder = Subscription.Config.DownloadOrder;
-                    Request.AutomaticDeleteWatched = Subscription.Config.AutomaticDeleteWatched;
+                    Request.DeleteWatched = Subscription.Config.DeleteWatched;
+                    Request.MarkDeletedAsWatched = Subscription.Config.MarkDeletedAsWatched;
                     Request.DownloadPath = Subscription.Config.DownloadPath;
                     SubmitEnabled = true;
                     ValidationMessage = string.Empty;

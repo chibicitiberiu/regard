@@ -166,8 +166,16 @@ namespace Regard.Backend.Services
 
         private async void JobTrackerService_JobFailed(object sender, JobFailedEventArgs e)
         {
-            if (e.Job.RetryCount > 0)
-                await ScheduleJobRetry(e.Job);
+            // async void: an unhandled exception here would crash the process, so guard it.
+            try
+            {
+                if (e.Job.RetryCount > 0)
+                    await ScheduleJobRetry(e.Job);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"RegardScheduler: failed to schedule job retry: {ex.Message}");
+            }
         }
 
         private async Task ScheduleJobRetry(JobInfo job)

@@ -28,6 +28,7 @@ namespace Regard.Backend.DB
                 connectionString = $"Data Source={Path.Combine(dataDir, "Regard.db")}";
             }
             optionsBuilder.UseSqlite(connectionString);
+            optionsBuilder.AddInterceptors(SqlitePragmaInterceptor.Instance);
         }
     }
 

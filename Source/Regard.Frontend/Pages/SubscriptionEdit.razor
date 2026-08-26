@@ -59,10 +59,16 @@
                          Label="Download order: "
                          Required="false" />
 
-    <RgSimpleInputSelect Id="subscription_autoDeleteWatched"
+    <RgSimpleInputSelect Id="subscription_deleteWatched"
                          TKey="bool?"
-                         @bind-Value="Request.AutomaticDeleteWatched"
-                         Label="Automatic delete watched: "
+                         @bind-Value="Request.DeleteWatched"
+                         Label="Delete files when watched: "
+                         Required="false" />
+
+    <RgSimpleInputSelect Id="subscription_markDeletedAsWatched"
+                         TKey="bool?"
+                         @bind-Value="Request.MarkDeletedAsWatched"
+                         Label="Mark watched when files deleted: "
                          Required="false" />
 
     <RgInputText Id="subscription_downloadPath"

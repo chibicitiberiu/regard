@@ -118,7 +118,9 @@ namespace Regard.Backend
                 // UseMicrosoftDependencyInjectionScopedJobFactory() call was removed.
                 q.UseSimpleTypeLoader();
                 q.UseInMemoryStore();
-                q.UseDefaultThreadPool();
+                // Serialize jobs: the SQLite-backed store doesn't tolerate many concurrent
+                // writers, and one-at-a-time downloads are fine for a personal media server.
+                q.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 
                 // Synchronize job
                 q.ScheduleJob<InitJob>(trigger => trigger.StartNow());
@@ -132,6 +134,7 @@ namespace Regard.Backend
             services.AddSingleton<UserLogger>();
 
             services.AddScoped<DeleteFilesJob>();
+            services.AddScoped<DeleteWatchedFilesJob>();
             services.AddScoped<DeleteSubscriptionFilesJob>();
             services.AddScoped<DeleteSubscriptionFolderFilesJob>();
             services.AddScoped<DownloadVideoJob>();

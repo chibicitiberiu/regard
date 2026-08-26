@@ -36,7 +36,9 @@ namespace Regard.Common.API.Model
 
         public VideoOrder? DownloadOrder { get; set; }
 
-        public bool? AutomaticDeleteWatched { get; set; }
+        public bool? MarkDeletedAsWatched { get; set; }
+
+        public bool? DeleteWatched { get; set; }
 
         public string DownloadPath { get; set; }
     }

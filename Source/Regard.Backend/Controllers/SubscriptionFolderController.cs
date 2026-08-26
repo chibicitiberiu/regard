@@ -96,8 +96,11 @@ namespace Regard.Backend.Controllers
                 if (optionManager.GetForSubscriptionFolderNoResolve(Options.Subscriptions_DownloadOrder, folder.Id, out var order))
                     folder.Config.DownloadOrder = order;
 
-                if (optionManager.GetForSubscriptionFolderNoResolve(Options.Subscriptions_AutoDeleteWatched, folder.Id, out var autoDel))
-                    folder.Config.AutomaticDeleteWatched = autoDel;
+                if (optionManager.GetForSubscriptionFolderNoResolve(Options.Subscriptions_MarkDeletedAsWatched, folder.Id, out var markDel))
+                    folder.Config.MarkDeletedAsWatched = markDel;
+
+                if (optionManager.GetForSubscriptionFolderNoResolve(Options.Subscriptions_DeleteWatched, folder.Id, out var delWatched))
+                    folder.Config.DeleteWatched = delWatched;
 
                 if (optionManager.GetForSubscriptionFolderNoResolve(Options.Subscriptions_DownloadPath, folder.Id, out var path))
                     folder.Config.DownloadPath = path;
@@ -169,9 +172,13 @@ namespace Regard.Backend.Controllers
                 optionManager.SetForSubscriptionFolder(Options.Subscriptions_DownloadOrder, request.Id, request.DownloadOrder.Value);
             else optionManager.UnsetForSubscriptionFolder(Options.Subscriptions_DownloadOrder, request.Id);
 
-            if (request.AutomaticDeleteWatched.HasValue)
-                optionManager.SetForSubscriptionFolder(Options.Subscriptions_AutoDeleteWatched, request.Id, request.AutomaticDeleteWatched.Value);
-            else optionManager.UnsetForSubscriptionFolder(Options.Subscriptions_AutoDeleteWatched, request.Id);
+            if (request.MarkDeletedAsWatched.HasValue)
+                optionManager.SetForSubscriptionFolder(Options.Subscriptions_MarkDeletedAsWatched, request.Id, request.MarkDeletedAsWatched.Value);
+            else optionManager.UnsetForSubscriptionFolder(Options.Subscriptions_MarkDeletedAsWatched, request.Id);
+
+            if (request.DeleteWatched.HasValue)
+                optionManager.SetForSubscriptionFolder(Options.Subscriptions_DeleteWatched, request.Id, request.DeleteWatched.Value);
+            else optionManager.UnsetForSubscriptionFolder(Options.Subscriptions_DeleteWatched, request.Id);
 
             if (!string.IsNullOrEmpty(request.DownloadPath))
                 optionManager.SetForSubscriptionFolder(Options.Subscriptions_DownloadPath, request.Id, request.DownloadPath);
