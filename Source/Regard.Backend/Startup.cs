@@ -181,7 +181,14 @@ namespace Regard.Backend
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            // Serve the Blazor WASM UI. In the Docker image the frontend's published wwwroot is
+            // copied into this app's wwwroot; UseBlazorFrameworkFiles serves the _framework assets.
+            app.UseBlazorFrameworkFiles();
+            app.UseStaticFiles();
+
+            // TLS is terminated by the reverse proxy in production; only redirect in development.
+            if (env.IsDevelopment())
+                app.UseHttpsRedirection();
 
             app.UseRouting();
 
@@ -195,9 +202,11 @@ namespace Regard.Backend
             {
                 endpoints.MapControllers();
                 endpoints.MapHub<MessagingHub>("/api/message_hub");
+                // SPA fallback: unmatched non-file routes serve index.html. The {*path:nonfile}
+                // constraint means extensioned paths (e.g. /thumbs/x.jpg) and the explicit /api/*
+                // + hub routes are never swallowed.
+                endpoints.MapFallbackToFile("index.html");
             });
-
-            app.UseStaticFiles();
 
             storageManager.Initialize(app);
 

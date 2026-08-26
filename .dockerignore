@@ -1,1 +1,7 @@
 Tmp
+Build
+**/bin
+**/obj
+.git
+.vs
+.vscode

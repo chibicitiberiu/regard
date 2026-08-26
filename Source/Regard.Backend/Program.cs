@@ -37,7 +37,9 @@ namespace Regard.Backend
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(System.IO.Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true).Build();
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()  // so DataDirectory=/data (env) drives NLog's log path, not the appsettings default
+                .Build();
 
             GlobalDiagnosticsContext.Set("DataDirectory", config["DataDirectory"]);
 

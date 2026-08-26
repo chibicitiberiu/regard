@@ -16,7 +16,14 @@ namespace Regard.Frontend
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
-            
+
+            // Default the backend origin to this app's own origin when BACKEND_URL is left empty
+            // (the single-container deploy serves the API + UI from the same host). A non-empty
+            // value from wwwroot/appsettings.json (e.g. the dev localhost URL) is preserved.
+            if (string.IsNullOrEmpty(builder.Configuration["BACKEND_URL"]))
+                builder.Configuration["BACKEND_URL"] = builder.HostEnvironment.BaseAddress;
+
+
             builder.Services.AddSingleton<AppState>();
             builder.Services.AddSingleton<SubscriptionManagerService>();
             builder.Services.AddSingleton<MessagingService>();

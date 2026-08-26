@@ -1,37 +1,37 @@
-version: '3.1'
-
 services:
-  db:
-    image: mcr.microsoft.com/mssql/server:2019-latest
-    environment: 
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=yourStrong(!)Password
-      - MSSQL_PID=Developer
+  regard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: chibicitiberiu/regard:latest
+    restart: unless-stopped
     ports:
-      - 1433:1433
-    volumes:
-      - ./Tmp/SqlData:/var/opt/mssql
-
-  backend:
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile.Backend
-    image: chibicitiberiu/regard-backend:latest
+      - "8999:8080"
     environment:
-      - "DB_MSSQL=Server=db,1433;Database=Regard;User Id=regard;Password=RegardSuperSecre3t!Passw0rd"
-      - "REGARD_DATA_DIR=/data"
-      - "REGARD_DOWNLOAD_DIR=/data/downloads"
+      # Jellyfin/Kodi metadata export (NFO + poster/thumb + "SxxExx - Title" naming). Optional.
+      - Metadata__Enabled=true
+      # Jellyfin watched-sync — optional. Fill in and flip Enabled to true to use it.
+      # - Jellyfin__Enabled=true
+      # - Jellyfin__BaseUrl=http://jellyfin:8096
+      # - Jellyfin__ApiKey=CHANGEME
+      # - Jellyfin__JellyfinUser=me
+      # - Jellyfin__RegardUser=me
     volumes:
-      - ./Tmp/RegardData:/data
-    ports:
-      - 8999:80
+      - regard-data:/data
+      # Videos. Mount this SAME host path into Jellyfin at the SAME container path (/downloads)
+      # and point a Jellyfin "Shows" library at it — Regard matches played videos by full file
+      # path. The host dir must be writable by uid 1000 (a bind mount keeps host ownership):
+      #   mkdir -p /srv/regard/downloads && sudo chown 1000:1000 /srv/regard/downloads
+      - /srv/regard/downloads:/downloads
 
-  frontend:
-    # build: 
-    #   context: .
-    #   dockerfile: Dockerfile.Frontend
-    image: chibicitiberiu/regard-frontend:latest
-    environment:
-      - BACKEND_URL=http://10.0.0.10:8999/
-    ports:
-      - 8998:80
+  # Jellyfin, sharing the SAME downloads path at the SAME mount point:
+  # jellyfin:
+  #   image: jellyfin/jellyfin:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8096:8096"
+  #   volumes:
+  #     - /srv/regard/downloads:/downloads:ro   # add a "Shows" library pointing at /downloads
+
+volumes:
+  regard-data:
