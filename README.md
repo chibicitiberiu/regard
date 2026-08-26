@@ -10,45 +10,100 @@ If you need any help, or would like to discuss with us, you are welcome to [join
 
 ## Installation (Docker)
 
-The easiest method to install Regard is to use Docker. Check the `docker-compose.yml` file for a full setup example. The `RunDocker.sh` script will perform all the required setup steps, like setting up a database and user.
+Regard runs as a **single container**: the .NET 10 backend serves both the REST API and the Blazor web UI, stores everything in **SQLite**, and manages `yt-dlp` itself. There is no separate database or frontend container. You only need Docker with the Compose plugin.
 
-There are 3 things needed for Regard to work:
+### Quick start
 
-- the database, so far only Microsoft SQL is supported. You can use this database image: `mcr.microsoft.com/mssql/server:2019-latest`
+1. Get the repository (or just copy `docker-compose.yml` and `Dockerfile`).
 
-- the backend `chibicitiberiu/regard-backend:latest`. For the backend, you need to setup the following environment variables:
+2. Create the downloads directory on the host and give it to UID `1000`. The container runs as a non-root user (uid 1000), and a bind mount keeps the **host** directory's ownership — so this step is required or downloads will fail:
 
-  - `DB_MSSQL` - contains the Microsoft SQL connection string
-  - `REGARD_DATA_DIR` - data directory that will be used for storing application data. This directory should be mounted as a volume to prevent data loss. Default: `/data/`
-  - `REGARD_DOWNLOAD_DIR` - directory where videos downloads will be stored. This directory should be mounted as a volume to prevent data loss. Default: `/data/downloads` 
+   ```sh
+   sudo mkdir -p /srv/regard/downloads
+   sudo chown 1000:1000 /srv/regard/downloads
+   ```
 
-  Also, you need to expose port `80` (the backend needs to be publicly accessible, since the frontend will make the requests from the browser).
+3. Build and start:
 
-- the frontend `chibicitiberiu/regard-frontend:latest`. Set the `BACKEND_URL` variable to point to the backend. The frontend will be accessible on port `80`.
+   ```sh
+   docker compose up -d --build
+   ```
 
-For both, frontend and backend, the following 2 tags are available on the Docker Hub:
+4. Open `http://<host>:8999` and register the first account.
 
-* `latest` contains the latest version
-* `latest-debug` contains the latest version, setup for debugging. This version is setup with additional logging, as well as debug symbols, but may be slower and less optimized.
+On first boot the container downloads `yt-dlp` from GitHub (and updates it daily), so it needs outbound HTTPS access.
+
+### What the compose file provides
+
+- One `regard` service on host port **8999** → container **8080**. It serves plain HTTP — put a reverse proxy in front of it for TLS (see below).
+- A named volume **`regard-data` → `/data`**: the SQLite database, thumbnails, the managed `yt-dlp` binary, and logs. Persistent — do not delete it.
+- A bind mount **`/srv/regard/downloads` → `/downloads`**: the downloaded videos. This path is absolute on purpose (see *Using it with Jellyfin*).
+
+### Configuration (environment variables)
+
+Set these under the service's `environment:` in `docker-compose.yml`:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DataDirectory` | `/data` | App data (DB, thumbnails, yt-dlp, logs). Keep it on the volume. |
+| `DownloadDirectory` | `/downloads` | Video storage. **Must be an absolute path.** |
+| `ASPNETCORE_URLS` | `http://+:8080` | Listen address inside the container. |
+| `REGARD_MIGRATE` | `1` | Apply database migrations on start (needed on first run). |
+| `Metadata__Enabled` | `false` | Write Jellyfin/Kodi NFO sidecars + poster/thumbnail images and name files `SxxExx - Title`. |
+| `Jellyfin__Enabled` | `false` | Enable watched-sync (poll Jellyfin; mark played videos watched → delete + refill). |
+| `Jellyfin__BaseUrl` | | e.g. `http://jellyfin:8096`. |
+| `Jellyfin__ApiKey` | | Jellyfin admin API key (Dashboard → API Keys). |
+| `Jellyfin__JellyfinUser` | | The Jellyfin account whose *played* state to read. |
+| `Jellyfin__RegardUser` | | The Regard account that owns the videos (defaults to `JellyfinUser`). |
+| `Jellyfin__PollSchedule` | `0 0/10 * * * ?` | Quartz cron expression for the poll interval. |
+
+### Using it with Jellyfin
+
+Regard's Jellyfin integration matches videos **by full file path**, so Jellyfin must see the same files at the same path. Mount the same host downloads directory into Jellyfin at `/downloads` and point a **Shows** library at it (with the NFO metadata reader enabled). `docker-compose.yml` includes a commented Jellyfin service showing the shared mount.
+
+- With `Metadata__Enabled=true`, each channel appears as a Show and each video as an Episode, with title, artwork, air date, and episode number.
+- With `Jellyfin__Enabled=true`, marking a video *played* in Jellyfin makes Regard mark it watched — which (per the subscription's settings) deletes the file and pulls the next video into the download window.
+
+### Reverse proxy / TLS
+
+The container serves plain HTTP on port 8080. Terminate TLS at your reverse proxy (nginx / Caddy / Traefik) and forward to the container — no in-container HTTPS configuration is required.
+
+### Upgrading
+
+```sh
+docker compose up -d --build   # rebuild the image and restart
+```
+
+Your data lives in the `regard-data` volume and the downloads bind mount, so upgrades preserve it; `REGARD_MIGRATE=1` applies any new database migrations on start.
 
 ## Development setup
 
 Required software:
 
-* **Visual Studio 2019** with the ***ASP.NET and web development*** and ***.NET Core cross-platform development*** workloads installed
-* **SQL Server** (any edition should work); **SQL Server Management Studio** is recommended for server management.
-* **Python 3.x**
-* [**Web Compiler**](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.WebCompiler) extension for Visual Studio, which compiles `.scss ` files
-* **Entity Framework CLI** which can be installed by running the command: `dotnet tool install --global dotnet-ef`
+* **.NET 10 SDK** (the version is pinned in `global.json`)
+* **Python 3** and **ffmpeg** on `PATH` (used to run `yt-dlp` and merge downloads)
+* An editor of your choice — **Visual Studio 2022**, **VS Code**, or **Rider**
+* (optional) **Entity Framework CLI** for working with migrations: `dotnet tool install --global dotnet-ef`
+
+The backend uses **SQLite by default**, so no database server is required. (To use SQL Server instead, set the `ConnectionStrings:SqlServer` connection string.)
 
 Steps:
 
-1. Clone the repository
-2. Create a new database in SQL Server
-3. Set the connection string in `Regard.Backend\appsettings.json`. At the moment, only SQL Server is supported.
-4. (optional) Modify data and download directories in `Regard.Backend\appsettings.json`.
-5. Run migrations, by running `Regard.Backend\MigrateSQLServer.cmd`
-6. Open `Regard.sln` in Visual Studio
-7. Set both the `Regard.Frontend` and `Regard.Backend` projects as startup projects; to do this, right clicking the solution, select *Set startup projects...*, select the *Multiple startup projects* option, and set the action for both projects to *Start*.
-8. Run project.
+1. Clone the repository.
+2. (optional) Adjust `DataDirectory` / `DownloadDirectory` in `Source/Regard.Backend/appsettings.json`. The SQLite database file is created automatically under `DataDirectory`; migrations are applied on start when the `REGARD_MIGRATE` environment variable is set.
+3. Run the backend (from the repo root):
+
+   ```sh
+   REGARD_MIGRATE=1 dotnet run --project Source/Regard.Backend
+   ```
+
+4. Run the frontend in a second terminal:
+
+   ```sh
+   dotnet run --project Source/Regard.Frontend
+   ```
+
+   The frontend reads its backend URL from `Source/Regard.Frontend/wwwroot/appsettings.json` (`BACKEND_URL`), which points at the local backend by default.
+
+Alternatively, open `Source/Regard.sln` in Visual Studio and set both `Regard.Backend` and `Regard.Frontend` as startup projects (right-click the solution → *Set startup projects…* → *Multiple startup projects* → set both to *Start*).
 
