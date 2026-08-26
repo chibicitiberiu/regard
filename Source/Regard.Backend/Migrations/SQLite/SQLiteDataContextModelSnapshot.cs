@@ -306,6 +306,29 @@ namespace Regard.Backend.Migrations.SQLite
                     b.ToTable("Subscriptions");
                 });
 
+            modelBuilder.Entity("Regard.Backend.Model.SubscriptionFilter", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Pattern")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SubscriptionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.ToTable("SubscriptionFilters");
+                });
+
             modelBuilder.Entity("Regard.Backend.Model.SubscriptionFolder", b =>
                 {
                     b.Property<int>("Id")
@@ -634,6 +657,17 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Regard.Backend.Model.SubscriptionFilter", b =>
+                {
+                    b.HasOne("Regard.Backend.Model.Subscription", "Subscription")
+                        .WithMany("Filters")
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subscription");
+                });
+
             modelBuilder.Entity("Regard.Backend.Model.SubscriptionFolder", b =>
                 {
                     b.HasOne("Regard.Backend.Model.SubscriptionFolder", "Parent")
@@ -694,6 +728,11 @@ namespace Regard.Backend.Migrations.SQLite
                         .IsRequired();
 
                     b.Navigation("Subscription");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Model.Subscription", b =>
+                {
+                    b.Navigation("Filters");
                 });
 #pragma warning restore 612, 618
         }

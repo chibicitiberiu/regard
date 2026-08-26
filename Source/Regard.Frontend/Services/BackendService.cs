@@ -157,6 +157,9 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionEdit(SubscriptionEditRequest data)
             => Post("api/subscription/edit", data);
 
+        public Task<(ApiResponse<SubscriptionFilterPreviewResponse>, HttpResponseMessage)> SubscriptionFilterPreview(SubscriptionFilterPreviewRequest data)
+            => Post<SubscriptionFilterPreviewRequest, SubscriptionFilterPreviewResponse>("api/subscription/filter_preview", data);
+
         #endregion
 
         #region Subscription folders

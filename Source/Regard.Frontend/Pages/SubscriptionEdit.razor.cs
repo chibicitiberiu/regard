@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
+using Regard.Frontend.Shared.Controls;
+using Regard.Model;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
@@ -22,6 +24,12 @@ namespace Regard.Frontend.Pages
         public string ValidationMessage { get; set; }
 
         public bool SubmitEnabled { get; set; }
+
+        protected Modal previewModal;
+
+        protected List<FilterPreviewItem> PreviewItems { get; set; } = new();
+
+        protected bool PreviewTruncated { get; set; }
 
         private string DownloadMaxCountStr 
         {
@@ -71,6 +79,7 @@ namespace Regard.Frontend.Pages
                     Request.DeleteWatched = Subscription.Config.DeleteWatched;
                     Request.MarkDeletedAsWatched = Subscription.Config.MarkDeletedAsWatched;
                     Request.DownloadPath = Subscription.Config.DownloadPath;
+                    Request.Filters = Subscription.Config.Filters?.ToList() ?? new();
                     SubmitEnabled = true;
                     ValidationMessage = string.Empty;
                 }
@@ -92,6 +101,30 @@ namespace Regard.Frontend.Pages
             }
 
             else ValidationMessage = resp.Message;
+        }
+
+        private void AddFilter()
+        {
+            Request.Filters.Add(new ApiSubscriptionFilter { Action = FilterAction.Include, Pattern = "" });
+        }
+
+        private async Task ShowPreview()
+        {
+            var (resp, httpResp) = await Backend.SubscriptionFilterPreview(new SubscriptionFilterPreviewRequest
+            {
+                SubscriptionId = SubscriptionId,
+                Filters = Request.Filters,
+            });
+            if (httpResp.IsSuccessStatusCode)
+            {
+                PreviewItems = resp.Data.Videos;
+                PreviewTruncated = resp.Data.Truncated;
+                previewModal?.Show();
+            }
+            else
+            {
+                ValidationMessage = "Preview failed: " + resp.Message;
+            }
         }
     }
 }

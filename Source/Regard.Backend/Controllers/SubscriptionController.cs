@@ -6,10 +6,13 @@ using Regard.Backend.Services;
 using Regard.Common.API.Subscriptions;
 using Regard.Backend.Model;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Regard.Common.API.Model;
 using Regard.Backend.Configuration;
+using Regard.Backend.DB;
+using Regard.Backend.Downloader;
 
 namespace Regard.Backend.Controllers
 {
@@ -22,18 +25,24 @@ namespace Regard.Backend.Controllers
         private readonly ApiResponseFactory responseFactory;
         private readonly ApiModelFactory modelFactory;
         private readonly IOptionManager optionManager;
+        private readonly DataContext dataContext;
+        private readonly IVideoDownloaderService videoDownloader;
 
         public SubscriptionController(UserManager<UserAccount> userManager,
                                       SubscriptionManager subscriptionManager,
                                       ApiResponseFactory responseFactory,
                                       ApiModelFactory modelFactory,
-                                      IOptionManager optionManager)
+                                      IOptionManager optionManager,
+                                      DataContext dataContext,
+                                      IVideoDownloaderService videoDownloader)
         {
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
             this.responseFactory = responseFactory;
             this.modelFactory = modelFactory;
             this.optionManager = optionManager;
+            this.dataContext = dataContext;
+            this.videoDownloader = videoDownloader;
         }
 
         [HttpPost]
@@ -170,6 +179,12 @@ namespace Regard.Backend.Controllers
 
                 if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_DownloadPath, sub.Id, out var path))
                     sub.Config.DownloadPath = path;
+
+                sub.Config.Filters = dataContext.SubscriptionFilters
+                    .Where(f => f.SubscriptionId == sub.Id)
+                    .ToList()
+                    .Select(f => new ApiSubscriptionFilter { Action = f.Action, Pattern = f.Pattern })
+                    .ToList();
             }
         }
 
@@ -224,6 +239,20 @@ namespace Regard.Backend.Controllers
         {
             var user = await userManager.GetUserAsync(User);
 
+            // Validate filter regexes up front: the option writes below persist eagerly, so a
+            // late rejection would leave a partial apply.
+            if (request.Filters != null)
+            {
+                foreach (var f in request.Filters)
+                {
+                    if (string.IsNullOrEmpty(f.Pattern))
+                        return BadRequest(responseFactory.Error("A filter pattern cannot be empty."));
+                    try { _ = new System.Text.RegularExpressions.Regex(f.Pattern); }
+                    catch (ArgumentException)
+                    { return BadRequest(responseFactory.Error($"Invalid filter pattern: {f.Pattern}")); }
+                }
+            }
+
             try
             {
                 subscriptionManager.Update(user, request.Id, request.Name, request.Description, request.ParentFolderId);
@@ -258,7 +287,73 @@ namespace Regard.Backend.Controllers
                 optionManager.SetForSubscription(Options.Subscriptions_DownloadPath, request.Id, request.DownloadPath);
             else optionManager.UnsetForSubscription(Options.Subscriptions_DownloadPath, request.Id);
 
+            // Replace the subscription's title filters (dedicated table, not the option store)
+            if (request.Filters != null)
+            {
+                dataContext.SubscriptionFilters.RemoveRange(
+                    dataContext.SubscriptionFilters.Where(f => f.SubscriptionId == request.Id));
+                dataContext.SubscriptionFilters.AddRange(request.Filters.Select(f => new SubscriptionFilter
+                {
+                    SubscriptionId = request.Id,
+                    Action = f.Action,
+                    Pattern = f.Pattern,
+                }));
+                dataContext.SaveChanges();
+            }
+
             return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("filter_preview")]
+        [Authorize]
+        public async Task<IActionResult> FilterPreview([FromBody] SubscriptionFilterPreviewRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            var sub = subscriptionManager.Get(user, request.SubscriptionId);
+            if (sub == null)
+                return BadRequest(responseFactory.Error("Invalid subscription ID."));
+
+            var compiled = SubscriptionFilterExtensions.CompileFilters(
+                (request.Filters ?? new List<ApiSubscriptionFilter>()).Select(f => (f.Action, f.Pattern)));
+
+            var order = optionManager.GetForSubscription(Options.Subscriptions_DownloadOrder, sub.Id);
+
+            var ordered = dataContext.Videos
+                .Where(x => x.SubscriptionId == sub.Id)
+                .AsEnumerable()
+                .OrderBy(order)
+                .ToList();
+
+            // Compute the download window exactly as ProcessDownloadRules would.
+            var windowIds = new HashSet<int>();
+            long? sizeLimit = videoDownloader.DetermineMaximumAllowedSize(sub);
+            if (!(sizeLimit.HasValue && sizeLimit.Value <= 1 * 1024 * 1024))
+            {
+                int? limit = videoDownloader.DetermineMaximumVideoCount(sub);
+                var passing = ordered.Where(v => v.DownloadedPath == null && !v.IsWatched
+                    && SubscriptionFilterExtensions.PassesTitleFilters(v.Name, compiled));
+                if (limit.HasValue)
+                    passing = passing.Take(limit.Value);
+                foreach (var v in passing)
+                    windowIds.Add(v.Id);
+            }
+
+            const int cap = 500;
+            var items = ordered.Take(cap).Select(v => new FilterPreviewItem
+            {
+                Name = v.Name,
+                IsDownloaded = v.DownloadedPath != null,
+                IsWatched = v.IsWatched,
+                PassesFilters = SubscriptionFilterExtensions.PassesTitleFilters(v.Name, compiled),
+                InWindow = windowIds.Contains(v.Id),
+            }).ToList();
+
+            return Ok(responseFactory.Success(new SubscriptionFilterPreviewResponse
+            {
+                Videos = items,
+                Truncated = ordered.Count > cap,
+            }));
         }
     }
 }

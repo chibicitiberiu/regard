@@ -185,14 +185,23 @@ namespace Regard.Backend.Downloader
 
             VideoOrder order = optionManager.GetForSubscription(Options.Subscriptions_DownloadOrder, sub.Id);
 
-            // Filter server-side, then order client-side: EF Core's SQLite provider
-            // cannot translate ORDER BY on DateTimeOffset (Published).
+            var filters = SubscriptionFilterExtensions.CompileFilters(
+                dataContext.SubscriptionFilters
+                    .Where(f => f.SubscriptionId == sub.Id)
+                    .ToList()
+                    .Select(f => (f.Action, f.Pattern)));
+
+            // Filter server-side, then order + title-filter client-side: EF Core's SQLite
+            // provider cannot translate ORDER BY on DateTimeOffset (Published), and the regex
+            // title filters can't translate to SQL either. Filtering after ordering keeps the
+            // ordered sequence intact and before Take so filtered-out titles don't take a slot.
             var downloadCandidates = dataContext.Videos
                 .Where(x => x.SubscriptionId == sub.Id)
                 .Where(x => x.DownloadedPath == null)
                 .Where(x => !x.IsWatched)
                 .AsEnumerable()
-                .OrderBy(order);
+                .OrderBy(order)
+                .Where(v => SubscriptionFilterExtensions.PassesTitleFilters(v.Name, filters));
 
             int? limit = DetermineMaximumVideoCount(sub);
             if (limit.HasValue)

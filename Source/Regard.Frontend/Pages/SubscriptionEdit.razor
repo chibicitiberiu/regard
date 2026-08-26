@@ -80,6 +80,39 @@
                  autofocus />
 
     <div class="form-group row">
+        <div class="col-xs-3">
+            <label class="col-form-label">Filters:</label>
+        </div>
+        <div class="col-xs-9">
+            @foreach (var f in Request.Filters)
+            {
+                <div class="row" @key="f" style="margin-bottom: .5rem;">
+                    <div class="col-xs-4">
+                        <select class="form-control" @bind="f.Action">
+                            <option value="Include">Include</option>
+                            <option value="Exclude">Exclude</option>
+                        </select>
+                    </div>
+                    <div class="col-xs-7">
+                        <input class="form-control" placeholder="regex (matched on title, case-insensitive)"
+                               @bind="f.Pattern" @bind:event="oninput" autocapitalize="none" />
+                    </div>
+                    <div class="col-xs-1">
+                        <button type="button" class="button-transparent" title="Remove"
+                                @onclick="@(() => Request.Filters.Remove(f))">
+                            <Icon Glyph="Icons.Close" />
+                        </button>
+                    </div>
+                </div>
+            }
+            <div class="row">
+                <button type="button" class="secondary" @onclick="AddFilter"><Icon Glyph="Icons.Add" /> Add</button>
+                <button type="button" class="secondary" style="margin-left: .5rem;" @onclick="ShowPreview">Preview</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group row">
         <div class="col-xs-12 fg-error">
             @ValidationMessage
         </div>
@@ -92,3 +125,33 @@
     </div>
 
 </EditForm>
+
+<Modal @ref="previewModal">
+    <Title>Filter preview</Title>
+    <Body>
+        <p>
+            <span class="fg-success">Green</span> = passes filters,
+            <span class="fg-error">red</span> = filtered out.
+            <Icon Glyph="Icons.Queued" /> would download next, <Icon Glyph="Icons.Downloaded" /> already downloaded.
+            (Size limits aren't reflected here.)
+        </p>
+        @if (PreviewTruncated)
+        {
+            <p class="fg-error">Showing the first 500 videos.</p>
+        }
+        <div class="filter-preview">
+            @foreach (var item in PreviewItems)
+            {
+                <div class="row">
+                    <span style="width: 1.5rem; display: inline-block;">
+                        @if (item.InWindow) { <Icon Glyph="Icons.Queued" title="Would download next" /> }
+                    </span>
+                    <span style="width: 1.5rem; display: inline-block;">
+                        @if (item.IsDownloaded) { <Icon Glyph="Icons.Downloaded" title="Downloaded" /> }
+                    </span>
+                    <span class="@(item.PassesFilters ? "fg-success" : "fg-error")">@item.Name</span>
+                </div>
+            }
+        </div>
+    </Body>
+</Modal>

@@ -25,6 +25,8 @@ namespace Regard.Backend.DB
 
         public DbSet<Video> Videos { get; set; }
 
+        public DbSet<SubscriptionFilter> SubscriptionFilters { get; set; }
+
         public DbSet<Option> Options { get; set; }
 
         public DbSet<UserOption> UserOptions { get; set; }
@@ -48,6 +50,12 @@ namespace Regard.Backend.DB
 
             modelBuilder.Entity<Video>()
                 .HasOne(x => x.Subscription).WithMany()
+                .HasForeignKey(x => x.SubscriptionId)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SubscriptionFilter>()
+                .HasOne(x => x.Subscription).WithMany(x => x.Filters)
                 .HasForeignKey(x => x.SubscriptionId)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);

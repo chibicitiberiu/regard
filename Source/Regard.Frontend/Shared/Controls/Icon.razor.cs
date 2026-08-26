@@ -32,6 +32,7 @@ namespace Regard.Frontend.Shared.Controls
         Filter,
         ShowWatched,
         HideWatched,
+        Queued,
     }
 
     public partial class Icon
@@ -62,6 +63,7 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.Filter, "filter_alt" },
             { Icons.ShowWatched, "visibility" },
             { Icons.HideWatched, "visibility_off" },
+            { Icons.Queued, "playlist_play" },
         };
 
         [Parameter(CaptureUnmatchedValues = true)]

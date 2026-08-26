@@ -1,5 +1,6 @@
 ﻿using Regard.Model;
 using System;
+using System.Collections.Generic;
 
 namespace Regard.Common.API.Model
 {
@@ -41,6 +42,8 @@ namespace Regard.Common.API.Model
         public bool? DeleteWatched { get; set; }
 
         public string DownloadPath { get; set; }
+
+        public List<ApiSubscriptionFilter> Filters { get; set; } = new();
     }
 
     public class ApiSubscriptionStats
