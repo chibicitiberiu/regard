@@ -40,6 +40,8 @@ namespace Regard.Backend.Configuration
         public OptionDefinition(TValue defaultValue, string key, string configurationKey, string environmentKey, OptionFlags flags = 0)
         {
             Key = key;
+            ConfigurationKey = configurationKey;
+            EnvironmentKey = environmentKey;
             DefaultValue = defaultValue;
             Flags = flags;
         }

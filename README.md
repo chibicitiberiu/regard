@@ -49,6 +49,8 @@ Set these under the service's `environment:` in `docker-compose.yml`:
 | `DownloadDirectory` | `/downloads` | Video storage. **Must be an absolute path.** |
 | `ASPNETCORE_URLS` | `http://+:8080` | Listen address inside the container. |
 | `REGARD_MIGRATE` | `1` | Apply database migrations on start (needed on first run). |
+| `REGARD_ALLOW_REGISTRATIONS` | `true` | Allow new account sign-ups. Set `false` after creating your account to lock it down (the first account is always allowed and becomes the admin). |
+| `JWT__Secret` | *(generated)* | JWT signing secret. Leave unset to auto-generate + persist one at `{DataDirectory}/jwt-secret`. |
 | `Metadata__Enabled` | `false` | Write Jellyfin/Kodi NFO sidecars + poster/thumbnail images and name files `SxxExx - Title`. |
 | `Jellyfin__Enabled` | `false` | Enable watched-sync (poll Jellyfin; mark played videos watched → delete + refill). |
 | `Jellyfin__BaseUrl` | | e.g. `http://jellyfin:8096`. |
@@ -56,6 +58,12 @@ Set these under the service's `environment:` in `docker-compose.yml`:
 | `Jellyfin__JellyfinUser` | | The Jellyfin account whose *played* state to read. |
 | `Jellyfin__RegardUser` | | The Regard account that owns the videos (defaults to `JellyfinUser`). |
 | `Jellyfin__PollSchedule` | `0 0/10 * * * ?` | Quartz cron expression for the poll interval. |
+
+### First run & security
+
+- The **first account you register becomes the administrator.** Register it immediately after starting the container, then set `REGARD_ALLOW_REGISTRATIONS=false` to close public sign-ups.
+- On first boot Regard generates a random JWT signing secret and stores it at `{DataDirectory}/jwt-secret` (override with `JWT__Secret`). Keep the `regard-data` volume — losing it forces everyone to log in again.
+- The container serves plain **HTTP**; always put it behind a TLS-terminating reverse proxy when exposing it to the internet.
 
 ### Using it with Jellyfin
 

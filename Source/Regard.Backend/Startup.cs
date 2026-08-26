@@ -1,8 +1,10 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -65,6 +67,12 @@ namespace Regard.Backend
                 .AddEntityFrameworkStores<DataContext>()
                 .AddDefaultTokenProviders();
 
+            // Persist DataProtection keys on the data volume so Identity/antiforgery tokens
+            // survive container recreation (the default keeps them in an ephemeral ~/.aspnet dir).
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(Configuration["DataDirectory"] ?? "Data", "DataProtection-Keys")))
+                .SetApplicationName("Regard");
+
             services.Configure<IdentityOptions>(options =>
             {
                 options.Password.RequiredLength = 8;
@@ -74,6 +82,11 @@ namespace Regard.Backend
                 options.Password.RequireUppercase = false;
                 //options.ClaimsIdentity.UserIdClaimType = ClaimTypes.Name;
             });
+
+            // Resolve the JWT signing secret (generates + persists one when unset or still the
+            // insecure shipped default) and share it with the token signer (AuthController).
+            var jwtSecret = JwtSecretProvider.Resolve(Configuration);
+            services.AddSingleton(new JwtSecretProvider(jwtSecret));
 
             services.AddAuthentication(options =>
             {
@@ -88,7 +101,7 @@ namespace Regard.Backend
                 {
                     ValidateIssuer = false,
                     ValidateAudience = false,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:Secret"]))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
                 };
             });
 
@@ -192,7 +205,10 @@ namespace Regard.Backend
 
             app.UseRouting();
 
-            app.UseCors();
+            // CORS is only needed for the separate frontend dev-server; production serves the UI
+            // same-origin, so no cross-origin API access is granted there.
+            if (env.IsDevelopment())
+                app.UseCors();
 
             app.UseAuthentication();
 

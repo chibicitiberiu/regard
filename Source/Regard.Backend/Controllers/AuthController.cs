@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Regard.Backend.Configuration;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.API.Auth;
@@ -22,15 +23,17 @@ namespace Regard.Backend.Controllers
     {
         private readonly UserManager<UserAccount> userManager;
         private readonly RoleManager<IdentityRole> roleManager;
-        private readonly IConfiguration configuration;
+        private readonly JwtSecretProvider jwtSecret;
+        private readonly IOptionManager optionManager;
         private readonly ApiResponseFactory responseFactory;
 
         public AuthController(UserManager<UserAccount> userManager, RoleManager<IdentityRole> roleManager,
-            IConfiguration configuration, ApiResponseFactory responseFactory)
+            JwtSecretProvider jwtSecret, IOptionManager optionManager, ApiResponseFactory responseFactory)
         {
             this.userManager = userManager;
             this.roleManager = roleManager;
-            this.configuration = configuration;
+            this.jwtSecret = jwtSecret;
+            this.optionManager = optionManager;
             this.responseFactory = responseFactory;
         }
 
@@ -47,7 +50,7 @@ namespace Regard.Backend.Controllers
             foreach (var role in userRoles)
                 authClaims.Add(new Claim(ClaimTypes.Role, role));
 
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]));
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret.Value));
 
             var token = new JwtSecurityToken(
                 issuer: null,
@@ -86,6 +89,12 @@ namespace Regard.Backend.Controllers
             if (userExists != null)
                 return BadRequest(responseFactory.Error("This username is taken!"));
 
+            // Registration gate: honor the server option, but always allow bootstrapping the first
+            // admin, so a locked-down instance with no admin yet can still be set up.
+            bool noAdminYet = (await userManager.GetUsersInRoleAsync(UserRoles.Admin)).Count == 0;
+            if (!optionManager.GetGlobal(Options.Server_AllowRegistrations) && !noAdminYet)
+                return BadRequest(responseFactory.Error("Registrations are disabled."));
+
             // Validate password
             if (string.IsNullOrWhiteSpace(register.Password1))
                 return BadRequest(responseFactory.Error("Password is required!"));
@@ -117,6 +126,18 @@ namespace Regard.Backend.Controllers
             if (!result.Succeeded)
                 return StatusCode(StatusCodes.Status500InternalServerError, responseFactory.Error("Failed to assign user role!", result.ToString()));
 
+            // The first account (when no admin exists yet) becomes the administrator, replacing the
+            // old self-promote bootstrap. The token is generated afterwards so its claims include Admin.
+            if (noAdminYet)
+            {
+                if (!await roleManager.RoleExistsAsync(UserRoles.Admin))
+                    await roleManager.CreateAsync(new IdentityRole(UserRoles.Admin));
+
+                result = await userManager.AddToRoleAsync(user, UserRoles.Admin);
+                if (!result.Succeeded)
+                    return StatusCode(StatusCodes.Status500InternalServerError, responseFactory.Error("Failed to assign admin role!", result.ToString()));
+            }
+
             // Login
             JwtSecurityToken token = await GenerateAuthToken(user);
 
@@ -132,15 +153,10 @@ namespace Regard.Backend.Controllers
         [Route("promote")]
         public async Task<IActionResult> Promote([FromBody] UserPromoteRequest promote)
         {
-            // This method can be executed by any registered user if there is NO admin account. 
-            // This should only be used during setup.
-            // Otherwise, only admins can promote other users to admin
+            // Only admins can promote other users. First-admin bootstrap now happens automatically
+            // for the first registered account (see Register), so there is no self-promote escape.
             if (!User.IsInRole(UserRoles.Admin))
-            {
-                var admins = await userManager.GetUsersInRoleAsync(UserRoles.Admin);
-                if (admins.Count != 0)
-                    return Unauthorized(responseFactory.Error("Only admins can promote users"));
-            }
+                return Unauthorized(responseFactory.Error("Only admins can promote users"));
 
             var user = await userManager.FindByNameAsync(promote.Username);
             if (user == null)

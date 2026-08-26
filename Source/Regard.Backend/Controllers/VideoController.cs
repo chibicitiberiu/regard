@@ -188,7 +188,10 @@ namespace Regard.Backend.Controllers
         [Authorize]
         public async Task<IActionResult> View([FromQuery(Name = "v")] int videoId)
         {
-            var video = videoManager.Get(videoId);
+            // Owner-scoped: only the video's own user may stream it (prevents streaming another
+            // user's video by guessing its id).
+            var user = await userManager.GetUserAsync(User);
+            var video = videoManager.GetAll(user).FirstOrDefault(v => v.Id == videoId);
             if (video == null)
                 return NotFound();
 
