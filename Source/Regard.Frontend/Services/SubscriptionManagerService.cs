@@ -50,22 +50,32 @@ namespace Regard.Frontend.Services
             if (loaded && !force)
                 return;
 
-            using var scope = serviceProvider.CreateScope();
-            var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
+            try
+            {
+                using var scope = serviceProvider.CreateScope();
+                var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
 
-            var (folders, httpResp) = await backend.SubscriptionFolderList(new SubscriptionFolderListRequest());
-            httpResp.EnsureSuccessStatusCode();
+                var (folders, httpResp) = await backend.SubscriptionFolderList(new SubscriptionFolderListRequest());
+                if (!httpResp.IsSuccessStatusCode || folders?.Data?.Folders == null)
+                    return;   // transient failure -> leave loaded=false so a later refresh retries
 
-            appState.Folders.Clear();
-            appState.Folders.AddRange(folders.Data.Folders.Select(x => KeyValuePair.Create(x.Id, x)));
+                appState.Folders.Clear();
+                appState.Folders.AddRange(folders.Data.Folders.Select(x => KeyValuePair.Create(x.Id, x)));
 
-            var (subs, httpRespSubs) = await backend.SubscriptionList(new SubscriptionListRequest());
-            httpRespSubs.EnsureSuccessStatusCode();
+                var (subs, httpRespSubs) = await backend.SubscriptionList(new SubscriptionListRequest());
+                if (!httpRespSubs.IsSuccessStatusCode || subs?.Data?.Subscriptions == null)
+                    return;
 
-            appState.Subscriptions.Clear();
-            appState.Subscriptions.AddRange(subs.Data.Subscriptions.Select(x => KeyValuePair.Create(x.Id, x)));
+                appState.Subscriptions.Clear();
+                appState.Subscriptions.AddRange(subs.Data.Subscriptions.Select(x => KeyValuePair.Create(x.Id, x)));
 
-            loaded = true;
+                loaded = true;
+            }
+            catch (Exception ex)
+            {
+                // Non-fatal: a transient load failure must not crash the UI. Retry on next refresh.
+                Console.Error.WriteLine("Failed to load subscriptions: " + ex.Message);
+            }
         }
 
         private async void AppState_RefreshRequested(object sender, EventArgs e)

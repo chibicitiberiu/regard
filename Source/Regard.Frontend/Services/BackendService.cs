@@ -52,7 +52,8 @@ namespace Regard.Services
             await UpdateAuthorization();
 
             uri = GenerateQueryString(uri, data);
-            var dataResponse = await client.GetFromJsonAsync<ApiResponse<TResponse>>(uri);
+            var response = await client.GetAsync(uri);
+            var dataResponse = await ParseResponse<TResponse>(response);
             LogDebugMessage(dataResponse);
 
             return dataResponse;
@@ -62,7 +63,7 @@ namespace Regard.Services
         {
             await UpdateAuthorization();
             var response = await client.PostAsJsonAsync(uri, data);
-            var dataResponse = await response.Content.ReadFromJsonAsync<ApiResponse>();
+            var dataResponse = await ParseResponse(response);
             LogDebugMessage(dataResponse);
 
             return (dataResponse, response);
@@ -72,10 +73,39 @@ namespace Regard.Services
         {
             await UpdateAuthorization();
             var response = await client.PostAsJsonAsync(uri, data);
-            var dataResponse = await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>();
+            var dataResponse = await ParseResponse<TResponse>(response);
             LogDebugMessage(dataResponse);
 
             return (dataResponse, response);
+        }
+
+        // Parse the body into an ApiResponse; never throw on an empty/non-JSON body (e.g. a 401/500
+        // with no content) — return a synthesized error instead, so a bad response can't crash a
+        // component render.
+        private static async Task<ApiResponse> ParseResponse(HttpResponseMessage response)
+        {
+            try
+            {
+                var parsed = await response.Content.ReadFromJsonAsync<ApiResponse>();
+                if (parsed != null)
+                    return parsed;
+            }
+            catch (JsonException) { }
+            catch (NotSupportedException) { }
+            return ApiResponse.Error($"Request failed ({(int)response.StatusCode} {response.ReasonPhrase}).");
+        }
+
+        private static async Task<ApiResponse<TResponse>> ParseResponse<TResponse>(HttpResponseMessage response)
+        {
+            try
+            {
+                var parsed = await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>();
+                if (parsed != null)
+                    return parsed;
+            }
+            catch (JsonException) { }
+            catch (NotSupportedException) { }
+            return ApiResponse<TResponse>.Error($"Request failed ({(int)response.StatusCode} {response.ReasonPhrase}).");
         }
 
         private static void LogDebugMessage(ApiResponse response)
