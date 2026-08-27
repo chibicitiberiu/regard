@@ -3,11 +3,13 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace YoutubeDLWrapper
 {
     public static class PythonFinder
     {
+        [SupportedOSPlatform("windows")]
         private static string FindInRegistry(RegistryKey rootKey)
         {
             var pythonKey = rootKey.OpenSubKey(@"SOFTWARE\Python\PythonCore");
@@ -62,9 +64,16 @@ namespace YoutubeDLWrapper
                     return registryExe;
             }
 
-            // Find in PATH... easiest way is to simply try to run it
-            return RunTestScript("pythonw") 
-                ?? RunTestScript("python3") 
+            // Find in PATH... easiest way is to simply try to run it.
+            // pythonw is a Windows-only GUI launcher (no console window); attempting it on
+            // Linux/macOS just throws a caught Win32Exception (noisy under a debugger), so
+            // only try it on Windows.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return RunTestScript("pythonw")
+                    ?? RunTestScript("python3")
+                    ?? RunTestScript("python");
+
+            return RunTestScript("python3")
                 ?? RunTestScript("python");
         }
     }
