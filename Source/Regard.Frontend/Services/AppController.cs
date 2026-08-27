@@ -17,6 +17,7 @@ namespace Regard.Services
         private readonly (string, Func<AppState, bool>)[] SetupSteps =
         {
             ("/setup/welcome", _ => true),
+            ("/setup/prerequisites", _ => true),
             ("/setup/step1", appState => !appState.ServerStatus.HaveAdmin),
             ("/setup/finished", _ => true)
         };

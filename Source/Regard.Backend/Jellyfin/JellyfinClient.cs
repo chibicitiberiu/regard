@@ -33,6 +33,9 @@ namespace Regard.Backend.Jellyfin
 
         /// <summary>Returns all items the given user has marked played (with their file paths).</summary>
         Task<IReadOnlyList<JellyfinItem>> GetPlayedItemsAsync(string userId);
+
+        /// <summary>Verifies the configured base URL + API key can reach Jellyfin.</summary>
+        Task<bool> TestConnectionAsync();
     }
 
     /// <summary>
@@ -70,6 +73,22 @@ namespace Regard.Backend.Jellyfin
             var response = await http.GetFromJsonAsync<JellyfinItemsResponse>(
                 $"Users/{userId}/Items?Filters=IsPlayed&Recursive=true&Fields=Path&IncludeItemTypes=Video,Movie,Episode");
             return response?.Items ?? new List<JellyfinItem>();
+        }
+
+        public async Task<bool> TestConnectionAsync()
+        {
+            if (http.BaseAddress == null)
+                return false;
+            try
+            {
+                // System/Info requires a valid API key, so this validates both the URL and the key.
+                var response = await http.GetAsync("System/Info");
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

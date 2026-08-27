@@ -1,0 +1,66 @@
+.checks {
+    list-style: none;
+    margin: 0 0 1.25rem;
+    padding: 0;
+}
+
+.check {
+    display: flex;
+    gap: .7rem;
+    align-items: flex-start;
+    padding: .55rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.check:first-child {
+    border-top: 0;
+}
+
+.check-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: .35rem;
+    flex: 0 0 auto;
+    background: var(--color-fg-secondary);
+}
+.check.ok .check-dot {
+    background: var(--color-fg-success);
+    box-shadow: 0 0 8px -1px var(--color-fg-success);
+}
+.check.warn .check-dot {
+    background: var(--color-fg-warning);
+    box-shadow: 0 0 8px -1px var(--color-fg-warning);
+}
+.check.error .check-dot {
+    background: var(--color-fg-error);
+    box-shadow: 0 0 8px -1px var(--color-fg-error);
+}
+
+.check-text {
+    display: flex;
+    flex-direction: column;
+}
+.check-name {
+    font-weight: 600;
+    color: var(--color-fg-window);
+}
+.check-msg {
+    font-size: .85rem;
+    color: var(--color-fg-secondary);
+    line-height: 1.4;
+}
+
+.checks-loading {
+    color: var(--color-fg-secondary);
+}
+.checks-hint {
+    font-size: .85rem;
+    color: var(--color-fg-error);
+    margin: 0 0 1rem;
+}
+
+.checks-actions {
+    display: flex;
+    gap: .6rem;
+    align-items: center;
+}

@@ -1,0 +1,89 @@
+﻿@page "/setup/prerequisites"
+@using System.Collections.Generic
+@using System.Linq
+@using Regard.Common.API.Response
+@inject BackendService Backend
+@inject AppController appCtrl
+
+<SetupCard Title="Prerequisite checks">
+    <p>Let's make sure the server is configured correctly before continuing.</p>
+
+    @if (Checks == null)
+    {
+        <p class="checks-loading">Running checks&hellip;</p>
+    }
+    else
+    {
+        <ul class="checks">
+            @foreach (var c in Checks)
+            {
+                <li class="check @StatusClass(c.Status)">
+                    <span class="check-dot"></span>
+                    <span class="check-text">
+                        <span class="check-name">@c.Name</span>
+                        <span class="check-msg">@c.Message</span>
+                    </span>
+                </li>
+            }
+        </ul>
+
+        @if (HasErrors)
+        {
+            <p class="checks-hint">Fix the errors above, then re-check to continue.</p>
+        }
+
+        <div class="checks-actions">
+            <button type="button" class="secondary" @onclick="RunChecks" disabled="@Loading">Re-check</button>
+            <button type="button" class="btn btn-primary" @onclick="GoNext" disabled="@(Loading || HasErrors)">Next</button>
+        </div>
+    }
+</SetupCard>
+
+@code {
+    List<SetupCheckResult> Checks;
+    bool HasErrors;
+    bool Loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await RunChecks();
+    }
+
+    private async Task RunChecks()
+    {
+        Loading = true;
+        Checks = null;
+        StateHasChanged();
+
+        try
+        {
+            var resp = await Backend.SetupChecks();
+            Checks = resp?.Data?.Checks ?? new List<SetupCheckResult>();
+            HasErrors = resp?.Data?.HasErrors ?? Checks.Any(c => c.Status == SetupCheckStatus.Error);
+        }
+        catch (Exception ex)
+        {
+            Checks = new List<SetupCheckResult>
+            {
+                new SetupCheckResult { Name = "Checks", Status = SetupCheckStatus.Error, Message = "Failed to run checks: " + ex.Message }
+            };
+            HasErrors = true;
+        }
+
+        Loading = false;
+        StateHasChanged();
+    }
+
+    private async Task GoNext()
+    {
+        await appCtrl.ContinueSetup();
+    }
+
+    private static string StatusClass(SetupCheckStatus status) => status switch
+    {
+        SetupCheckStatus.Ok => "ok",
+        SetupCheckStatus.Warning => "warn",
+        _ => "error"
+    };
+}

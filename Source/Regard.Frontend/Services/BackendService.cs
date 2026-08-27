@@ -107,8 +107,11 @@ namespace Regard.Services
 
         #region Setup
 
-        public Task<ApiResponse<ServerStatusResponse>> SetupServerStatus() 
+        public Task<ApiResponse<ServerStatusResponse>> SetupServerStatus()
             => Get<ServerStatusResponse>("api/setup/server_status");
+
+        public Task<ApiResponse<SetupChecksResponse>> SetupChecks()
+            => Get<SetupChecksResponse>("api/setup/checks");
 
         public Task<(ApiResponse, HttpResponseMessage)> SetupInitialize()
             => Post("api/setup/initialize", EmptyRequest);
