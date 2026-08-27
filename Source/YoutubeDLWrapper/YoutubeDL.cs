@@ -203,18 +203,33 @@ namespace YoutubeDLWrapper
 
             string stdOut = null, stdErr = null;
             int returnCode = await Task.Run(() => Run(args, out stdOut, out stdErr, timeoutMs: 1000 * 60 * 10));
-            if (returnCode != 0)
+
+            // With --ignore-errors, yt-dlp exits non-zero whenever SOME entries fail to extract
+            // (members-only, private, geo-blocked, or -- lately -- videos needing a JS runtime),
+            // yet it still emits a valid single-JSON document for every entry it could extract.
+            // So a non-zero exit alone isn't fatal: only treat it as failure when there's no
+            // usable JSON to parse. Otherwise proceed with the partial result and just log it.
+            if (string.IsNullOrWhiteSpace(stdOut))
                 throw new Exception("Information extraction failed! " + stdErr);
+
+            if (returnCode != 0)
+                logger.LogWarning($"yt-dlp reported errors extracting '{url}' (exit {returnCode}); using the entries it did return. Details: {stdErr}");
 
             var serializer = JsonSerializer.CreateDefault();
             serializer.MissingMemberHandling = MissingMemberHandling.Ignore;
 
-            return await Task.Run(() =>
+            var info = await Task.Run(() =>
             {
                 using var stream = new StringReader(stdOut);
                 using var jsonStream = new JsonTextReader(stream);
                 return serializer.Deserialize<UrlInformation>(jsonStream);
             });
+
+            // yt-dlp prints the literal "null" when nothing at all could be extracted.
+            if (info == null)
+                throw new Exception("Information extraction failed! " + stdErr);
+
+            return info;
         }
     }
 }

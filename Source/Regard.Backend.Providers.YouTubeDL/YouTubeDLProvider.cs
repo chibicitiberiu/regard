@@ -142,7 +142,7 @@ namespace Regard.Backend.Providers.YouTubeDL
 
             Queue<UrlInformation> queue = new Queue<UrlInformation>();
             if (info.Entries != null)
-                info.Entries.ForEach(queue.Enqueue);
+                info.Entries.Where(e => e != null).ForEach(queue.Enqueue);
 
             int index = 0;
             while (queue.Count > 0)
@@ -153,7 +153,7 @@ namespace Regard.Backend.Providers.YouTubeDL
                     case UrlType.Playlist:
                     case UrlType.MultiVideo:
                         if (entry.Entries != null)
-                            entry.Entries.ForEach(queue.Enqueue);
+                            entry.Entries.Where(e => e != null).ForEach(queue.Enqueue);
                         break;
 
                     case UrlType.Video:
