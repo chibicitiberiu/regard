@@ -8,10 +8,10 @@ Based on a code inventory of both (ytsm at its current `master`) and a live feat
 Regard is a modern rewrite that **gained** things ytsm never had (multi-site via yt-dlp, no API
 key/quota, per-subscription title filters, Jellyfin integration, SignalR live updates, `@handle`
 support). Most of the ytsm gaps have now been closed — **User Settings UI**, **logout**,
-**video duration**, **live job-progress notifications + a Job Log**, and a **fully functional watch
-page** (embed / watch-on-site / up-next) all shipped (2026-08-27 – 08-28). What remains:
-**subscription import**, an **Admin settings** surface, **subtitle/filename-pattern UI**, and
-**password reset**.
+**video duration**, **live job-progress notifications + a Job Log**, a **fully functional watch page**
+(embed / watch-on-site / up-next), and **subscription import** (OPML + URL list) all shipped
+(2026-08-27 – 08-28). What remains: an **Admin settings** surface, a **subtitle/filename-pattern UI**,
+and **password reset**.
 
 Status key: ✅ done · ◻ still open.
 
@@ -37,10 +37,10 @@ Status key: ✅ done · ◻ still open.
    folder → all) with mark-watched on finish. ytsm's auto-advance was intentionally dropped
    (mark-watched only).
 
-4. ◻ **Import subscriptions.** ytsm bulk-imports from **OPML** (YouTube's export) and plain URL lists,
-   with a target folder + download-config for the batch (`ytsm index.py:389-484`,
-   `utils/subscription_file_parser.py`). Regard's Add menu has "Import (todo)" — unimplemented.
-   (Neither has export.)
+4. ✅ **Import subscriptions.** Done (commit `fbb2472`). The Add menu's Import dialog takes an **OPML**
+   export or a **URL list**, mirrors OPML folder groups as Regard folders, rewrites YouTube feed URLs
+   to channel URLs, and runs the batch as a background job (bell progress + per-URL Job Log) with a
+   per-import auto-download toggle. (Export still absent — neither app has it.)
 
 5. **Logout / password reset** — ✅ *logout done* / ◻ *password reset open*. The user dropdown now
    shows the signed-in name + a Log out action (commit `5e5bdb4`). Password reset (email flow) is
@@ -87,7 +87,7 @@ so effectively both rely on an edit form to re-parent.
    Remaining: an **Admin settings** surface (registrations, sync schedule, concurrency).
 3. ✅ ~~Wire the notifications panel~~ — done as a generic job-progress + Job Log system (`5e5bdb4`).
 4. ✅ ~~Watch page for non-downloaded videos~~ — done (`c419e66`): embed / watch-on-site / up-next.
-5. ◻ **Import (OPML/URL list)** — port ytsm's parser; the "Import (todo)" menu item is already there.
-   **(Now the top remaining gap.)**
-6. ◻ **Subtitle + filename-pattern UI**, and the **Admin settings** page (see #2).
+5. ✅ ~~Import (OPML/URL list)~~ — done (`fbb2472`): OPML + URL list, folder mirroring, background job.
+6. ◻ **Admin settings** page (registrations, sync schedule, concurrency) — **now the top remaining gap**.
+7. ◻ **Subtitle + filename-pattern UI** (backend-only today).
 </content>

@@ -37,6 +37,7 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 | **Modals don't close on Escape** | Escape-to-close via a keydown registry + Modal interop. | `5e5bdb4` |
 | **Fake hardcoded "5:00" duration** (re-addressed) | Real `Video.Duration` from yt-dlp, shown as a `m:ss`/`h:mm:ss` badge. | `5e5bdb4` |
 | **Watch page for non-downloaded videos was all TODO stubs** | Full watch page: a privacy-gated YouTube embed (`youtube-nocookie`) when the user opts in, otherwise a placeholder frame with **Download now** + **Watch on {site}** (handles any yt-dlp domain). Adds title, metric views, relative date, duration, rating stars, linkified description, an **Up next** queue (same-sub → folder → all), and mark-watched on finish. New per-user "allow embedding" setting (default off). | `c419e66` |
+| **"Import (todo)" menu item did nothing** | Real importer: paste a URL list or upload an OPML export; OPML folder groups are mirrored as Regard folders, YouTube feed URLs are rewritten to channel URLs. Runs as a background job (progress in the bell, per-URL results in the Job Log); a dialog checkbox sets per-sub auto-download, duplicates skipped by default. | `fbb2472` |
 
 ---
 
@@ -54,7 +55,6 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 
 ## Incomplete / missing functionality (still open)
 
-- **[MISSING] "Import (todo)"** — Add-menu item labeled unfinished (OPML / URL-list import from ytsm not ported).
 - **[MISSING] Admin/server settings UI** — user download settings exist, but registrations toggle, sync schedule, and scheduler concurrency have no UI.
 - **[MISSING] Subtitle + filename-pattern controls** are backend-only (no UI).
 
