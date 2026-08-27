@@ -34,11 +34,20 @@ namespace Regard.Frontend.Services
 
         private async void AuthService_AuthenticationStateChanged(object sender, EventArgs e)
         {
-            // Reinitialize with new token
-            if (hubConnection != null)
-                await hubConnection.DisposeAsync();
-            hubConnection = null;
-            await Initialize();
+            // async void event handler: an unhandled exception here terminates the whole WASM
+            // runtime, so everything below must be guarded.
+            try
+            {
+                // Reinitialize with new token
+                if (hubConnection != null)
+                    await hubConnection.DisposeAsync();
+                hubConnection = null;
+                await Initialize();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("Failed to reinitialize messaging: " + ex.Message);
+            }
         }
 
         public async Task Initialize()
@@ -75,7 +84,19 @@ namespace Regard.Frontend.Services
             hubConnection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
             hubConnection.On<ApiVideo>("NotifyVideoUpdated", NotifyVideoUpdated);
 
-            await hubConnection.StartAsync();
+            try
+            {
+                await hubConnection.StartAsync();
+            }
+            catch (Exception ex)
+            {
+                // A failed/canceled initial connect must not crash the app. Drop the connection so a
+                // later auth change / refresh can retry (WithAutomaticReconnect only recovers drops
+                // after a successful start, not the initial StartAsync).
+                Console.Error.WriteLine("Failed to start message hub: " + ex.Message);
+                try { await hubConnection.DisposeAsync(); } catch { }
+                hubConnection = null;
+            }
         }
 
         private async Task HubConnection_Closed(Exception arg)
