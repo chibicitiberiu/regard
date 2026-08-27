@@ -67,17 +67,23 @@ namespace Regard.Services
 
         private async Task ResumeSetup()
         {
-            bool execute = false;
-            for (int i = appState.SetupStep; i < SetupSteps.Length && !execute; i++)
+            // Advance to the first step that still needs to run, skipping any whose work is already
+            // done (e.g. step1 is skipped when an admin already exists). Track the landed step in
+            // appState.SetupStep so ContinueSetup() resumes from the right place instead of desyncing.
+            for (int i = appState.SetupStep; i < SetupSteps.Length; i++)
             {
-                execute = SetupSteps[i].Item2(appState);
-                string currentUri = "/" + navigationManager.ToBaseRelativePath(navigationManager.Uri);
-                if (execute && currentUri != SetupSteps[i].Item1)
-                    navigationManager.NavigateTo(SetupSteps[i].Item1);
+                if (SetupSteps[i].Item2(appState))
+                {
+                    appState.SetupStep = i;
+                    string currentUri = "/" + navigationManager.ToBaseRelativePath(navigationManager.Uri);
+                    if (currentUri != SetupSteps[i].Item1)
+                        navigationManager.NavigateTo(SetupSteps[i].Item1);
+                    return;
+                }
             }
 
-            if (!execute)
-                await FinishSetup();
+            // Every remaining step is already done -> complete setup.
+            await FinishSetup();
         }
 
         public async Task ContinueSetup()
