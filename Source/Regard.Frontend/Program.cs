@@ -23,6 +23,9 @@ namespace Regard.Frontend
             if (string.IsNullOrEmpty(builder.Configuration["BACKEND_URL"]))
                 builder.Configuration["BACKEND_URL"] = builder.HostEnvironment.BaseAddress;
 
+            // Shows in the browser dev console (F12) — the WASM app has no "listening" port itself.
+            Console.WriteLine($"Regard frontend running at {builder.HostEnvironment.BaseAddress} (backend API: {builder.Configuration["BACKEND_URL"]})");
+
 
             builder.Services.AddSingleton<AppState>();
             builder.Services.AddSingleton<SubscriptionManagerService>();

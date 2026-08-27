@@ -26,11 +26,12 @@ mkdir -p "$DataDirectory" "$DownloadDirectory"
 
 backend() {
   echo "==> Backend listening on $BACKEND_URL   (data in $DEV)"
-  ASPNETCORE_URLS="$BACKEND_URL" dotnet run --project "$REPO/Source/Regard.Backend"
+  # --no-launch-profile so our ASPNETCORE_URLS wins over launchSettings.json (which points at :5001/:5000).
+  ASPNETCORE_URLS="$BACKEND_URL" dotnet run --no-launch-profile --project "$REPO/Source/Regard.Backend"
 }
 frontend() {
   echo "==> Frontend listening on $FRONTEND_URL   (talks to API at $BACKEND_URL)"
-  ASPNETCORE_URLS="$FRONTEND_URL" dotnet run --project "$REPO/Source/Regard.Frontend"
+  ASPNETCORE_URLS="$FRONTEND_URL" dotnet run --no-launch-profile --project "$REPO/Source/Regard.Frontend"
 }
 
 case "${1:-backend}" in
