@@ -23,6 +23,7 @@
       "type": "blazorwasm",
       "request": "launch",
       "cwd": "${workspaceFolder}/Source/Regard.Frontend",
+      "url": "http://localhost:5000",
       "browser": "chrome",
       "runtimeExecutable": "/usr/bin/chromium-browser"
     }
