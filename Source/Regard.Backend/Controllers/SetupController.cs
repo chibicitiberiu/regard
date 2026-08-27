@@ -165,7 +165,12 @@ namespace Regard.Backend.Controllers
             var jfUrl = configuration["Jellyfin:BaseUrl"];
             if (string.IsNullOrWhiteSpace(jfUrl))
             {
-                checks.Add(new SetupCheckResult { Name = "Jellyfin", Status = SetupCheckStatus.Ok, Message = "Not configured (optional)." });
+                checks.Add(new SetupCheckResult
+                {
+                    Name = "Jellyfin",
+                    Status = SetupCheckStatus.Warning,
+                    Message = "Not configured (optional) — Jellyfin watched-sync is disabled."
+                });
             }
             else
             {
