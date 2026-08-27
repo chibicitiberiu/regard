@@ -15,7 +15,8 @@
         "ASPNETCORE_URLS": "http://localhost:9585",
         "DataDirectory": "${workspaceFolder}/.dev/data",
         "DownloadDirectory": "${workspaceFolder}/.dev/videos",
-        "REGARD_MIGRATE": "1"
+        "REGARD_MIGRATE": "1",
+        "PATH": "${env:HOME}/.deno/bin:${env:PATH}"
       }
     },
     {

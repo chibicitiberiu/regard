@@ -22,6 +22,9 @@ export ASPNETCORE_ENVIRONMENT=Development
 export DataDirectory="$DEV/data"
 export DownloadDirectory="$DEV/videos"   # absolute on purpose (storage layer requires it)
 export REGARD_MIGRATE=1                   # create/upgrade the SQLite schema on start
+# yt-dlp needs a JS runtime (deno) for reliable YouTube extraction; put a userspace
+# install on PATH if present so the child yt-dlp process can find it.
+[ -d "$HOME/.deno/bin" ] && export PATH="$HOME/.deno/bin:$PATH"
 mkdir -p "$DataDirectory" "$DownloadDirectory"
 
 backend() {

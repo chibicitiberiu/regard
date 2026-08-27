@@ -17,8 +17,23 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 # yt-dlp runs as a python zipapp; ffmpeg is needed for merges + thumbnail conversion;
 # ca-certificates for the HTTPS pull of yt-dlp from github.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends python3 ffmpeg ca-certificates && \
+    apt-get install -y --no-install-recommends python3 ffmpeg ca-certificates curl unzip && \
     rm -rf /var/lib/apt/lists/*
+
+# deno: YouTube extraction now requires a JS runtime, otherwise yt-dlp degrades and many
+# videos fail to extract. Install the static binary to /usr/local/bin (on PATH for uid 1000).
+RUN set -eux; \
+    arch="$(dpkg --print-architecture)"; \
+    case "$arch" in \
+        amd64) deno_arch="x86_64-unknown-linux-gnu" ;; \
+        arm64) deno_arch="aarch64-unknown-linux-gnu" ;; \
+        *) echo "unsupported arch: $arch" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL "https://github.com/denoland/deno/releases/latest/download/deno-${deno_arch}.zip" -o /tmp/deno.zip; \
+    unzip /tmp/deno.zip -d /usr/local/bin; \
+    chmod +x /usr/local/bin/deno; \
+    rm /tmp/deno.zip; \
+    /usr/local/bin/deno --version
 
 # Run non-root as uid 1000 (the base image already provides this user); it owns the volumes.
 RUN mkdir -p /data /downloads && chown 1000:1000 /data /downloads
