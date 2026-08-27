@@ -13,6 +13,8 @@ namespace Regard.Frontend.Shared.Modals
 
         [Inject] protected BackendService Backend { get; set; }
 
+        [Inject] protected AppState AppState { get; set; }
+
         [Parameter] public EventCallback Submitted { get; set; }
 
         protected SubscriptionCreateRequest Request { get; set; } = new SubscriptionCreateRequest();
@@ -42,6 +44,10 @@ namespace Regard.Frontend.Shared.Modals
                 var (resp, httpResp) = await Backend.SubscriptionCreate(Request);
                 if (httpResp.IsSuccessStatusCode)
                 {
+                    // The list normally updates from the SignalR NotifySubscriptionCreated push;
+                    // force a refresh too so the new subscription appears even if that push is
+                    // missed (keyed by id, so it can't double up with the push).
+                    AppState.RequestRefresh();
                     await Submitted.InvokeAsync(null);
                     await Dismiss();
                     return;

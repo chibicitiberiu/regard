@@ -7,6 +7,7 @@ using Regard.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Regard.Frontend.Services
@@ -16,6 +17,13 @@ namespace Regard.Frontend.Services
         private readonly IConfiguration configuration;
         private readonly AuthenticationService authService;
         private HubConnection hubConnection;
+
+        // Serializes (re)connects. Auth-state changes can fire several times in quick
+        // succession; without this lock, one firing disposes the connection while another's
+        // StartAsync is still in flight, canceling it (OperationCanceled) and leaving the app
+        // with no live hub -- so pushes like NotifySubscriptionCreated silently go nowhere.
+        private readonly SemaphoreSlim connectionLock = new SemaphoreSlim(1, 1);
+        private string currentToken;
 
         public event EventHandler<ApiSubscription> SubscriptionCreated;
         public event EventHandler<ApiSubscription> SubscriptionUpdated;
@@ -38,11 +46,7 @@ namespace Regard.Frontend.Services
             // runtime, so everything below must be guarded.
             try
             {
-                // Reinitialize with new token
-                if (hubConnection != null)
-                    await hubConnection.DisposeAsync();
-                hubConnection = null;
-                await Initialize();
+                await EnsureConnected();
             }
             catch (Exception ex)
             {
@@ -50,53 +54,89 @@ namespace Regard.Frontend.Services
             }
         }
 
-        public async Task Initialize()
-        {
-            // Already initialized
-            if (hubConnection != null)
-                return;
+        public Task Initialize() => EnsureConnected();
 
+        /// <summary>
+        /// Ensures a hub connection exists for the current auth token. Safe to call
+        /// concurrently and repeatedly: a lock serializes (re)connects so overlapping
+        /// auth-state changes can't cancel each other's StartAsync, and an already-connected
+        /// hub on the same token is left untouched.
+        /// </summary>
+        private async Task EnsureConnected()
+        {
+            var token = await authService.GetToken();
+
+            await connectionLock.WaitAsync();
+            try
+            {
+                // Keep a healthy connection when the token hasn't changed.
+                if (hubConnection != null
+                    && hubConnection.State == HubConnectionState.Connected
+                    && token == currentToken)
+                    return;
+
+                // Otherwise tear down whatever we had and rebuild.
+                if (hubConnection != null)
+                {
+                    try { await hubConnection.DisposeAsync(); } catch { }
+                    hubConnection = null;
+                }
+
+                currentToken = token;
+
+                // Not signed in -> nothing to connect to. A later auth change reconnects.
+                if (string.IsNullOrEmpty(token))
+                    return;
+
+                var connection = BuildConnection();
+                try
+                {
+                    await connection.StartAsync();
+                    hubConnection = connection;
+                }
+                catch (Exception ex)
+                {
+                    // A failed/canceled initial connect must not crash the app. Drop it so a
+                    // later auth change / refresh can retry (WithAutomaticReconnect only recovers
+                    // drops after a successful start, not the initial StartAsync).
+                    Console.Error.WriteLine("Failed to start message hub: " + ex.Message);
+                    try { await connection.DisposeAsync(); } catch { }
+                    hubConnection = null;
+                }
+            }
+            finally
+            {
+                connectionLock.Release();
+            }
+        }
+
+        private HubConnection BuildConnection()
+        {
             var baseAddress = new Uri(configuration["BACKEND_URL"]);
             var messageHub = new Uri(baseAddress, "/api/message_hub");
 
-            var authToken = await authService.GetToken();
-            
-            hubConnection = new HubConnectionBuilder()
+            var connection = new HubConnectionBuilder()
                 .WithUrl(messageHub, opts =>
                 {
                     opts.AccessTokenProvider = () => authService.GetToken();
-                    //if (!string.IsNullOrEmpty(authToken)) 
-                    //    opts.Headers.Add("Authorization", $"bearer {authToken}");
                 })
                 .WithAutomaticReconnect()
                 .Build();
 
-            hubConnection.Reconnected += HubConnection_Reconnected;
-            hubConnection.Reconnecting += HubConnection_Reconnecting;
-            hubConnection.Closed += HubConnection_Closed;
+            connection.Reconnected += HubConnection_Reconnected;
+            connection.Reconnecting += HubConnection_Reconnecting;
+            connection.Closed += HubConnection_Closed;
 
-            hubConnection.On<string>("ShowToast", ShowToast);
-            hubConnection.On<ApiSubscription>("NotifySubscriptionCreated", NotifySubscriptionCreated);
-            hubConnection.On<ApiSubscription>("NotifySubscriptionUpdated", NotifySubscriptionUpdated);
-            hubConnection.On<int[]>("NotifySubscriptionsDeleted", NotifySubscriptionsDeleted);
-            hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderCreated", NotifySubscriptionFolderCreated);
-            hubConnection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderUpdated", NotifySubscriptionFolderUpdated);
-            hubConnection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
-            hubConnection.On<ApiVideo>("NotifyVideoUpdated", NotifyVideoUpdated);
+            connection.On<string>("ShowToast", ShowToast);
+            connection.On<ApiSubscription>("NotifySubscriptionCreated", NotifySubscriptionCreated);
+            connection.On<ApiSubscription>("NotifySubscriptionUpdated", NotifySubscriptionUpdated);
+            connection.On<int[]>("NotifySubscriptionsDeleted", NotifySubscriptionsDeleted);
+            connection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderCreated", NotifySubscriptionFolderCreated);
+            connection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderUpdated", NotifySubscriptionFolderUpdated);
+            connection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
+            connection.On<ApiVideo>("NotifyVideoUpdated", NotifyVideoUpdated);
 
-            try
-            {
-                await hubConnection.StartAsync();
-            }
-            catch (Exception ex)
-            {
-                // A failed/canceled initial connect must not crash the app. Drop the connection so a
-                // later auth change / refresh can retry (WithAutomaticReconnect only recovers drops
-                // after a successful start, not the initial StartAsync).
-                Console.Error.WriteLine("Failed to start message hub: " + ex.Message);
-                try { await hubConnection.DisposeAsync(); } catch { }
-                hubConnection = null;
-            }
+            return connection;
         }
 
         private async Task HubConnection_Closed(Exception arg)
