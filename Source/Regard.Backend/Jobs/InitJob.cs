@@ -21,13 +21,17 @@ namespace Regard.Backend.Jobs
         private readonly IProviderManager providerManager;
         private readonly IYoutubeDlService ytdlService;
         private readonly RegardScheduler scheduler;
+        private readonly JobTrackerService jobTracker;
+        private readonly Configuration.IOptionManager optionManager;
 
         public InitJob(ILogger<InitJob> logger,
                        IConfiguration configuration,
                        DataContext dataContext,
                        IProviderManager providerManager,
                        IYoutubeDlService ytdlService,
-                       RegardScheduler scheduler)
+                       RegardScheduler scheduler,
+                       JobTrackerService jobTracker,
+                       Configuration.IOptionManager optionManager)
         {
             this.log = logger;
             this.configuration = configuration;
@@ -35,11 +39,26 @@ namespace Regard.Backend.Jobs
             this.providerManager = providerManager;
             this.ytdlService = ytdlService;
             this.scheduler = scheduler;
+            this.jobTracker = jobTracker;
+            this.optionManager = optionManager;
         }
 
         public async Task Execute(IJobExecutionContext context)
         {
             log.LogInformation("Running initialization tasks...");
+
+            // Prune old Job Log history so it doesn't grow unbounded (all jobs are tracked).
+            try
+            {
+                int retention = optionManager.GetGlobal(Configuration.Options.Server_JobHistoryRetentionDays);
+                int pruned = jobTracker.PruneOldJobs(retention);
+                if (pruned > 0)
+                    log.LogInformation("Pruned {0} old job(s) from history.", pruned);
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Failed to prune old jobs.");
+            }
 
             // Initialize providers
             await providerManager.Initialize();

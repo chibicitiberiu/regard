@@ -1,0 +1,116 @@
+// Job progress + notifications panel + Job Log. NOTE: index.html serves the pre-compiled
+// css/style.css (no build step runs during dotnet build), so keep these rules in sync with the
+// matching block appended to style.css.
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background-color: var(--color-bg-secondary);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background-color: var(--color-bg-primary);
+    transition: width 0.2s ease;
+
+    &.indeterminate {
+        width: 40%;
+        animation: progress-indeterminate 1.2s infinite ease-in-out;
+    }
+}
+
+@keyframes progress-indeterminate {
+    0% { margin-left: -40%; }
+    100% { margin-left: 100%; }
+}
+
+.notifications-panel {
+    min-width: 22rem;
+    max-width: 26rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.np-empty {
+    padding: 0.75rem 1rem;
+    color: var(--color-fg-secondary);
+}
+
+.np-section-title {
+    font-weight: bold;
+    padding: 0.5rem 0.75rem 0.25rem;
+    color: var(--color-fg-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.np-list {
+    .list-view-items { list-style: none; margin: 0; padding: 0; }
+    .list-view-item { padding: 0.4rem 0.75rem; border-top: 1px solid var(--color-bg-secondary); }
+}
+
+.np-job-name { font-weight: 500; }
+.np-job-detail { font-size: 0.85rem; color: var(--color-fg-secondary); }
+.np-msg { font-size: 0.9rem; }
+.np-msg-warning { color: var(--color-fg-warning); }
+.np-msg-error { color: var(--color-fg-error); }
+
+.toast {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    color: var(--color-fg);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.toast-body { color: var(--color-fg); }
+
+.job-log-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th, td {
+        text-align: left;
+        padding: 0.4rem 0.5rem;
+        border-bottom: 1px solid var(--color-bg-secondary);
+        vertical-align: top;
+    }
+}
+
+.job-log-output {
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 20rem;
+    overflow-y: auto;
+    background-color: var(--color-bg-window);
+    padding: 0.5rem;
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    border-radius: 3px;
+}
+
+.job-log-name summary { cursor: pointer; }
+
+.job-log-pager {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 0.75rem;
+}
+
+.job-state {
+    padding: 0.1rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.job-state-running { background-color: var(--color-bg-info); color: var(--color-fg-info); }
+.job-state-completed { background-color: var(--color-bg-success); color: var(--color-fg-success); }
+.job-state-failed { background-color: var(--color-bg-error); color: var(--color-fg-error); }
+.job-state-scheduled,
+.job-state-created { background-color: var(--color-bg-secondary); color: var(--color-fg-secondary); }

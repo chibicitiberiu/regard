@@ -64,6 +64,9 @@ namespace Regard.Backend.Model
 
         public ulong? Views { get; set; }
 
+        /// <summary>Video length in whole seconds (from yt-dlp), or null if unknown.</summary>
+        public int? Duration { get; set; }
+
         public float? Rating { get; set; }
 
         public string ProviderData { get; set; }

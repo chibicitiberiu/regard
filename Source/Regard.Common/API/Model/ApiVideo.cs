@@ -36,6 +36,8 @@ namespace Regard.Common.API.Model
 
         public ulong? Views { get; set; }
 
+        public int? Duration { get; set; }
+
         public float? Rating { get; set; }
     }
 }

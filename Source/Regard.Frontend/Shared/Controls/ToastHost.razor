@@ -1,0 +1,37 @@
+@using Regard.Common.API.Model
+@using Regard.Frontend.Services
+@using System.Collections.Specialized
+@implements IDisposable
+@inject NotificationsService Notifications
+
+<div id="toast-wrapper">
+    @foreach (var toast in Notifications.Toasts)
+    {
+        <div class="toast @SeverityClass(toast.Severity)" @key="toast.Id"
+             @onclick="() => Notifications.Dismiss(toast)" title="Dismiss">
+            <div class="toast-body">@toast.Message</div>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Notifications.Toasts.CollectionChanged += OnToastsChanged;
+    }
+
+    private void OnToastsChanged(object sender, NotifyCollectionChangedEventArgs e)
+        => InvokeAsync(StateHasChanged);
+
+    private static string SeverityClass(ApiMessageSeverity severity) => severity switch
+    {
+        ApiMessageSeverity.Error => "bg-danger",
+        ApiMessageSeverity.Warning => "bg-warning",
+        _ => "bg-success",
+    };
+
+    public void Dispose()
+    {
+        Notifications.Toasts.CollectionChanged -= OnToastsChanged;
+    }
+}

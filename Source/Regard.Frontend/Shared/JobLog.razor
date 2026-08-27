@@ -1,0 +1,117 @@
+@using Regard.Common.API.Model
+@inject Regard.Services.BackendService Backend
+
+<div class="job-log">
+    @if (loading)
+    {
+        <p>Loading…</p>
+    }
+    else if (jobs.Length == 0)
+    {
+        <p class="np-empty">No jobs have run yet.</p>
+    }
+    else
+    {
+        <table class="job-log-table">
+            <thead>
+                <tr>
+                    <th>Job</th>
+                    <th>State</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var job in jobs)
+                {
+                    <tr @key="job.Id">
+                        <td class="job-log-name">
+                            <details @ontoggle="() => OnToggle(job)">
+                                <summary>@job.Name</summary>
+                                <pre class="job-log-output">@LogFor(job.Id)</pre>
+                            </details>
+                        </td>
+                        <td>
+                            <span class="job-state job-state-@job.State.ToString().ToLowerInvariant()">@job.State</span>
+                        </td>
+                        <td>@FormatTime(job.Started)</td>
+                        <td>@FormatDuration(job)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="job-log-pager">
+            <button class="button-undecorated" @onclick="Prev" disabled="@(skip == 0)">Prev</button>
+            <span>@(total == 0 ? 0 : skip + 1)–@(skip + jobs.Length) of @total</span>
+            <button class="button-undecorated" @onclick="Next" disabled="@(skip + take >= total)">Next</button>
+        </div>
+    }
+</div>
+
+@code {
+    private const int take = 20;
+
+    private ApiJobInfo[] jobs = System.Array.Empty<ApiJobInfo>();
+    private readonly Dictionary<long, string> logs = new();
+    private int skip = 0;
+    private int total = 0;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        loading = true;
+        var resp = await Backend.GetJobs(skip, take);
+        var data = resp?.Data;
+        jobs = data?.Jobs ?? System.Array.Empty<ApiJobInfo>();
+        total = data?.Total ?? 0;
+        logs.Clear();
+        loading = false;
+    }
+
+    private async Task OnToggle(ApiJobInfo job)
+    {
+        if (logs.ContainsKey(job.Id))
+            return;
+
+        var resp = await Backend.GetJobLog(job.Id);
+        logs[job.Id] = string.IsNullOrEmpty(resp?.Data?.Log) ? "(no output captured)" : resp.Data.Log;
+        StateHasChanged();
+    }
+
+    private string LogFor(long id) => logs.TryGetValue(id, out var log) ? log : "Loading…";
+
+    private async Task Prev()
+    {
+        if (skip == 0) return;
+        skip = System.Math.Max(0, skip - take);
+        await Load();
+    }
+
+    private async Task Next()
+    {
+        if (skip + take >= total) return;
+        skip += take;
+        await Load();
+    }
+
+    private static string FormatTime(System.DateTimeOffset? time)
+        => time.HasValue ? time.Value.LocalDateTime.ToString("g") : "—";
+
+    private static string FormatDuration(ApiJobInfo job)
+    {
+        if (!job.Started.HasValue)
+            return "—";
+        var end = job.Completed ?? System.DateTimeOffset.UtcNow;
+        var d = end - job.Started.Value;
+        if (d.TotalSeconds < 0) return "—";
+        return d.TotalHours >= 1
+            ? $"{(int)d.TotalHours}h {d.Minutes}m"
+            : (d.TotalMinutes >= 1 ? $"{d.Minutes}m {d.Seconds}s" : $"{d.Seconds}s");
+    }
+}

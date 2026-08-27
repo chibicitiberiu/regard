@@ -30,6 +30,7 @@ namespace Regard.Frontend
             builder.Services.AddSingleton<AppState>();
             builder.Services.AddSingleton<SubscriptionManagerService>();
             builder.Services.AddSingleton<MessagingService>();
+            builder.Services.AddSingleton<NotificationsService>();
             builder.Services.AddSingleton<AppController>();
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 

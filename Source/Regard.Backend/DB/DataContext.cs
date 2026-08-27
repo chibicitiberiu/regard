@@ -127,6 +127,14 @@ namespace Regard.Backend.DB
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Cascade so pruning an old job clears its linked messages instead of throwing an FK error.
+            modelBuilder.Entity<Message>()
+                .HasOne(x => x.Job)
+                .WithMany()
+                .HasForeignKey(x => x.JobId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // Jobs
             modelBuilder.Entity<JobInfo>()
                 .HasOne(x => x.User)

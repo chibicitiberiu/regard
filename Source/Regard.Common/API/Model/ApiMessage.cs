@@ -1,20 +1,29 @@
-﻿namespace Regard.Common.API.Model
+using System;
+
+namespace Regard.Common.API.Model
 {
     /// <summary>
-    /// Notice and above are stored in the DB
+    /// Mirrors the backend MessageSeverity enum (same order, so an int cast maps cleanly).
     /// </summary>
-    enum ApiMessageSeverity
+    public enum ApiMessageSeverity
     {
         Info,
-        Notice,
         Warning,
         Error
     }
 
     public class ApiMessage
     {
+        public int Id { get; set; }
+
+        public DateTimeOffset Timestamp { get; set; }
+
+        public ApiMessageSeverity Severity { get; set; }
+
         public string Message { get; set; }
 
-        ApiMessageSeverity Severity { get; set; }
+        public string Details { get; set; }
+
+        public long? JobId { get; set; }
     }
 }

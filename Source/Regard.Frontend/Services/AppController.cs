@@ -38,12 +38,15 @@ namespace Regard.Services
                              AppState appState,
                              NavigationManager navigationManager,
                              MessagingService messaging,
+                             NotificationsService notifications,
                              IServiceProvider serviceProvider)
         {
             this.configuration = configuration;
             this.appState = appState;
             this.navigationManager = navigationManager;
             this.messaging = messaging;
+            // Resolved (not otherwise injected) so its MessagingService subscriptions run from startup.
+            _ = notifications;
             this.serviceProvider = serviceProvider;
 
             appState.PropertyChanged += AppState_PropertyChanged;

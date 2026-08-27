@@ -45,6 +45,18 @@ namespace Regard.Backend.Configuration
         );
 
         /// <summary>
+        /// How many days of finished jobs to keep in the Job Log (completed jobs are pruned past
+        /// this; failed jobs are kept ~3x longer). 0 = never prune.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_JobHistoryRetentionDays = new OptionDefinition<int>(
+            30,
+            "server.job_history_retention_days",
+            "JobHistoryRetentionDays",
+            "REGARD_JOB_HISTORY_RETENTION_DAYS",
+            0
+        );
+
+        /// <summary>
         /// If enabled, videos will be downloaded automatically
         /// </summary>
         public static readonly OptionDefinition<bool> Subscriptions_AutoDownload = new OptionDefinition<bool>(

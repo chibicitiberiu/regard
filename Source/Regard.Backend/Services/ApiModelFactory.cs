@@ -54,6 +54,7 @@ namespace Regard.Backend.Services
                 ThumbnailUrl = thumbnailService.GetThumbnail(video),
                 UploaderName = video.UploaderName,
                 Views = video.Views,
+                Duration = video.Duration,
                 Rating = video.Rating
             };
         }

@@ -2,6 +2,7 @@
 using Quartz;
 using Regard.Backend.Common.Model;
 using Regard.Backend.DB;
+using Regard.Backend.Downloader;
 using Regard.Backend.Jobs;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,14 @@ namespace Regard.Backend.Services
         private readonly DataContext dataContext;
 
         private IScheduler quartz;
+
+        // "Important" job types that surface live in the notification bell. Everything else is
+        // tracked + logged but stays out of the bell. Flip a type in/out here to change the policy.
+        private static readonly HashSet<Type> NotifiableJobTypes = new HashSet<Type>()
+        {
+            typeof(DownloadVideoJob),
+            typeof(SynchronizeJob),
+        };
 
         public RegardScheduler(ILogger<RegardScheduler> log,
                                ISchedulerFactory schedulerFactory,
@@ -49,7 +58,8 @@ namespace Regard.Backend.Services
                                                          int retryCount = 0,
                                                          int retryIntervalSecs = 600) where TJob : JobBase
         {
-            var job = jobTrackerService.CreateJob(name, userId, trackWhenScheduled, jobData, retryCount, retryIntervalSecs);
+            bool notify = NotifiableJobTypes.Contains(typeof(TJob));
+            var job = jobTrackerService.CreateJob(name, userId, trackWhenScheduled, jobData, retryCount, retryIntervalSecs, notify);
 
             try
             {

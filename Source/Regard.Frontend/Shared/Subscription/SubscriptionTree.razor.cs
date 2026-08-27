@@ -23,6 +23,7 @@ namespace Regard.Frontend.Shared.Subscription
         private bool deleteRecursive = false;
         private bool deleteFolder = false;
         private string deleteItemName = "";
+        private bool loaded = false;
 
         private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeFolders = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
 
@@ -45,6 +46,7 @@ namespace Regard.Frontend.Shared.Subscription
             AppState.Subscriptions.DictionaryChanged += Subscriptions_DictionaryChanged;
 
             await SubscriptionManager.Load();
+            loaded = true;
 
             // Load's await yields, so the first render (which assigns the TreeView @ref) usually
             // happens while Load is still in flight -- OnAfterRender then builds an empty tree, and

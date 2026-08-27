@@ -112,3 +112,51 @@
     margin: 0 .25em;
     text-shadow: 1px 1px 3px black;
 }
+
+.video-badge-duration {
+    opacity: 1;
+    margin: 0;
+    padding: .1em .4em;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: .25em;
+    font-size: .8em;
+    line-height: 1.2;
+    text-shadow: none;
+}
+
+.empty-state {
+    padding: 2em;
+    text-align: center;
+    opacity: .6;
+}
+
+.user-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 12em;
+
+    .user-panel-name {
+        padding: .5em .75em;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .user-panel-logout {
+        display: flex;
+        align-items: center;
+        gap: .4em;
+        padding: .5em .75em;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+    }
+}
+
+.channel-icon {
+    height: 2em;
+    width: 2em;
+    border-radius: 50%;
+    vertical-align: middle;
+}

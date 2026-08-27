@@ -33,6 +33,13 @@ namespace Regard.Backend.Common.Model
 
         public bool TrackWhenScheduled { get; set; } = false;
 
+        /// <summary>
+        /// Whether this job is "important" enough to surface live in the notification bell
+        /// (downloads, syncs). Background/maintenance jobs are false and only appear in the Job Log.
+        /// Persisted, because the Started/Progress/Completed handlers reload JobInfo from the DB.
+        /// </summary>
+        public bool Notify { get; set; } = false;
+
         #endregion
 
         #region Execution parameters
@@ -66,6 +73,19 @@ namespace Regard.Backend.Common.Model
 
         [NotMapped]
         public float? Progress { get; set; }
+
+        /// <summary>
+        /// Live "current step" text (e.g. "Downloading", "Syncing X"). Not persisted.
+        /// </summary>
+        [NotMapped]
+        public string Detail { get; set; }
+
+        /// <summary>
+        /// Accumulated per-run output (yt-dlp lines, sync results, failure reason). Persisted so the
+        /// Settings Job Log can show the full log of a past run.
+        /// </summary>
+        public string Log { get; set; }
+
         public string Key { get; set; }
 
         #endregion

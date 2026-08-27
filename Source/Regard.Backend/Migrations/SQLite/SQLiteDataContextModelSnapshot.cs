@@ -163,11 +163,17 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Log")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset?>("NextRun")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("Notify")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("RetryCount")
                         .HasColumnType("INTEGER");
@@ -500,6 +506,9 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<long?>("DownloadedSize")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("Duration")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsWatched")
                         .HasColumnType("INTEGER");
 
@@ -627,7 +636,8 @@ namespace Regard.Backend.Migrations.SQLite
                 {
                     b.HasOne("Regard.Backend.Common.Model.JobInfo", "Job")
                         .WithMany()
-                        .HasForeignKey("JobId");
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Regard.Common;
@@ -32,6 +33,8 @@ namespace Regard.Frontend.Services
         public event EventHandler<ApiSubscriptionFolder> SubscriptionFolderUpdated;
         public event EventHandler<int[]> SubscriptionFoldersDeleted;
         public event EventHandler<ApiVideo> VideoUpdated;
+        public event EventHandler<ApiJobInfo> JobUpdated;
+        public event EventHandler<ApiMessage> MessageReceived;
 
         public MessagingService(IConfiguration configuration, AuthenticationService authService)
         {
@@ -119,6 +122,10 @@ namespace Regard.Frontend.Services
                 .WithUrl(messageHub, opts =>
                 {
                     opts.AccessTokenProvider = () => authService.GetToken();
+                    // Pin the transport to WebSockets: the query-string JWT only authenticates the
+                    // WS upgrade, so a fallback to SSE/long-polling would leave the hub unauthenticated
+                    // and Clients.User(...) pushes would silently vanish.
+                    opts.Transports = HttpTransportType.WebSockets;
                 })
                 .WithAutomaticReconnect()
                 .Build();
@@ -135,6 +142,8 @@ namespace Regard.Frontend.Services
             connection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderUpdated", NotifySubscriptionFolderUpdated);
             connection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
             connection.On<ApiVideo>("NotifyVideoUpdated", NotifyVideoUpdated);
+            connection.On<ApiJobInfo>("NotifyJobUpdated", NotifyJobUpdated);
+            connection.On<ApiMessage>("NotifyMessage", NotifyMessage);
 
             return connection;
         }
@@ -192,6 +201,16 @@ namespace Regard.Frontend.Services
         private void NotifyVideoUpdated(ApiVideo video)
         {
             VideoUpdated?.Invoke(this, video);
+        }
+
+        private void NotifyJobUpdated(ApiJobInfo job)
+        {
+            JobUpdated?.Invoke(this, job);
+        }
+
+        private void NotifyMessage(ApiMessage message)
+        {
+            MessageReceived?.Invoke(this, message);
         }
     }
 }

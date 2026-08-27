@@ -80,6 +80,7 @@ namespace Regard.Services
             var authStateProvider = scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
 
             await localStorage.RemoveItemAsync(StorageAuthTokenKey);
+            await localStorage.RemoveItemAsync(StorageAuthUsernameKey);
             if (authStateProvider is ApiAuthenticationStateProvider apiAuthenticationStateProvider)
                 apiAuthenticationStateProvider.UpdateAuthenticationState();
 

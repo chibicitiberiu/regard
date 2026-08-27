@@ -64,8 +64,12 @@
                             <Icon Glyph="Icons.Downloaded" Class="video-badge" title="Downloaded" />
                         }
                     </div>
-                    @* Duration badge removed: the video model carries no duration, so this only ever
-                       showed a hardcoded "5:00". Restore once real duration is captured from yt-dlp. *@
+                    @if (item.ApiVideo.Duration.HasValue)
+                    {
+                        <div class="video-badges-bottom">
+                            <span class="video-badge video-badge-duration">@item.ApiVideo.Duration.Value.ToDurationString()</span>
+                        </div>
+                    }
                 </NavLink>
             </div>
             <div class="video-body">
@@ -115,6 +119,13 @@
         </div>
     </ItemTemplate>
 </ListView>
+
+@if (initialized && videos.Count == 0)
+{
+    <div class="empty-state">
+        <p>No videos here yet.</p>
+    </div>
+}
 
 @if (totalVideoCount > videosPerPage)
 {

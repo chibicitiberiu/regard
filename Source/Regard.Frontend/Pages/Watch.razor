@@ -35,8 +35,13 @@
             <h3>@video?.Name</h3><br>
             <h5>@video.Views Views   •    Posted @video.Published   •    Score @video.Rating/5</h5>
         </div>
-        <div class="right-stats"> 
-            @video.UploaderName  • <img src="https://i.imgur.com/7DXZees.jpg" alt="ChannelIcon">
+        <div class="right-stats">
+            @video.UploaderName
+            @if (subscription?.ThumbnailUrl != null)
+            {
+                <span>&nbsp;&#x2022;&nbsp;</span>
+                <img class="channel-icon" src="@subscription.ThumbnailUrl" alt="@subscription.Name">
+            }
         </div>
     </div>
 

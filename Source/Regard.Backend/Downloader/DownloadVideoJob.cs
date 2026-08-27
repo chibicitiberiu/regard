@@ -45,6 +45,7 @@ namespace Regard.Backend.Downloader
         private AsyncLock videoMutex = new AsyncLock();
         private CancellationTokenSource cancellationTokenSrc = new CancellationTokenSource();
         private bool limitsChecked = false;
+        private int lastReportedPercent = -1;
 
         public int VideoId { get; set; }
 
@@ -190,15 +191,31 @@ namespace Regard.Backend.Downloader
                 || MergingRegex.TryMatch(message, out match)
                 || AlreadyDownloadedRegex.TryMatch(message, out match))
             {
+                JobLog(message);
                 await UpdateOutputPath(Path.ChangeExtension(match.Groups[1].Value, null));
             }
             else if (ProgressRegex.TryMatch(message, out match))
             {
                 if (float.TryParse(match.Groups[1].Value, out float percent))
+                {
                     videoDownloader.OnVideoDownloading(VideoId, percent / 100f);
+
+                    // Throttle: yt-dlp emits many progress lines/sec; push to the bell only when the
+                    // whole percent changes. Progress ticks are deliberately kept out of the job log.
+                    int p = (int)percent;
+                    if (p != lastReportedPercent)
+                    {
+                        lastReportedPercent = p;
+                        ReportProgress(percent / 100f, "Downloading");
+                    }
+                }
 
                 if (!limitsChecked && double.TryParse(match.Groups[2].Value, out double size))
                     ProcessFileSize(size, match.Groups[3].Value);
+            }
+            else
+            {
+                JobLog(message);
             }
         }
 
@@ -235,6 +252,7 @@ namespace Regard.Backend.Downloader
                 return;
 
             log.LogError($"videoId={VideoId}: {message}");
+            JobLog(message, Regard.Backend.Common.Model.MessageSeverity.Error);
         }
 
         private IEnumerable<string> ResolveDownloadOptions(Video video)

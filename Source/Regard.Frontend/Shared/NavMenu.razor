@@ -1,4 +1,6 @@
-﻿<nav class="navbar navbar-fixed-top">
+﻿@using Regard.Common.API.Model
+
+<nav class="navbar navbar-fixed-top">
     <NavLink class="navbar-brand nav-link logo-small" href="" Match="NavLinkMatch.All" @onclick="LogoClicked">
         Regard
     </NavLink>
@@ -15,7 +17,44 @@
                                    AttachTo="notificationsLink"
                                    Placement="Popper.Placement.Bottom"
                                    Offset="15">
-                        Notifications panel
+                        <div class="notifications-panel">
+                            @if (Notifications.ActiveJobs.Count == 0 && Notifications.RecentMessages.Count == 0)
+                            {
+                                <div class="np-empty">Nothing happening right now.</div>
+                            }
+
+                            @if (Notifications.ActiveJobs.Count > 0)
+                            {
+                                <div class="np-section-title">Active jobs</div>
+                                <ListView Model="ApiJobInfo" ItemsSource="Notifications.ActiveJobs" Class="np-list">
+                                    <ItemTemplate Context="job">
+                                        <div class="np-job">
+                                            <div class="np-job-name">@job.Name</div>
+                                            @if (!string.IsNullOrEmpty(job.Detail))
+                                            {
+                                                <div class="np-job-detail">@job.Detail</div>
+                                            }
+                                            <div class="progress-bar">
+                                                <div class="progress-bar-fill @(job.Progress.HasValue ? "" : "indeterminate")"
+                                                     style="@ProgressWidth(job)"></div>
+                                            </div>
+                                        </div>
+                                    </ItemTemplate>
+                                </ListView>
+                            }
+
+                            @if (Notifications.RecentMessages.Count > 0)
+                            {
+                                <div class="np-section-title">Recent</div>
+                                <ListView Model="ApiMessage" ItemsSource="Notifications.RecentMessages" Class="np-list">
+                                    <ItemTemplate Context="msg">
+                                        <div class="np-msg np-msg-@msg.Severity.ToString().ToLowerInvariant()">
+                                            @msg.Message
+                                        </div>
+                                    </ItemTemplate>
+                                </ListView>
+                            }
+                        </div>
                     </DropDownPanel>
                 </li>
                 <li class="nav-item">
@@ -26,7 +65,15 @@
                                    AttachTo="userLink"
                                    Placement="Popper.Placement.Bottom"
                                    Offset="15">
-                        This will be the user panel
+                        <div class="user-panel">
+                            @if (!string.IsNullOrEmpty(username))
+                            {
+                                <div class="user-panel-name">Signed in as <strong>@username</strong></div>
+                            }
+                            <button class="button-undecorated user-panel-logout" @onclick="Logout">
+                                <Icon Glyph="Icons.SignOut" /> Log out
+                            </button>
+                        </div>
                     </DropDownPanel>
                 </li>
                 <li class="nav-item">

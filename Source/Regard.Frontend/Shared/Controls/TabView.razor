@@ -3,7 +3,7 @@
         @foreach(var tab in Tabs)
         {
             <div class="tab-header @GetSelectedClass(tab)">
-                <a href="#" @onclick="@(e => OnTabHeaderClicked(tab))">
+                <a href="#" @onclick="@(e => OnTabHeaderClicked(tab))" @onclick:preventDefault="true">
                     @tab.Title
                 </a>
             </div>

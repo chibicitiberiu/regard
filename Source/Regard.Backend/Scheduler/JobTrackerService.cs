@@ -4,6 +4,7 @@ using Regard.Backend.DB;
 using Regard.Backend.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Regard.Backend.Services
 {
@@ -70,7 +71,8 @@ namespace Regard.Backend.Services
                                  bool trackWhenScheduled = false,
                                  IDictionary<string, object> jobData = null,
                                  int retryCount = 0,
-                                 int retryIntervalSecs = 600)
+                                 int retryIntervalSecs = 600,
+                                 bool notify = false)
         {
             using var scope = scopeFactory.CreateScope();
             using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
@@ -80,6 +82,7 @@ namespace Regard.Backend.Services
                 UserId = userId,
                 Name = name,
                 TrackWhenScheduled = trackWhenScheduled,
+                Notify = notify,
                 JobData = new Dictionary<string, object>(),
                 RetryCount = retryCount,
                 RetryInterval = retryIntervalSecs,
@@ -123,13 +126,20 @@ namespace Regard.Backend.Services
             JobStarted?.Invoke(this, new JobStartedEventArgs() { Job = job });
         }
 
-        public void OnJobProgress(long jobId, float progress)
+        public void OnJobProgress(long jobId, float progress, string detail = null)
         {
             using var scope = scopeFactory.CreateScope();
             using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
 
             var job = dataContext.Jobs.Find(jobId);
+            if (job == null)
+                return;
+
+            // Reloaded from the DB (a fresh instance), so the persisted State may lag behind the
+            // in-memory Running set by JobBase — a progress tick means the job is running, so say so.
+            job.State = JobState.Running;
             job.Progress = progress;
+            job.Detail = detail;
 
             JobProgress?.Invoke(this, new JobProgressEventArgs() { Job = job, Progress = progress });
         }
@@ -156,8 +166,42 @@ namespace Regard.Backend.Services
             job.Completed = DateTimeOffset.UtcNow;
             dataContext.SaveChanges();
 
-            userLogger.LogInfo("Job failed", reason, userId: job.UserId, jobId: job.Id);
+            // LogError (not LogInfo) so failures surface as an error toast, even for background jobs.
+            userLogger.LogError($"{job.Name}: {reason}", details, userId: job.UserId, jobId: job.Id);
             JobFailed?.Invoke(this, new JobFailedEventArgs() { Job = job, Reason = reason, Details = details });
+        }
+
+        /// <summary>
+        /// Deletes old finished jobs to keep the history bounded (all jobs are tracked). Completed
+        /// jobs are pruned past <paramref name="retentionDays"/>; failed jobs are kept ~3x longer so
+        /// problems stay visible. Linked messages cascade-delete (see DataContext Message→Job FK).
+        /// </summary>
+        public int PruneOldJobs(int retentionDays)
+        {
+            if (retentionDays <= 0)
+                return 0;
+
+            using var scope = scopeFactory.CreateScope();
+            using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+
+            var completedCutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
+            var failedCutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays * 3);
+
+            // Filter State server-side (translatable), then compare DateTimeOffset client-side — the
+            // SQLite provider can't translate ordering comparisons on DateTimeOffset.
+            var stale = dataContext.Jobs
+                .Where(j => (j.State == JobState.Completed || j.State == JobState.Failed) && j.Completed != null)
+                .AsEnumerable()
+                .Where(j => (j.State == JobState.Completed && j.Completed < completedCutoff)
+                         || (j.State == JobState.Failed && j.Completed < failedCutoff))
+                .ToList();
+
+            if (stale.Count == 0)
+                return 0;
+
+            dataContext.Jobs.RemoveRange(stale);
+            dataContext.SaveChanges();
+            return stale.Count;
         }
     }
 }

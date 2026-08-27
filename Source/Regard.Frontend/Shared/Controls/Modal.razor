@@ -1,4 +1,5 @@
-﻿<div class="modal @CssUtils.BoolToVisible(IsVisible)"
+﻿@implements IAsyncDisposable
+<div class="modal @CssUtils.BoolToVisible(IsVisible)" @ref="rootDiv"
      @onclick="@OnClickedBehind" @onmousedown="@OnMouseDown">
     <div class="modal-content" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true">
         <div class="modal-header">

@@ -172,6 +172,7 @@ namespace Regard.Backend.Providers.YouTubeDL
                             UploaderName = entry.Uploader,
                             OriginalUrl = entry.WebpageUrl?.ToString(),
                             Views = entry.ViewCount,
+                            Duration = entry.Duration.HasValue ? (int?)Math.Round(entry.Duration.Value) : null,
                             Rating = ProviderHelpers.CalculateRating(entry.LikeCount, entry.DislikeCount)
                         };
                         break;
@@ -199,6 +200,7 @@ namespace Regard.Backend.Providers.YouTubeDL
                     video.LastUpdated = DateTimeOffset.Now;
                     video.ThumbnailPath = info.Thumbnail?.ToString();
                     video.UploaderName = info.Uploader;
+                    video.Duration = info.Duration.HasValue ? (int?)Math.Round(info.Duration.Value) : null;
                 }
 
                 if (updateStatistics)

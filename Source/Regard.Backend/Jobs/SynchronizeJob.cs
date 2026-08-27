@@ -99,6 +99,8 @@ namespace Regard.Backend.Jobs
                 if (sub != null)
                 {
                     log.LogInformation($"Synchronization started for subscription {sub}.");
+                    JobLog($"Synchronizing subscription {sub.Name}");
+                    ReportProgress(0f, $"Syncing {sub.Name}");
                     await Synchronize(sub);
                 }
             }
@@ -109,19 +111,31 @@ namespace Regard.Backend.Jobs
                 if (folder != null)
                 {
                     log.LogInformation($"Synchronization started for folder {folder}.");
-                    foreach (var sub in dataContext.GetSubscriptionsRecursive(folder).ToList())
-                        await Synchronize(sub);
+                    JobLog($"Synchronizing folder {folder.Name}");
+                    await SynchronizeAll(dataContext.GetSubscriptionsRecursive(folder).ToList());
                 }
             }
 
             else
             {
                 log.LogInformation($"Synchronization started.");
-                foreach (var sub in dataContext.Subscriptions.ToList())
-                    await Synchronize(sub);
+                JobLog("Global synchronization started");
+                await SynchronizeAll(dataContext.Subscriptions.ToList());
             }
 
+            JobLog("Synchronization finished");
             log.LogInformation("Synchronization finished.");
+        }
+
+        private async Task SynchronizeAll(IList<Subscription> subs)
+        {
+            for (int i = 0; i < subs.Count; i++)
+            {
+                var sub = subs[i];
+                ReportProgress(subs.Count > 0 ? (float)i / subs.Count : 0f, $"Syncing {sub.Name}");
+                JobLog($"[{i + 1}/{subs.Count}] {sub.Name}");
+                await Synchronize(sub);
+            }
         }
 
         private async Task Synchronize(Subscription sub)
@@ -141,6 +155,7 @@ namespace Regard.Backend.Jobs
             catch (Exception ex)
             {
                 log.LogError(ex, $"Synchronization failed for subscription {sub}");
+                JobLog($"Synchronization failed for subscription {sub.Name}: {ex.Message}", Regard.Backend.Common.Model.MessageSeverity.Error);
             }
         }
 
@@ -205,6 +220,7 @@ namespace Regard.Backend.Jobs
                 // Store video
                 dataContext.Videos.Add(video);
                 log.LogInformation("New video {0}", video);
+                JobLog($"New video: {video.Name}");
                 await dataContext.SaveChangesAsync();
             }
         }

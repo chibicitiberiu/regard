@@ -22,5 +22,16 @@ namespace Regard.Frontend.Utils
 
             else return number.ToString();
         }
+
+        /// <summary>
+        /// Formats a duration in seconds as a compact "m:ss" (or "h:mm:ss" when at least one hour).
+        /// </summary>
+        public static string ToDurationString(this int seconds)
+        {
+            var t = TimeSpan.FromSeconds(seconds);
+            return t.TotalHours >= 1
+                ? ((int)t.TotalHours).ToString() + t.ToString(@"\:mm\:ss", CultureInfo.InvariantCulture)
+                : ((int)t.TotalMinutes).ToString() + t.ToString(@"\:ss", CultureInfo.InvariantCulture);
+        }
     }
 }

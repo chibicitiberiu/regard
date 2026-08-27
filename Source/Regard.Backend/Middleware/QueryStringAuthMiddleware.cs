@@ -23,8 +23,13 @@ namespace Regard.Backend.Middleware
 
         private bool IsRequestWhitelisted(HttpRequest request)
         {
-            // SignalR request
-            if (request.Headers["Connection"] == "Upgrade")
+            // SignalR WebSocket upgrade (some agents send "keep-alive, Upgrade", so match loosely).
+            if (request.Headers["Connection"].ToString().Contains("Upgrade", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // The SignalR hub itself, so non-WebSocket transports (SSE / long-polling negotiate)
+            // also authenticate — otherwise Clients.User(...) would silently deliver to nobody.
+            if (request.Path.StartsWithSegments("/api/message_hub"))
                 return true;
 
             if (WhitelistedPaths.Contains(request.Path.Value))

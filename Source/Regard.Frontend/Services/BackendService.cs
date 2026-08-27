@@ -206,6 +206,16 @@ namespace Regard.Services
 
         #endregion
 
+        #region Jobs
+
+        public Task<ApiResponse<Regard.Common.API.Jobs.JobListResponse>> GetJobs(int skip = 0, int take = 25)
+            => Get<Regard.Common.API.Jobs.JobListResponse>($"api/jobs?skip={skip}&take={take}");
+
+        public Task<ApiResponse<Regard.Common.API.Model.ApiJobInfo>> GetJobLog(long id)
+            => Get<Regard.Common.API.Model.ApiJobInfo>($"api/jobs/{id}");
+
+        #endregion
+
         #region Subscription folders
 
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderCreate(SubscriptionFolderCreateRequest data)

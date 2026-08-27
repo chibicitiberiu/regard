@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Regard.Backend.DB;
 
@@ -11,9 +12,11 @@ using Regard.Backend.DB;
 namespace Regard.Backend.Migrations.SqlServer
 {
     [DbContext(typeof(SQLServerDataContext))]
-    partial class SQLServerDataContextModelSnapshot : ModelSnapshot
+    [Migration("20260827150823_AddVideoDuration")]
+    partial class AddVideoDuration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -175,17 +178,11 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.Property<string>("Key")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Log")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("NextRun")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("Notify")
-                        .HasColumnType("bit");
 
                     b.Property<int>("RetryCount")
                         .HasColumnType("int");
@@ -659,8 +656,7 @@ namespace Regard.Backend.Migrations.SqlServer
                 {
                     b.HasOne("Regard.Backend.Common.Model.JobInfo", "Job")
                         .WithMany()
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("JobId");
 
                     b.HasOne("Regard.Backend.Model.UserAccount", "User")
                         .WithMany()

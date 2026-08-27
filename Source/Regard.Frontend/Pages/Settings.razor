@@ -5,14 +5,18 @@
 <div class="settings-page">
     <h2>Settings</h2>
 
-    @if (loading)
-    {
-        <p>Loading…</p>
-    }
-    else
-    {
-        <section class="settings-section">
-            <h3>Downloads</h3>
+    <TabView>
+        <TabPage>
+            <Title>Downloads</Title>
+            <Content>
+                @if (loading)
+                {
+                    <p>Loading…</p>
+                }
+                else
+                {
+                    <section class="settings-section">
+                        <h3>Downloads</h3>
 
             <div class="form-group row">
                 <label class="col-xs-4 col-form-label">Maximum resolution:</label>
@@ -140,6 +144,15 @@
                     <button class="primary ml-auto" @onclick="OnSave" disabled="@saving">Save</button>
                 </div>
             </div>
-        </section>
-    }
+                    </section>
+                }
+            </Content>
+        </TabPage>
+        <TabPage>
+            <Title>Job Log</Title>
+            <Content>
+                <JobLog />
+            </Content>
+        </TabPage>
+    </TabView>
 </div>
