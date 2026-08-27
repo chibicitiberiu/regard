@@ -3,7 +3,7 @@
 # Run Regard locally (SQLite, no Docker) for development / debugging.
 #
 #   ./run-debug.sh            run the backend (API) on http://localhost:9585
-#   ./run-debug.sh frontend   run the Blazor WASM dev server (open the URL it prints)
+#   ./run-debug.sh frontend   run the Blazor WASM dev server on http://localhost:5000
 #   ./run-debug.sh both       run both (frontend in the background; Ctrl+C stops both)
 #
 # Data + downloads live in ./.dev (git-ignored). Delete that folder to start fresh.
@@ -13,22 +13,33 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV="$REPO/.dev"
 
+BACKEND_URL="http://localhost:9585"    # the frontend's BACKEND_URL points here
+FRONTEND_URL="http://localhost:5000"
+
+# Shared env. Note: ASPNETCORE_URLS is set PER-process below (not exported) so the
+# backend and frontend don't fight over the same port in "both" mode.
 export ASPNETCORE_ENVIRONMENT=Development
-export ASPNETCORE_URLS=http://localhost:9585   # matches the frontend's BACKEND_URL
 export DataDirectory="$DEV/data"
-export DownloadDirectory="$DEV/videos"         # absolute on purpose (storage layer requires it)
-export REGARD_MIGRATE=1                         # create/upgrade the SQLite schema on start
+export DownloadDirectory="$DEV/videos"   # absolute on purpose (storage layer requires it)
+export REGARD_MIGRATE=1                   # create/upgrade the SQLite schema on start
 mkdir -p "$DataDirectory" "$DownloadDirectory"
 
-backend()  { dotnet run --project "$REPO/Source/Regard.Backend"; }
-frontend() { dotnet run --project "$REPO/Source/Regard.Frontend"; }
+backend() {
+  echo "==> Backend listening on $BACKEND_URL   (data in $DEV)"
+  ASPNETCORE_URLS="$BACKEND_URL" dotnet run --project "$REPO/Source/Regard.Backend"
+}
+frontend() {
+  echo "==> Frontend listening on $FRONTEND_URL   (talks to API at $BACKEND_URL)"
+  ASPNETCORE_URLS="$FRONTEND_URL" dotnet run --project "$REPO/Source/Regard.Frontend"
+}
 
 case "${1:-backend}" in
-  backend)  echo "Backend  -> $ASPNETCORE_URLS   (data in $DEV)"; backend ;;
-  frontend) echo "Frontend -> open the URL it prints (talks to $ASPNETCORE_URLS)"; frontend ;;
-  both)     echo "Frontend (background) + backend (foreground). Ctrl+C stops both."
-            frontend & FE=$!
-            trap 'kill "$FE" 2>/dev/null || true' EXIT
-            backend ;;
-  *)        echo "usage: $(basename "$0") [backend|frontend|both]"; exit 1 ;;
+  backend)  backend ;;
+  frontend) frontend ;;
+  both)
+    echo "==> Starting frontend (background) + backend (foreground). Ctrl+C stops both."
+    frontend & FE=$!
+    trap 'kill "$FE" 2>/dev/null || true' EXIT
+    backend ;;
+  *) echo "usage: $(basename "$0") [backend|frontend|both]"; exit 1 ;;
 esac

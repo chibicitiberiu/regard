@@ -22,7 +22,9 @@
       "name": "Regard.Frontend (Blazor WASM)",
       "type": "blazorwasm",
       "request": "launch",
-      "cwd": "${workspaceFolder}/Source/Regard.Frontend"
+      "cwd": "${workspaceFolder}/Source/Regard.Frontend",
+      "browser": "chrome",
+      "runtimeExecutable": "/usr/bin/chromium-browser"
     }
   ],
   "compounds": [
