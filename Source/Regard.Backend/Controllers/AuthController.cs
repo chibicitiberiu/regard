@@ -165,9 +165,15 @@ namespace Regard.Backend.Controllers
             if (!await roleManager.RoleExistsAsync(UserRoles.Admin))
                 await roleManager.CreateAsync(new IdentityRole(UserRoles.Admin));
 
-            var result = await userManager.AddToRoleAsync(user, UserRoles.Admin);
-            if (!result.Succeeded)
-                return StatusCode(StatusCodes.Status500InternalServerError, responseFactory.Error("Failed to assign admin role!", result.ToString()));
+            // Idempotent: the first registered account is already an admin (see Register), and the
+            // setup wizard still calls promote — so treat "already an admin" as success rather than
+            // failing with UserAlreadyInRole.
+            if (!await userManager.IsInRoleAsync(user, UserRoles.Admin))
+            {
+                var result = await userManager.AddToRoleAsync(user, UserRoles.Admin);
+                if (!result.Succeeded)
+                    return StatusCode(StatusCodes.Status500InternalServerError, responseFactory.Error("Failed to assign admin role!", result.ToString()));
+            }
 
             // Generate new token with updated credentials
             JwtSecurityToken token = await GenerateAuthToken(user);
