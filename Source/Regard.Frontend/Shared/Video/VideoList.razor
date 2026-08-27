@@ -64,9 +64,8 @@
                             <Icon Glyph="Icons.Downloaded" Class="video-badge" title="Downloaded" />
                         }
                     </div>
-                    <div class="video-badges-bottom">
-                        <span class="video-badge video-badge-duration">5:00</span>
-                    </div>
+                    @* Duration badge removed: the video model carries no duration, so this only ever
+                       showed a hardcoded "5:00". Restore once real duration is captured from yt-dlp. *@
                 </NavLink>
             </div>
             <div class="video-body">
@@ -104,11 +103,11 @@
                         }
                         @if (item.ApiVideo.IsDownloaded)
                         {
-                            <MenuItem Click="() => OnVideoDownload(item)">Download</MenuItem>
-                        }
-                        else 
-                        {
                             <MenuItem Click="() => OnVideoDeleteFiles(item)">Delete downloaded files</MenuItem>
+                        }
+                        else
+                        {
+                            <MenuItem Click="() => OnVideoDownload(item)">Download</MenuItem>
                         }
                     </Menu>
                 </div>

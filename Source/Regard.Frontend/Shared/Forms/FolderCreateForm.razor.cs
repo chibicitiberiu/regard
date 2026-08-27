@@ -15,6 +15,9 @@ namespace Regard.Frontend.Shared.Forms
         [Inject]
         BackendService Backend { get; set; }
 
+        [Inject]
+        AppState AppState { get; set; }
+
         SubscriptionFolderCreateRequest Request { get; set; } = new SubscriptionFolderCreateRequest();
 
         string ValidationMessage { get; set; }
@@ -31,6 +34,9 @@ namespace Regard.Frontend.Shared.Forms
             var (resp, httpResp) = await Backend.SubscriptionFolderCreate(Request);
             if (httpResp.IsSuccessStatusCode)
             {
+                // Refresh the tree so the new folder shows immediately, even if the SignalR
+                // push is missed (mirrors the subscription-create flow; keyed by id, no dup).
+                AppState.RequestRefresh();
                 await Submitted.InvokeAsync(null);
 
                 // clear request
