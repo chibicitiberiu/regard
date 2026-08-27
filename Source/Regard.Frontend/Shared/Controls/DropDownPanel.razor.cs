@@ -106,8 +106,11 @@ namespace Regard.Frontend.Shared.Controls
 
         public async ValueTask DisposeAsync()
         {
+            // dotNetRef is only created in OnAfterRenderAsync(firstRender), so it's still null when
+            // a panel is disposed before its first render (e.g. a tree rebuild that adds then
+            // immediately removes a node's menu). Null-guard to avoid an NRE during disposal.
             await UnregisterClickOutsideHandler();
-            dotNetRef.Dispose();
+            dotNetRef?.Dispose();
         }
 
         private async Task UpdateIsVisibleDelayed(bool value, int ms)
