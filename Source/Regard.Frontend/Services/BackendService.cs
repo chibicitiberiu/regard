@@ -8,6 +8,7 @@ using Regard.Api;
 using Regard.Common.API;
 using Regard.Common.API.Auth;
 using Regard.Common.API.Response;
+using Regard.Common.API.Settings;
 using Regard.Common.API.Subscriptions;
 using System;
 using System.Collections.Generic;
@@ -192,6 +193,16 @@ namespace Regard.Services
 
         public Task<(ApiResponse<SubscriptionFilterPreviewResponse>, HttpResponseMessage)> SubscriptionFilterPreview(SubscriptionFilterPreviewRequest data)
             => Post<SubscriptionFilterPreviewRequest, SubscriptionFilterPreviewResponse>("api/subscription/filter_preview", data);
+
+        #endregion
+
+        #region Settings
+
+        public Task<ApiResponse<ApiUserSettings>> GetSettings()
+            => Get<ApiUserSettings>("api/settings");
+
+        public Task<(ApiResponse, HttpResponseMessage)> SaveSettings(ApiUserSettings data)
+            => Post("api/settings", data);
 
         #endregion
 

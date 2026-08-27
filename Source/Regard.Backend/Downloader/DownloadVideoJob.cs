@@ -299,21 +299,64 @@ namespace Regard.Backend.Downloader
 
             #region Video Format Options
 
-            string format = optionManager.GetForSubscription(Options.Ytdl_Format, video.SubscriptionId);
-            if (format != null)
+            // Format selector: an explicit raw override wins; otherwise compose one from the
+            // structured resolution/codec options.
+            string rawFormat = optionManager.GetForSubscription(Options.Ytdl_Format, video.SubscriptionId);
+            string format;
+            if (!string.IsNullOrWhiteSpace(rawFormat))
             {
-                yield return "-f";
-                yield return format;
+                format = rawFormat;
             }
+            else
+            {
+                int maxRes = optionManager.GetForSubscription(Options.Ytdl_MaxResolution, video.SubscriptionId);
+                string exVideo = optionManager.GetForSubscription(Options.Ytdl_ExcludedVideoCodecs, video.SubscriptionId);
+                string exAudio = optionManager.GetForSubscription(Options.Ytdl_ExcludedAudioCodecs, video.SubscriptionId);
+
+                var vf = new StringBuilder();
+                if (maxRes > 0)
+                    vf.Append($"[height<={maxRes}]");
+                foreach (var codec in SplitCodecs(exVideo))
+                    vf.Append($"[vcodec!*={codec}]");
+
+                var af = new StringBuilder();
+                foreach (var codec in SplitCodecs(exAudio))
+                    af.Append($"[acodec!*={codec}]");
+
+                // Prefer the filtered separate streams, then a filtered combined stream, then a bare
+                // fallback so the selector can never match zero formats (the final /best carries no
+                // codec filter on purpose: downloading something beats failing).
+                format = $"bestvideo{vf}+bestaudio{af}/best{vf}/best";
+            }
+
+            yield return "-f";
+            yield return format;
 
             if (optionManager.GetForSubscription(Options.Ytdl_PreferFreeFormats, video.SubscriptionId))
                 yield return "--prefer-free-formats";
 
-            string mergeOutputFormat = optionManager.GetForSubscription(Options.Ytdl_MergeOutputFormat, video.SubscriptionId);
-            if (mergeOutputFormat != null)
+            // If a transcode target is set, merge straight into that container (a free remux for the
+            // merge case) and apply the chosen conversion; otherwise emit the configured merge format.
+            string transcodeTarget = optionManager.GetForSubscription(Options.Ytdl_TranscodeVideo, video.SubscriptionId);
+            if (!string.IsNullOrWhiteSpace(transcodeTarget))
             {
                 yield return "--merge-output-format";
-                yield return mergeOutputFormat;
+                yield return transcodeTarget;
+
+                string mode = optionManager.GetForSubscription(Options.Ytdl_TranscodeMode, video.SubscriptionId);
+                yield return string.Equals(mode, "recode", StringComparison.OrdinalIgnoreCase)
+                    ? "--recode-video"
+                    : "--remux-video";
+                yield return transcodeTarget;
+            }
+            else
+            {
+                string mergeOutputFormat = optionManager.GetForSubscription(Options.Ytdl_MergeOutputFormat, video.SubscriptionId);
+                if (mergeOutputFormat != null)
+                {
+                    yield return "--merge-output-format";
+                    yield return mergeOutputFormat;
+                }
             }
 
             #endregion
@@ -354,6 +397,17 @@ namespace Regard.Backend.Downloader
             yield return outputPath;
 
             yield return video.OriginalUrl;
+        }
+
+        /// <summary>
+        /// Splits a comma-separated codec-token list into trimmed, non-empty tokens.
+        /// </summary>
+        private static IEnumerable<string> SplitCodecs(string csv)
+        {
+            if (string.IsNullOrWhiteSpace(csv))
+                yield break;
+            foreach (var part in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                yield return part;
         }
 
         private string ResolveOutputPath(Video video)

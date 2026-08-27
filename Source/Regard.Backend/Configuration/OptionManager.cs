@@ -390,6 +390,27 @@ namespace Regard.Backend.Configuration
             }
         }
 
+        public bool GetForUserNoResolve<TValue>(OptionDefinition<TValue> pref, string userId, out TValue value)
+        {
+            return GetFromDatabaseUser(pref, userId, out value);
+        }
+
+        public void UnsetForUser<TValue>(OptionDefinition<TValue> pref, string userId)
+        {
+            // Mirror SetForUser's cache handling: drop this user's cached value and invalidate the
+            // folder/sub caches that inherit from it.
+            userCache.Remove(new UserCacheKey(userId, pref.Key));
+            folderCache.Invalidate();
+            subCache.Invalidate();
+
+            var dbPref = dataContext.UserOptions.Find(pref.Key, userId);
+            if (dbPref != null)
+            {
+                dataContext.UserOptions.Remove(dbPref);
+                dataContext.SaveChanges();
+            }
+        }
+
         public bool GetForSubscriptionFolderNoResolve<TValue>(OptionDefinition<TValue> pref, int folderId, out TValue value)
         {
             return GetFromDatabaseFolder(pref, folderId, out value);

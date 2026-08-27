@@ -1,0 +1,145 @@
+@page "/settings"
+@attribute [Authorize]
+@using Regard.Common.API.Settings
+
+<div class="settings-page">
+    <h2>Settings</h2>
+
+    @if (loading)
+    {
+        <p>Loading…</p>
+    }
+    else
+    {
+        <section class="settings-section">
+            <h3>Downloads</h3>
+
+            <div class="form-group row">
+                <label class="col-xs-4 col-form-label">Maximum resolution:</label>
+                <div class="col-xs-8">
+                    <select class="form-control" @bind="MaxResolutionStr">
+                        <option value="">Default</option>
+                        <option value="0">Unlimited</option>
+                        <option value="2160">2160p (4K)</option>
+                        <option value="1440">1440p</option>
+                        <option value="1080">1080p</option>
+                        <option value="720">720p</option>
+                        <option value="480">480p</option>
+                        <option value="360">360p</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-xs-4 col-form-label">Exclude video codecs:</label>
+                <div class="col-xs-8">
+                    <label class="inline-check">
+                        <input type="checkbox" @bind="OverrideVideoCodecs" /> Override default
+                    </label>
+                    @if (OverrideVideoCodecs)
+                    {
+                        <div class="codec-list">
+                            @foreach (var c in VideoCodecOptions)
+                            {
+                                <label class="inline-check" @key="c.Token">
+                                    <input type="checkbox" checked="@videoCodecs.Contains(c.Token)"
+                                           @onchange="e => ToggleCodec(videoCodecs, c.Token, e)" />
+                                    @c.Label
+                                </label>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-xs-4 col-form-label">Exclude audio codecs:</label>
+                <div class="col-xs-8">
+                    <label class="inline-check">
+                        <input type="checkbox" @bind="OverrideAudioCodecs" /> Override default
+                    </label>
+                    @if (OverrideAudioCodecs)
+                    {
+                        <div class="codec-list">
+                            @foreach (var c in AudioCodecOptions)
+                            {
+                                <label class="inline-check" @key="c.Token">
+                                    <input type="checkbox" checked="@audioCodecs.Contains(c.Token)"
+                                           @onchange="e => ToggleCodec(audioCodecs, c.Token, e)" />
+                                    @c.Label
+                                </label>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-xs-4 col-form-label">Convert (transcode) to:</label>
+                <div class="col-xs-8">
+                    <select class="form-control" @bind="TranscodeVideoStr">
+                        <option value="">Default</option>
+                        <option value="off">Off (keep original)</option>
+                        <option value="mp4">mp4</option>
+                        <option value="mkv">mkv</option>
+                        <option value="webm">webm</option>
+                    </select>
+                    @if (IsTranscodeTarget)
+                    {
+                        <div class="transcode-mode">
+                            <label class="inline-check">
+                                <input type="radio" name="tmode" checked="@(TranscodeModeVal == "remux")"
+                                       @onchange="@(() => TranscodeModeVal = "remux")" />
+                                Remux (lossless, fast)
+                            </label>
+                            <label class="inline-check">
+                                <input type="radio" name="tmode" checked="@(TranscodeModeVal == "recode")"
+                                       @onchange="@(() => TranscodeModeVal = "recode")" />
+                                Re-encode (slow, lossy)
+                            </label>
+                            @if (TranscodeModeVal == "recode")
+                            {
+                                <p class="fg-error transcode-warning">
+                                    Re-encoding runs ffmpeg on every download — CPU-heavy and lossy.
+                                    Remux only changes the container and is near-instant.
+                                </p>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <details class="advanced">
+                <summary>Advanced</summary>
+
+                <div class="form-group row">
+                    <label class="col-xs-4 col-form-label">Raw format override:</label>
+                    <div class="col-xs-8">
+                        <input class="form-control" @bind="RawFormatOverride"
+                               placeholder="(compose from the options above)" autocapitalize="none" />
+                        <small class="text-muted">When set, overrides the resolution/codec options above (yt-dlp <code>-f</code> syntax).</small>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-xs-4 col-form-label">Merge container:</label>
+                    <div class="col-xs-8">
+                        <select class="form-control" @bind="MergeOutputFormat">
+                            <option value="">Default</option>
+                            <option value="mp4">mp4</option>
+                            <option value="mkv">mkv</option>
+                            <option value="webm">webm</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+
+            <div class="form-group row">
+                <div class="col-xs-12 row">
+                    <span class="@(saved ? "fg-success" : "fg-error")">@statusMessage</span>
+                    <button class="primary ml-auto" @onclick="OnSave" disabled="@saving">Save</button>
+                </div>
+            </div>
+        </section>
+    }
+</div>

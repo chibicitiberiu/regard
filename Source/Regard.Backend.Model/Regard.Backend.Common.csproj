@@ -9,17 +9,4 @@
     <ProjectReference Include="..\YoutubeDLWrapper\YoutubeDLWrapper.csproj" />
   </ItemGroup>
 
-  <!-- T4-generated options (Options.cs is checked in; the .tt only runs in Visual Studio). -->
-  <ItemGroup>
-    <None Update="Configuration\Options.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>Options.cs</LastGenOutput>
-    </None>
-    <Compile Update="Configuration\Options.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Options.tt</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
 </Project>

@@ -5,9 +5,9 @@ namespace Regard.Backend.Configuration
     [Flags]
     public enum OptionFlags
     {
-        User,
-        SubscriptionFolder,
-        Subscription,
+        User = 1,
+        SubscriptionFolder = 2,
+        Subscription = 4,
     }
 
     public class OptionDefinition<TValue>

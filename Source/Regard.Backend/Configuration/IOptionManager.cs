@@ -9,6 +9,8 @@ namespace Regard.Backend.Configuration
 
         public TValue GetForUser<TValue>(OptionDefinition<TValue> pref, string userId);
 
+        public bool GetForUserNoResolve<TValue>(OptionDefinition<TValue> pref, string userId, out TValue value);
+
         public TValue GetForSubscriptionFolder<TValue>(OptionDefinition<TValue> pref, int folderId);
 
         public bool GetForSubscriptionFolderNoResolve<TValue>(OptionDefinition<TValue> pref, int subId, out TValue value);
@@ -24,6 +26,8 @@ namespace Regard.Backend.Configuration
         public void SetForSubscriptionFolder<TValue>(OptionDefinition<TValue> pref, int folderId, TValue value);
 
         public void SetForSubscription<TValue>(OptionDefinition<TValue> pref, int subId, TValue value);
+
+        public void UnsetForUser<TValue>(OptionDefinition<TValue> pref, string userId);
 
         public void UnsetForSubscription<TValue>(OptionDefinition<TValue> pref, int subId);
 
