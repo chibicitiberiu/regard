@@ -31,6 +31,17 @@ namespace Regard.Backend.Providers.YouTubeDL
             this.ytdlService = ytdlService;
         }
 
+        public bool CanHandleSubscriptionUrlHint(Uri uri)
+        {
+            // yt-dlp supports many sites, but for YouTube hosts it's unambiguously the
+            // right provider, so claim them up front and let the dispatcher probe us
+            // before generic providers (RSS) that would otherwise fetch-and-fail.
+            var host = uri.Host;
+            return host.Equals("youtube.com", StringComparison.OrdinalIgnoreCase)
+                || host.EndsWith(".youtube.com", StringComparison.OrdinalIgnoreCase)
+                || host.Equals("youtu.be", StringComparison.OrdinalIgnoreCase);
+        }
+
         public async Task<bool> CanHandleSubscriptionUrl(Uri uri)
         {
             try

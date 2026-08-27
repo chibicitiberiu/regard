@@ -82,9 +82,18 @@ namespace Regard.Backend.Services
 
         public async IAsyncEnumerable<ISubscriptionProvider> FindFromSubscriptionUrl(Uri uri)
         {
-            foreach (var provider in providers.Values)
+            // Probe providers that claim the URL via a cheap hint first (e.g. yt-dlp for
+            // youtube.com), so generic providers like RSS aren't consulted -- and don't
+            // fetch-and-fail -- when an obvious handler exists. OrderByDescending on a bool
+            // puts hinted providers first; OrderBy is stable, so the rest keep their
+            // original registration order.
+            var subProviders = providers.Values
+                .OfType<ISubscriptionProvider>()
+                .OrderByDescending(sp => sp.CanHandleSubscriptionUrlHint(uri));
+
+            foreach (var sp in subProviders)
             {
-                if (provider is ISubscriptionProvider sp && await sp.CanHandleSubscriptionUrl(uri))
+                if (await sp.CanHandleSubscriptionUrl(uri))
                     yield return sp;
             }
         }
