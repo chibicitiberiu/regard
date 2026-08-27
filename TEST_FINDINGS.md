@@ -38,6 +38,7 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 | **Fake hardcoded "5:00" duration** (re-addressed) | Real `Video.Duration` from yt-dlp, shown as a `m:ss`/`h:mm:ss` badge. | `5e5bdb4` |
 | **Watch page for non-downloaded videos was all TODO stubs** | Full watch page: a privacy-gated YouTube embed (`youtube-nocookie`) when the user opts in, otherwise a placeholder frame with **Download now** + **Watch on {site}** (handles any yt-dlp domain). Adds title, metric views, relative date, duration, rating stars, linkified description, an **Up next** queue (same-sub → folder → all), and mark-watched on finish. New per-user "allow embedding" setting (default off). | `c419e66` |
 | **"Import (todo)" menu item did nothing** | Real importer: paste a URL list or upload an OPML export; OPML folder groups are mirrored as Regard folders, YouTube feed URLs are rewritten to channel URLs. Runs as a background job (progress in the bell, per-URL results in the Job Log); a dialog checkbox sets per-sub auto-download, duplicates skipped by default. | `fbb2472` |
+| **No Admin/server settings UI** | New role-gated `/admin` page: allow-registration toggle, global default per-user quotas (max videos + GB), job-history retention, and full user management (list with live usage, promote/demote, enable/disable, per-user quota override, delete via a background teardown job). Quotas made transparent — a Storage & quota panel on Settings, and clear "quota reached" messages in the Job Log when a download is blocked. `disable` now actually blocks login (added a lockout check to the manual login path). | `536c707` |
 
 ---
 
@@ -55,8 +56,8 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 
 ## Incomplete / missing functionality (still open)
 
-- **[MISSING] Admin/server settings UI** — user download settings exist, but registrations toggle, sync schedule, and scheduler concurrency have no UI.
 - **[MISSING] Subtitle + filename-pattern controls** are backend-only (no UI).
+- **[MISSING] Password reset** (email flow) — logout exists, reset does not.
 
 ## Bugs / UX not yet fixed (recommend)
 

@@ -9,9 +9,9 @@ Regard is a modern rewrite that **gained** things ytsm never had (multi-site via
 key/quota, per-subscription title filters, Jellyfin integration, SignalR live updates, `@handle`
 support). Most of the ytsm gaps have now been closed — **User Settings UI**, **logout**,
 **video duration**, **live job-progress notifications + a Job Log**, a **fully functional watch page**
-(embed / watch-on-site / up-next), and **subscription import** (OPML + URL list) all shipped
-(2026-08-27 – 08-28). What remains: an **Admin settings** surface, a **subtitle/filename-pattern UI**,
-and **password reset**.
+(embed / watch-on-site / up-next), **subscription import** (OPML + URL list), and an **Admin settings +
+user-management surface** (registration toggle, global/per-user quotas, enable/disable, delete) all
+shipped (2026-08-27 – 08-28). What remains: a **subtitle/filename-pattern UI** and **password reset**.
 
 Status key: ✅ done · ◻ still open.
 
@@ -24,10 +24,13 @@ Status key: ✅ done · ◻ still open.
    the watch page when `Video.Rating` has a value (commit `c419e66`). Note the data source stays weak
    (YouTube dropped dislikes), so the value is often absent — the widget just hides itself then.
 
-2. **Settings UI (User + Admin)** — ✅ *User done* / ◻ *Admin open*. The `/settings` page now exists
-   (commit `911731f`) with download max-resolution, codec exclude lists, transcode, merge container,
-   and a raw `-f` override — plus a **Job Log** tab (`5e5bdb4`). **Admin** settings (allow-registrations,
-   sync cron schedule, scheduler concurrency) still have no UI.
+2. **Settings UI (User + Admin)** — ✅ *both done*. The `/settings` page (commit `911731f`) has download
+   max-resolution, codec exclude lists, transcode, merge container, a raw `-f` override, a **Job Log**
+   tab (`5e5bdb4`), and now a **Storage & quota** usage panel. The new admin-only `/admin` page
+   (commit `536c707`) adds an allow-registrations toggle, global default per-user quotas (max videos +
+   GB), job-history retention, and full **user management** (list with usage, promote/demote,
+   enable/disable, per-user quota override, delete). Sync-cron and scheduler concurrency were
+   deliberately left out — both are startup/appsettings-only and not safe to change at runtime.
 
 3. ✅ **Watch page for non-downloaded videos.** Done (commit `c419e66`). A non-downloaded video now
    shows either a privacy-gated YouTube embed (`youtube-nocookie`, when the user opts in via the new
@@ -88,6 +91,9 @@ so effectively both rely on an edit form to re-parent.
 3. ✅ ~~Wire the notifications panel~~ — done as a generic job-progress + Job Log system (`5e5bdb4`).
 4. ✅ ~~Watch page for non-downloaded videos~~ — done (`c419e66`): embed / watch-on-site / up-next.
 5. ✅ ~~Import (OPML/URL list)~~ — done (`fbb2472`): OPML + URL list, folder mirroring, background job.
-6. ◻ **Admin settings** page (registrations, sync schedule, concurrency) — **now the top remaining gap**.
-7. ◻ **Subtitle + filename-pattern UI** (backend-only today).
+6. ✅ ~~Admin settings~~ — done (`536c707`): `/admin` page — registration toggle, global + per-user
+   quotas (with in-Settings usage transparency + clear download-block messages), and user management
+   (promote/demote, enable/disable, delete). Sync-cron/concurrency intentionally excluded.
+7. ◻ **Subtitle + filename-pattern UI** (backend-only today) — **now the top remaining gap**.
+8. ◻ **Password reset** (email flow).
 </content>
