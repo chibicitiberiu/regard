@@ -8,21 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="compilerconfig.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="compilerconfig.json" />
-    <None Include="wwwroot\css\lib\_loading.scss" />
-    <None Include="wwwroot\css\lib\_theme.scss" />
-    <None Include="wwwroot\css\lib\_toast.scss" />
-    <None Include="wwwroot\css\lib\_utils.scss" />
-    <None Include="wwwroot\css\style.css" />
-    <None Include="wwwroot\css\style.min.css" />
-    <None Include="wwwroot\css\style.scss" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Blazored.LocalStorage" />
     <PackageReference Include="Humanizer.Core" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
@@ -33,6 +18,7 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client.Core" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="AspNetCore.SassCompiler" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
