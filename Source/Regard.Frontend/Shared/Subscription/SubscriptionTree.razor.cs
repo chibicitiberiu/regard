@@ -37,10 +37,21 @@ namespace Regard.Frontend.Shared.Subscription
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
-            await SubscriptionManager.Load();
 
+            // Subscribe BEFORE loading: Load() populates the dictionaries and raises their change
+            // events. If we subscribed afterwards, that initial population would fire into no
+            // listeners and the tree would stay empty until the next change (e.g. a manual Refresh).
             AppState.Folders.DictionaryChanged += Folders_DictionaryChanged;
             AppState.Subscriptions.DictionaryChanged += Subscriptions_DictionaryChanged;
+
+            await SubscriptionManager.Load();
+
+            // Load's await yields, so the first render (which assigns the TreeView @ref) usually
+            // happens while Load is still in flight -- OnAfterRender then builds an empty tree, and
+            // the change events raised during population may have hit the treeView==null guard.
+            // Rebuild now that the data is in and the ref is ready. No-op if the ref isn't set yet
+            // (a synchronous Load on remount); OnAfterRender(firstRender) covers that case.
+            RebuildTree();
         }
 
         protected override void OnAfterRender(bool firstRender)
