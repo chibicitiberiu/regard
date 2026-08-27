@@ -1,25 +1,25 @@
 ﻿@page "/setup/step1"
 
-<h3>Step 1: Create an administrator account</h3>
+<SetupCard Eyebrow="Setup · Step 2" Title="Create an administrator">
+    @if (AppState.ServerStatus != null && AppState.ServerStatus.HaveUsers && pickUser)
+    {
+        <p>Enter the credentials of the user that should become the system administrator.</p>
 
-@if (AppState.ServerStatus != null && AppState.ServerStatus.HaveUsers && pickUser)
-{
-    <p>Type the credentials of the user which will become the system administrator.</p>
-
-    <LoginForm SubmitText="Next" LoggedIn="OnFormCompleted">
-        <ExtraButtons>
-            <a href="#" @onclick="OnTogglePickCreate">Create new administrator account</a>
-        </ExtraButtons>
-    </LoginForm>
-}
-else
-{
-    <RegisterForm SubmitText="Next" Registered="OnFormCompleted">
-        <ExtraButtons>
-            @if (AppState.ServerStatus != null && AppState.ServerStatus.HaveUsers)
-            {
-                <a href="#" @onclick="OnTogglePickCreate">Login as an existing user</a>
-            }
-        </ExtraButtons>
-    </RegisterForm>
-}
+        <LoginForm SubmitText="Next" LoggedIn="OnFormCompleted">
+            <ExtraButtons>
+                <a href="#" @onclick="OnTogglePickCreate">Create new administrator account</a>
+            </ExtraButtons>
+        </LoginForm>
+    }
+    else
+    {
+        <RegisterForm SubmitText="Next" Registered="OnFormCompleted">
+            <ExtraButtons>
+                @if (AppState.ServerStatus != null && AppState.ServerStatus.HaveUsers)
+                {
+                    <a href="#" @onclick="OnTogglePickCreate">Login as an existing user</a>
+                }
+            </ExtraButtons>
+        </RegisterForm>
+    }
+</SetupCard>

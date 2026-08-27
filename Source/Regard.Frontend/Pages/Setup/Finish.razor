@@ -1,11 +1,11 @@
 ﻿@page "/setup/finished"
 @inject AppController appCtrl
 
-<h3>Setup complete!</h3>
+<SetupCard Eyebrow="Setup · Done" Title="Setup complete!">
+    <p>Everything is ready. You will be redirected to the home page in a moment.</p>
 
-<p>You will be redirected to the home page.</p>
-
-<button class="btn btn-primary" @onclick="GoNext" disabled="@NextClicked">Finish</button>
+    <button class="btn btn-primary" @onclick="GoNext" disabled="@NextClicked">Finish</button>
+</SetupCard>
 
 @code {
     System.Timers.Timer timer;

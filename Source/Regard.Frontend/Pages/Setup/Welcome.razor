@@ -1,11 +1,11 @@
 ﻿@page "/setup/welcome"
 @inject AppController appCtrl
 
-<h3>Welcome to Regard!</h3>
+<SetupCard Eyebrow="Setup · Step 1" Title="Welcome to Regard">
+    <p>This wizard will guide you through setting up your Regard instance &mdash; it only takes a moment.</p>
 
-<p>This wizard will guide you through setting up the application.</p>
-
-<button class="btn btn-primary" @onclick="GoNext" disabled="@NextClicked">Next</button>
+    <button class="btn btn-primary" @onclick="GoNext" disabled="@NextClicked">Next</button>
+</SetupCard>
 
 @code {
     bool NextClicked { get; set; }

@@ -1,0 +1,118 @@
+.setup-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 7vh 1rem 3rem;
+    min-height: 60vh;
+}
+
+.setup-card {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    background: linear-gradient(180deg, rgba(52, 42, 60, 0.72), rgba(30, 24, 36, 0.82));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(253, 209, 255, 0.16);
+    border-radius: 16px;
+    padding: 2.25rem 2.25rem 2rem;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 40px -18px var(--color-bg-primary);
+    overflow: hidden;
+    animation: setup-in .35s ease both;
+}
+
+/* magenta -> teal accent bar, echoing the app's background gradient */
+.setup-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-bg-primary), #d64bde, #549CA7);
+}
+
+@keyframes setup-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.setup-eyebrow {
+    font-family: var(--font-family-title);
+    text-transform: uppercase;
+    letter-spacing: .22em;
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--color-fg-primary);
+    margin-bottom: .5rem;
+}
+
+.setup-title {
+    margin: 0 0 1.1rem;
+    font-size: 1.6rem;
+    line-height: 1.2;
+    font-weight: 700;
+    color: var(--color-fg-window);
+}
+
+.setup-body {
+    color: var(--color-fg-secondary);
+    font-size: .95rem;
+}
+
+.setup-body ::deep p {
+    margin: 0 0 1.5rem;
+    line-height: 1.55;
+}
+
+/* Primary action button (Next / Finish / form submit) */
+.setup-body ::deep .btn-primary,
+.setup-body ::deep .primary,
+.setup-body ::deep button[type="submit"] {
+    display: inline-block;
+    padding: .62em 1.5em;
+    border: 0;
+    border-radius: .4em;
+    background: linear-gradient(135deg, #8a1f90, #b52ec0);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter .15s ease, transform .05s ease, box-shadow .15s ease;
+    box-shadow: 0 8px 20px -6px rgba(181, 46, 192, 0.7);
+}
+
+.setup-body ::deep .btn-primary:hover,
+.setup-body ::deep .primary:hover,
+.setup-body ::deep button[type="submit"]:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 10px 24px -6px rgba(181, 46, 192, 0.8);
+}
+
+.setup-body ::deep .btn-primary:active,
+.setup-body ::deep .primary:active,
+.setup-body ::deep button[type="submit"]:active {
+    transform: translateY(1px);
+}
+
+.setup-body ::deep .btn-primary:disabled,
+.setup-body ::deep .primary:disabled,
+.setup-body ::deep button[type="submit"]:disabled {
+    opacity: .55;
+    cursor: default;
+    box-shadow: none;
+}
+
+.setup-body ::deep a {
+    color: var(--color-fg-primary);
+    text-decoration: none;
+}
+.setup-body ::deep a:hover {
+    text-decoration: underline;
+}
+
+/* Form fields inside the card (admin step) */
+.setup-body ::deep input,
+.setup-body ::deep .form-control {
+    width: 100%;
+    box-sizing: border-box;
+}

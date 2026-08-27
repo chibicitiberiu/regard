@@ -1,0 +1,23 @@
+@* Centered card used by the first-run setup wizard (Welcome / Admin / Finish). *@
+
+<div class="setup-wrap">
+    <div class="setup-card">
+        @if (!string.IsNullOrWhiteSpace(Eyebrow))
+        {
+            <div class="setup-eyebrow">@Eyebrow</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <h1 class="setup-title">@Title</h1>
+        }
+        <div class="setup-body">
+            @ChildContent
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public string Eyebrow { get; set; } = "Setup";
+    [Parameter] public RenderFragment ChildContent { get; set; }
+}
