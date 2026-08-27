@@ -98,12 +98,17 @@ namespace Regard.Backend.Controllers
                 var url = new Uri(request.Url);
                 var user = await userManager.GetUserAsync(User);
 
-                var result = await subscriptionManager.Create(user, url, request.ParentFolderId);
+                var result = await subscriptionManager.Create(user, url, request.ParentFolderId, request.AllowDuplicate);
                 return Ok(responseFactory.Success(modelFactory.ToApi(result)));
             }
             catch (UriFormatException)
             {
                 return BadRequest(responseFactory.Error("Invalid URL format!"));
+            }
+            catch (DuplicateSubscriptionException ex)
+            {
+                // 409 so the UI can tell this apart from a hard failure and offer "create anyway".
+                return Conflict(responseFactory.Error(ex.Message));
             }
             catch (Exception ex)
             {

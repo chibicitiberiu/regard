@@ -151,7 +151,8 @@ namespace Regard.Backend.Services
 
         public async Task<Subscription> Create(UserAccount userAccount,
                                                Uri uri,
-                                               int? parentFolderId)
+                                               int? parentFolderId,
+                                               bool allowDuplicate = false)
         {
             // Verify parent folder ID exists
             SubscriptionFolder parent = null;
@@ -168,6 +169,21 @@ namespace Regard.Backend.Services
                 throw new Exception("Could not find a subscription provider that can handle this URL!");
 
             Subscription sub = await provider.CreateSubscription(uri);
+
+            // Same channel/playlist resolves to the same (provider, SubscriptionId) regardless of
+            // which URL form was pasted, so that's the reliable duplicate key. Duplicates are a
+            // valid case (e.g. same source, different filters), so this only warns unless allowed.
+            if (!allowDuplicate && sub.SubscriptionId != null)
+            {
+                var existing = dataContext.Subscriptions.AsQueryable()
+                    .Where(x => x.UserId == userAccount.Id)
+                    .Where(x => x.SubscriptionProviderId == sub.SubscriptionProviderId)
+                    .Where(x => x.SubscriptionId == sub.SubscriptionId)
+                    .FirstOrDefault();
+                if (existing != null)
+                    throw new DuplicateSubscriptionException(existing.Name);
+            }
+
             sub.User = userAccount;
             sub.ParentFolder = parent;
             dataContext.Subscriptions.Add(sub);

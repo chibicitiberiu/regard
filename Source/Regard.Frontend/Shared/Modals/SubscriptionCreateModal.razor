@@ -6,7 +6,7 @@
 
             @if (!string.IsNullOrEmpty(ErrorMessage))
             {
-                <div class="create-error">@ErrorMessage</div>
+                <div class="@(DuplicateWarning ? "create-warning" : "create-error")">@ErrorMessage</div>
             }
 
             <RgFieldWrapper Id="subcreate_url"
@@ -36,6 +36,10 @@
                         @if (Submitting)
                         {
                             <span class="btn-spinner"></span><span>Creating&hellip;</span>
+                        }
+                        else if (DuplicateWarning)
+                        {
+                            <span>Create anyway</span>
                         }
                         else
                         {

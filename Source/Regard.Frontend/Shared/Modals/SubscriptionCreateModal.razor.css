@@ -9,6 +9,17 @@
     line-height: 1.4;
 }
 
+.create-warning {
+    margin-bottom: 1rem;
+    padding: .6rem .8rem;
+    border-radius: .4rem;
+    background: rgba(166, 132, 104, 0.18);
+    border: 1px solid var(--color-fg-warning);
+    color: var(--color-fg-warning);
+    font-size: .9rem;
+    line-height: 1.4;
+}
+
 .btn-spinner {
     display: inline-block;
     width: 1em;
