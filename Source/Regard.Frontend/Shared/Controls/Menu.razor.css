@@ -1,0 +1,46 @@
+/* Dropdown menu polish: inner padding + aligned icon/label rows + a proper separator.
+   .menu-items is Menu's own element (scoped directly); the items/separators come from
+   MenuItem/MenuSeparator as child content, so they need ::deep. */
+
+.menu-items {
+    padding: .35rem;
+    min-width: 12.5rem;
+}
+
+.menu-items ::deep .menu-item {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .5rem .7rem;
+    margin: 0;
+    line-height: 1.25;
+    white-space: nowrap;
+    color: var(--color-fg);
+}
+
+/* Consistent, muted icon box for both material-icons glyphs and inline svgs. */
+.menu-items ::deep .menu-item .material-icons,
+.menu-items ::deep .menu-item .svg-icon {
+    flex: 0 0 auto;
+    width: 1.35em;
+    height: 1.35em;
+    font-size: 1.35em;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-fg-secondary);
+    fill: currentColor;
+}
+
+.menu-items ::deep .menu-item:hover .material-icons,
+.menu-items ::deep .menu-item:hover .svg-icon {
+    color: var(--color-fg-primary);
+}
+
+.menu-items ::deep .menu-separator {
+    border: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.09);
+    margin: .35rem .3rem;
+}
