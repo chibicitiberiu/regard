@@ -36,5 +36,11 @@ namespace Regard.Common.API.Settings
 
         /// <summary>Container to merge separate video+audio into. null = inherit.</summary>
         public string MergeOutputFormat { get; set; }
+
+        /// <summary>
+        /// Allow embedding the source site's player (e.g. YouTube) on the watch page for
+        /// non-downloaded videos. null = inherit the default (off).
+        /// </summary>
+        public bool? AllowEmbedding { get; set; }
     }
 }

@@ -55,7 +55,9 @@ namespace Regard.Backend.Services
                 UploaderName = video.UploaderName,
                 Views = video.Views,
                 Duration = video.Duration,
-                Rating = video.Rating
+                Rating = video.Rating,
+                OriginalUrl = video.OriginalUrl
+                // EmbedUrl is set by VideoController.List (it depends on the per-user embedding setting).
             };
         }
     }

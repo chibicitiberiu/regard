@@ -33,6 +33,9 @@ namespace Regard.Frontend.Pages
         // "" = inherit default; otherwise a container.
         protected string MergeOutputFormat { get; set; } = string.Empty;
 
+        // "" = inherit default (off); "on" = allow embedding; "off" = never embed.
+        protected string AllowEmbeddingStr { get; set; } = string.Empty;
+
         protected bool IsTranscodeTarget =>
             TranscodeVideoStr != string.Empty && TranscodeVideoStr != "off";
 
@@ -85,6 +88,8 @@ namespace Regard.Frontend.Pages
 
             RawFormatOverride = s.RawFormatOverride ?? string.Empty;
             MergeOutputFormat = s.MergeOutputFormat ?? string.Empty;
+
+            AllowEmbeddingStr = s.AllowEmbedding.HasValue ? (s.AllowEmbedding.Value ? "on" : "off") : string.Empty;
         }
 
         private void ToggleCodec(HashSet<string> set, string token, ChangeEventArgs e)
@@ -113,6 +118,8 @@ namespace Regard.Frontend.Pages
                 TranscodeMode = IsTranscodeTarget ? TranscodeModeVal : null,
                 RawFormatOverride = string.IsNullOrWhiteSpace(RawFormatOverride) ? null : RawFormatOverride,
                 MergeOutputFormat = string.IsNullOrEmpty(MergeOutputFormat) ? null : MergeOutputFormat,
+                // "" -> inherit (null); "on" -> true; "off" -> false.
+                AllowEmbedding = AllowEmbeddingStr == string.Empty ? (bool?)null : AllowEmbeddingStr == "on",
             };
 
             var (resp, httpResp) = await Backend.SaveSettings(request);

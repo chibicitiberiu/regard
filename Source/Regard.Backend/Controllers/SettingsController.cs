@@ -45,6 +45,7 @@ namespace Regard.Backend.Controllers
                 TranscodeMode = GetOrNull(Options.Ytdl_TranscodeMode, user.Id),
                 RawFormatOverride = GetOrNull(Options.Ytdl_Format, user.Id),
                 MergeOutputFormat = GetOrNull(Options.Ytdl_MergeOutputFormat, user.Id),
+                AllowEmbedding = GetOrNull(Options.Ui_AllowEmbedding, user.Id),
             };
             return Ok(responseFactory.Success(settings));
         }
@@ -66,6 +67,7 @@ namespace Regard.Backend.Controllers
             SetOrUnset(Options.Ytdl_TranscodeMode, user.Id, request.TranscodeMode);
             SetOrUnset(Options.Ytdl_Format, user.Id, request.RawFormatOverride);
             SetOrUnset(Options.Ytdl_MergeOutputFormat, user.Id, request.MergeOutputFormat);
+            SetOrUnset(Options.Ui_AllowEmbedding, user.Id, request.AllowEmbedding);
 
             return Ok(responseFactory.Success());
         }
@@ -75,6 +77,9 @@ namespace Regard.Backend.Controllers
 
         private string GetOrNull(OptionDefinition<string> pref, string userId)
             => optionManager.GetForUserNoResolve(pref, userId, out string v) ? v : null;
+
+        private bool? GetOrNull(OptionDefinition<bool> pref, string userId)
+            => optionManager.GetForUserNoResolve(pref, userId, out bool v) ? v : (bool?)null;
 
         private string[] GetCodecsOrNull(OptionDefinition<string> pref, string userId)
         {
@@ -94,6 +99,12 @@ namespace Regard.Backend.Controllers
         private void SetOrUnset(OptionDefinition<string> pref, string userId, string value)
         {
             if (value != null) optionManager.SetForUser(pref, userId, value);
+            else optionManager.UnsetForUser(pref, userId);
+        }
+
+        private void SetOrUnset(OptionDefinition<bool> pref, string userId, bool? value)
+        {
+            if (value.HasValue) optionManager.SetForUser(pref, userId, value.Value);
             else optionManager.UnsetForUser(pref, userId);
         }
 

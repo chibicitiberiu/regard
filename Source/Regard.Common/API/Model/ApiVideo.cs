@@ -39,5 +39,15 @@ namespace Regard.Common.API.Model
         public int? Duration { get; set; }
 
         public float? Rating { get; set; }
+
+        /// <summary>The video's canonical page URL on its source site (yt-dlp webpage_url).</summary>
+        public string OriginalUrl { get; set; }
+
+        /// <summary>
+        /// An embeddable player URL, set only when the user allows embedding AND the source host is
+        /// embeddable (YouTube today). Null otherwise — the watch page then shows the download /
+        /// watch-on-site placeholder instead of an embedded player.
+        /// </summary>
+        public string EmbedUrl { get; set; }
     }
 }

@@ -1,51 +1,160 @@
-﻿@page "/watch/{videoId:int}"
+@page "/watch/{videoId:int}"
+@using Regard.Common.API.Model
+@using Regard.Frontend.Utils
 
 @if (errorMessage != null)
 {
-    <div>Error: @errorMessage</div>
+    <div class="alert-card fg-error">Error: @errorMessage</div>
 }
 
 @if (video != null)
 {
-    @if (video.IsDownloaded)
-    { 
-        <Video ShowControls="true"
-               AutoPlay="true"
-               Error="e => errorMessage = e.Message">
-            <source src="@videoStreamUri" type="@video.StreamMimeType"
-                    @onerror="e => { errorMessage = e.Message; StateHasChanged(); }"/>
-        </Video>
-    }
-    else
-    {
-        <div>
-            <h2>Video is not yet downloaded</h2>
-            TODO: show something here
-            <ul>
-                <li>TODO: Show embedded video</li>
-                <li>TODO: View on original site</li>
-                <li>TODO: Download now</li>
-            </ul>
-        </div>
-    }
+    <div class="watch-layout">
+        <div class="watch-main">
+            <div class="watch-player">
+                @if (video.IsDownloaded)
+                {
+                    <Video ShowControls="true"
+                           AutoPlay="true"
+                           Ended="OnPlaybackEnded"
+                           Error="e => { errorMessage = e.Message; StateHasChanged(); }">
+                        <source src="@videoStreamUri" type="@video.StreamMimeType"
+                                @onerror="e => { errorMessage = e.Message; StateHasChanged(); }" />
+                    </Video>
+                }
+                else if (video.EmbedUrl != null)
+                {
+                    <div class="watch-embed">
+                        <iframe src="@video.EmbedUrl"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen></iframe>
+                    </div>
+                }
+                else
+                {
+                    <div class="watch-unavailable">
+                        <div class="watch-unavailable-inner">
+                            <div class="watch-unavailable-glyph">&#9654;</div>
+                            <p class="watch-unavailable-title">This video isn't downloaded</p>
+                            <p class="text-muted">
+                                @if (!embeddingAllowed)
+                                {
+                                    <span>Embedding external players is turned off. Download it, or watch it on the original site.</span>
+                                }
+                                else
+                                {
+                                    <span>This site can't be embedded here. Download it, or watch it on the original site.</span>
+                                }
+                            </p>
+                            <div class="watch-unavailable-actions">
+                                <button class="primary" @onclick="OnDownloadNow" disabled="@downloadQueued">
+                                    @(downloadQueued ? "Queued…" : "Download now")
+                                </button>
+                                @if (watchOnHost != null)
+                                {
+                                    <a class="watch-btn" href="@video.OriginalUrl" target="_blank" rel="noopener noreferrer">
+                                        Watch on @watchOnHost
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
 
+            <div class="watch-info">
+                <h1 class="watch-title">@video.Name</h1>
 
-    <div class="player-view-stats">
-        <div class="left-stats">
-            <h3>@video?.Name</h3><br>
-            <h5>@video.Views Views   •    Posted @video.Published   •    Score @video.Rating/5</h5>
+                <div class="watch-meta">
+                    <div class="watch-meta-left">
+                        @if (subscription?.ThumbnailUrl != null)
+                        {
+                            <img class="channel-icon" src="@subscription.ThumbnailUrl" alt="@video.UploaderName">
+                        }
+                        <span class="watch-uploader">@video.UploaderName</span>
+                    </div>
+                    <div class="watch-meta-right text-muted">
+                        @if (video.Views.HasValue)
+                        {
+                            <span>@video.Views.Value.ToMetric(decimals: 1) views</span>
+                            <span class="dot">&#x2022;</span>
+                        }
+                        <span>@video.Published.ToLocalTime().Humanize()</span>
+                        @if (video.Duration.HasValue)
+                        {
+                            <span class="dot">&#x2022;</span>
+                            <span>@video.Duration.Value.ToDurationString()</span>
+                        }
+                    </div>
+                </div>
+
+                @if (video.Rating.HasValue)
+                {
+                    <div class="watch-rating" title="@($"{video.Rating.Value.ToString("0.0")} / 5")">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span class="star @(i <= System.Math.Round(video.Rating.Value) ? "star-full" : "star-empty")">&#x2605;</span>
+                        }
+                        <span class="watch-rating-value text-muted">@video.Rating.Value.ToString("0.0")/5</span>
+                    </div>
+                }
+
+                <div class="watch-actions">
+                    @if (!video.IsDownloaded)
+                    {
+                        <button class="watch-btn" @onclick="OnDownloadNow" disabled="@downloadQueued">
+                            @(downloadQueued ? "Queued…" : "Download")
+                        </button>
+                    }
+                    @if (video.IsWatched)
+                    {
+                        <button class="watch-btn" @onclick="OnMarkNotWatched">Mark not watched</button>
+                    }
+                    else
+                    {
+                        <button class="watch-btn" @onclick="OnMarkWatched">Mark watched</button>
+                    }
+                    @if (watchOnHost != null)
+                    {
+                        <a class="watch-btn" href="@video.OriginalUrl" target="_blank" rel="noopener noreferrer">Watch on @watchOnHost</a>
+                    }
+                </div>
+
+                <div class="watch-description">
+                    @FormattedDescription
+                </div>
+            </div>
         </div>
-        <div class="right-stats">
-            @video.UploaderName
-            @if (subscription?.ThumbnailUrl != null)
+
+        <aside class="watch-upnext">
+            <h3>Up next</h3>
+            @if (upNext == null)
             {
-                <span>&nbsp;&#x2022;&nbsp;</span>
-                <img class="channel-icon" src="@subscription.ThumbnailUrl" alt="@subscription.Name">
+                <p class="text-muted">Loading…</p>
             }
-        </div>
-    </div>
-
-    <div class="video-description">
-        @FormattedDescription
+            else if (upNext.Count == 0)
+            {
+                <p class="text-muted">Nothing up next.</p>
+            }
+            else
+            {
+                @foreach (var v in upNext)
+                {
+                    <NavLink class="upnext-item" href="@($"/watch/{v.Id}")" @key="v.Id">
+                        <div class="upnext-thumb">
+                            <img src="@ThumbUrl(v)" alt="" />
+                            @if (v.Duration.HasValue)
+                            {
+                                <span class="upnext-duration">@v.Duration.Value.ToDurationString()</span>
+                            }
+                        </div>
+                        <div class="upnext-text">
+                            <span class="upnext-title">@v.Name</span>
+                            <small class="text-muted">@v.UploaderName</small>
+                        </div>
+                    </NavLink>
+                }
+            }
+        </aside>
     </div>
 }

@@ -113,6 +113,22 @@
                 </div>
             </div>
 
+            <div class="form-group row">
+                <label class="col-xs-4 col-form-label">Embed external players:</label>
+                <div class="col-xs-8">
+                    <select class="form-control" @bind="AllowEmbeddingStr">
+                        <option value="">Default (off)</option>
+                        <option value="on">Allow embedding</option>
+                        <option value="off">Never embed</option>
+                    </select>
+                    <small class="text-muted">
+                        When allowed, a video you haven't downloaded plays in its source site's player
+                        (e.g. YouTube) on the watch page. Off keeps things private — you get a
+                        "Download" and "Watch on the original site" prompt instead.
+                    </small>
+                </div>
+            </div>
+
             <details class="advanced">
                 <summary>Advanced</summary>
 

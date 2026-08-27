@@ -402,5 +402,19 @@ namespace Regard.Backend.Configuration
             OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
         );
 
+        /// <summary>
+        /// Allow embedding the source site's player (e.g. YouTube) on the watch page for videos that
+        /// aren't downloaded. Off by default for privacy: when off, a non-downloaded video shows a
+        /// placeholder with "Download now" and "Watch on the original site" instead of loading a
+        /// third-party player.
+        /// </summary>
+        public static readonly OptionDefinition<bool> Ui_AllowEmbedding = new OptionDefinition<bool>(
+            false,
+            "ui.allow_embedding",
+            "Ui:AllowEmbedding",
+            null,
+            OptionFlags.User
+        );
+
     }
 }

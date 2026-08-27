@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Regard.Backend.Common.Utils;
+using Regard.Backend.Configuration;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.API.Model;
@@ -24,13 +25,15 @@ namespace Regard.Backend.Controllers
         private readonly ApiResponseFactory responseFactory;
         private readonly ApiModelFactory modelFactory;
         private readonly IVideoStorageService videoStorage;
+        private readonly IOptionManager optionManager;
 
         public VideoController(UserManager<UserAccount> userManager,
                                VideoManager videoManager,
                                SubscriptionManager subscriptionManager,
                                ApiResponseFactory responseFactory,
                                ApiModelFactory modelFactory,
-                               IVideoStorageService videoStorage)
+                               IVideoStorageService videoStorage,
+                               IOptionManager optionManager)
         {
             this.userManager = userManager;
             this.videoManager = videoManager;
@@ -38,6 +41,7 @@ namespace Regard.Backend.Controllers
             this.responseFactory = responseFactory;
             this.modelFactory = modelFactory;
             this.videoStorage = videoStorage;
+            this.optionManager = optionManager;
         }
 
         [HttpPost]
@@ -94,10 +98,16 @@ namespace Regard.Backend.Controllers
                 .ToArray();
             var apiVideos = new List<ApiVideo>();
 
+            // Embedding is a per-user privacy choice (default off); only expose an embed URL when the
+            // user allows it AND the source host is actually embeddable (else the watch page shows the
+            // download / watch-on-site placeholder).
+            bool embedAllowed = user != null && optionManager.GetForUser(Options.Ui_AllowEmbedding, user.Id);
+
             foreach (var video in videos)
             {
                 var apiVideo = modelFactory.ToApi(video);
                 apiVideo.StreamMimeType = await videoStorage.GetMimeType(video);
+                apiVideo.EmbedUrl = embedAllowed ? VideoEmbedHelper.GetEmbedUrl(video) : null;
                 apiVideos.Add(apiVideo);
             }
 
