@@ -39,14 +39,27 @@ namespace Regard.Frontend.Shared.Subscription
             await base.OnInitializedAsync();
             await SubscriptionManager.Load();
 
-            RebuildTree();
-
             AppState.Folders.DictionaryChanged += Folders_DictionaryChanged;
             AppState.Subscriptions.DictionaryChanged += Subscriptions_DictionaryChanged;
         }
 
+        protected override void OnAfterRender(bool firstRender)
+        {
+            base.OnAfterRender(firstRender);
+
+            // The TreeView @ref is only populated after the first render, so build the initial
+            // tree here rather than in OnInitializedAsync (which may complete before any render).
+            if (firstRender)
+                RebuildTree();
+        }
+
         private void RebuildTree()
         {
+            // Guard against being called before the TreeView @ref is assigned (e.g. a dictionary
+            // change that arrives before the first render) — OnAfterRender builds it once ready.
+            if (treeView == null)
+                return;
+
             treeFolders.Clear();
             treeView.Root.Children.Clear();
 
@@ -65,6 +78,8 @@ namespace Regard.Frontend.Shared.Subscription
             // Create subscription leafs
             foreach (var sub in AppState.Subscriptions.Values)
                 AddSubscription(sub);
+
+            StateHasChanged();
         }
 
         public void DeselectAll()
@@ -74,6 +89,9 @@ namespace Regard.Frontend.Shared.Subscription
 
         private void Subscriptions_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscription> e)
         {
+            if (treeView == null)   // not rendered yet; OnAfterRender will build from current state
+                return;
+
             if (e.Action == NotifyCollectionChangedAction.Reset)
             {
                 RebuildTree();
@@ -90,6 +108,9 @@ namespace Regard.Frontend.Shared.Subscription
 
         private void Folders_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscriptionFolder> e)
         {
+            if (treeView == null)   // not rendered yet; OnAfterRender will build from current state
+                return;
+
             if (e.Action == NotifyCollectionChangedAction.Reset || e.Action == NotifyCollectionChangedAction.Replace)
             {
                 RebuildTree();
