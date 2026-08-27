@@ -75,6 +75,17 @@ namespace Regard.Frontend.Services
                 });
         }
 
+        /// <summary>Pops a transient info toast (e.g. a "started" confirmation from a dialog).</summary>
+        public void ShowInfo(string message)
+        {
+            ShowToast(new ToastItem
+            {
+                Id = nextToastId++,
+                Severity = ApiMessageSeverity.Info,
+                Message = message,
+            });
+        }
+
         private void ShowToast(ToastItem toast)
         {
             Toasts.Insert(0, toast);

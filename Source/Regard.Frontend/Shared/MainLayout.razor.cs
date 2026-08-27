@@ -17,6 +17,7 @@ namespace Regard.Frontend.Shared
         private SubscriptionCreateEmptyModal subscriptionCreateEmptyModal;
         private FolderCreateModal folderCreateModal;
         private VideoAddModal videoAddModal;
+        private ImportModal importModal;
 
         private ElementReference addButton;
         private bool isAddMenuVisible = false;
@@ -59,6 +60,11 @@ namespace Regard.Frontend.Shared
         private async Task OnAddVideo()
         {
             await videoAddModal?.Show();
+        }
+
+        private async Task OnImport()
+        {
+            await importModal?.Show();
         }
 
         private void OnRefresh()

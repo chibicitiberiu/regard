@@ -329,6 +329,33 @@ namespace Regard.Backend.Services
             }
         }
 
+        /// <summary>
+        /// Returns the user's folder named <paramref name="name"/> under <paramref name="parentFolderId"/>
+        /// (case-insensitive), creating it if absent. Used by import to mirror OPML folder groups.
+        /// </summary>
+        public SubscriptionFolder GetOrCreateFolder(UserAccount user, string name, int? parentFolderId)
+        {
+            var existing = dataContext.SubscriptionFolders.AsQueryable()
+                .Where(x => x.UserId == user.Id)
+                .Where(x => x.ParentId == parentFolderId)
+                .Where(x => x.Name.ToUpper() == name.ToUpper())
+                .FirstOrDefault();
+            if (existing != null)
+                return existing;
+
+            var folder = new SubscriptionFolder()
+            {
+                User = user,
+                ParentId = parentFolderId,
+                Name = name,
+            };
+            dataContext.SubscriptionFolders.Add(folder);
+            dataContext.SaveChanges();
+
+            FolderCreated?.Invoke(this, new SubscriptionFolderCreatedEventArgs() { User = user, Folder = folder });
+            return folder;
+        }
+
         public SubscriptionFolder GetFolder(UserAccount user, int id)
         {
             return dataContext.SubscriptionFolders.AsQueryable()

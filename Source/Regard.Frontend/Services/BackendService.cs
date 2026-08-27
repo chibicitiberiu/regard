@@ -176,6 +176,9 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionCreateEmpty(SubscriptionCreateEmptyRequest data)
             => Post("api/subscription/create_empty", data);
 
+        public Task<(ApiResponse<SubscriptionImportResponse>, HttpResponseMessage)> SubscriptionImport(SubscriptionImportRequest data)
+            => Post<SubscriptionImportRequest, SubscriptionImportResponse>("api/subscription/import", data);
+
         public Task<(ApiResponse<SubscriptionListResponse>, HttpResponseMessage)> SubscriptionList(SubscriptionListRequest data)
             => Post<SubscriptionListRequest, SubscriptionListResponse>("api/subscription/list", data);
 

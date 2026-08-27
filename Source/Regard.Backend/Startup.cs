@@ -156,6 +156,7 @@ namespace Regard.Backend
             services.AddScoped<DeleteSubscriptionFolderFilesJob>();
             services.AddScoped<DownloadVideoJob>();
             services.AddScoped<FetchThumbnailsJob>();
+            services.AddScoped<ImportSubscriptionsJob>();
             services.AddScoped<InitJob>();
             services.AddScoped<JellyfinSyncJob>();
             services.AddScoped<SynchronizeJob>();

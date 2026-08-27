@@ -13,6 +13,7 @@ using Regard.Common.API.Model;
 using Regard.Backend.Configuration;
 using Regard.Backend.DB;
 using Regard.Backend.Downloader;
+using Regard.Backend.Jobs;
 
 namespace Regard.Backend.Controllers
 {
@@ -27,6 +28,7 @@ namespace Regard.Backend.Controllers
         private readonly IOptionManager optionManager;
         private readonly DataContext dataContext;
         private readonly IVideoDownloaderService videoDownloader;
+        private readonly RegardScheduler scheduler;
 
         public SubscriptionController(UserManager<UserAccount> userManager,
                                       SubscriptionManager subscriptionManager,
@@ -34,7 +36,8 @@ namespace Regard.Backend.Controllers
                                       ApiModelFactory modelFactory,
                                       IOptionManager optionManager,
                                       DataContext dataContext,
-                                      IVideoDownloaderService videoDownloader)
+                                      IVideoDownloaderService videoDownloader,
+                                      RegardScheduler scheduler)
         {
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
@@ -43,6 +46,7 @@ namespace Regard.Backend.Controllers
             this.optionManager = optionManager;
             this.dataContext = dataContext;
             this.videoDownloader = videoDownloader;
+            this.scheduler = scheduler;
         }
 
         [HttpPost]
@@ -116,6 +120,29 @@ namespace Regard.Backend.Controllers
                 // or a provider failed while resolving it).
                 return BadRequest(responseFactory.Error("Could not add subscription: " + ex.Message, ex.ToString()));
             }
+        }
+
+        [HttpPost]
+        [Route("import")]
+        [Authorize]
+        public async Task<IActionResult> Import([FromBody] SubscriptionImportRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(responseFactory.Error("Not authenticated."));
+
+            // Parse synchronously so we can report the batch size and reject empty input right away;
+            // the slow per-URL adds run in a background job (progress in the bell, results in Job Log).
+            var tree = SubscriptionImportParser.Parse(request.Content ?? "");
+            int count = SubscriptionImportParser.CountFeeds(tree);
+            if (count == 0)
+                return BadRequest(responseFactory.Error("No subscriptions found in the input."));
+
+            var treeJson = JsonUtils.Serialize(tree);
+            await ImportSubscriptionsJob.Schedule(scheduler, user.Id, treeJson,
+                request.ParentFolderId, request.AllowDuplicate, request.AutoDownload);
+
+            return Ok(responseFactory.Success(new SubscriptionImportResponse() { Count = count }));
         }
 
         [HttpPost]

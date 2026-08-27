@@ -12,6 +12,8 @@
 
         <VideoAddModal @ref="videoAddModal" />
 
+        <ImportModal @ref="importModal" />
+
         <NavMenu LogoClicked="@OnLogoClicked" />
 
         <div class="main">
@@ -57,9 +59,9 @@
                                 Video
                             </MenuItem>
                             <MenuSeparator />
-                            <MenuItem>
+                            <MenuItem Click="OnImport">
                                 <Icon Glyph="Icons.Import" />
-                                Import (todo)
+                                Import
                             </MenuItem>
                         </Menu>
                     </div>

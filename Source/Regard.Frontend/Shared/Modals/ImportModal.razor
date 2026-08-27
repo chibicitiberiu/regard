@@ -1,0 +1,64 @@
+<Modal @ref="modal">
+    <Title>Import subscriptions</Title>
+    <Body>
+        <EditForm Model="Request" OnValidSubmit="OnSubmit">
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="create-error">@ErrorMessage</div>
+            }
+
+            <RgFieldWrapper Id="import_file" Label="OPML file:" LabelWidth="3" Required="false">
+                <Field>
+                    <InputFile OnChange="OnFile" accept=".opml,.xml" class="form-control" />
+                    @if (fileInfo != null)
+                    {
+                        <small class="text-muted">@fileInfo</small>
+                    }
+                </Field>
+                <HelpText>Upload a YouTube/OPML subscriptions export — its contents fill the box below.</HelpText>
+            </RgFieldWrapper>
+
+            <RgInputTextArea Id="import_content"
+                             @bind-Value="Request.Content"
+                             Label="URLs or OPML:" LabelWidth="3"
+                             Required="false"
+                             ValidationFor="() => Request.Content"
+                             rows="8"
+                             autocapitalize="none"
+                             placeholder="One URL per line, or paste OPML XML." />
+
+            <FolderSelect Id="import_parent"
+                          @bind-Value="Request.ParentFolderId"
+                          Label="Folder:" LabelWidth="3"
+                          Required="false" />
+
+            <RgFieldWrapper Id="import_opts" Label="Options:" LabelWidth="3" Required="false">
+                <Field>
+                    <label class="inline-check">
+                        <input type="checkbox" @bind="Request.AutoDownload" /> Automatically download new videos
+                    </label>
+                    <label class="inline-check">
+                        <input type="checkbox" @bind="Request.AllowDuplicate" /> Allow duplicates
+                    </label>
+                </Field>
+            </RgFieldWrapper>
+
+            <div class="row">
+                <div class="col-xs-12 row">
+                    <button class="primary ml-auto" type="submit" disabled="@(!SubmitEnabled)">
+                        @if (Submitting)
+                        {
+                            <span class="btn-spinner"></span><span>Importing&hellip;</span>
+                        }
+                        else
+                        {
+                            <span>Import</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+        </EditForm>
+    </Body>
+</Modal>

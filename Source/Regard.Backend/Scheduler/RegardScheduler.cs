@@ -25,6 +25,7 @@ namespace Regard.Backend.Services
         {
             typeof(DownloadVideoJob),
             typeof(SynchronizeJob),
+            typeof(ImportSubscriptionsJob),
         };
 
         public RegardScheduler(ILogger<RegardScheduler> log,
