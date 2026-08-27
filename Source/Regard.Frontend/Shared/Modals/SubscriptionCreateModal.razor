@@ -4,22 +4,23 @@
         <EditForm Model="Request"
                   OnValidSubmit="OnSubmit">
 
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="create-error">@ErrorMessage</div>
+            }
+
             <RgFieldWrapper Id="subcreate_url"
                             Label="Url:" LabelWidth="2"
                             Required="true">
                 <Field>
-                    <div class="input-wrapper @UrlStateClass">
-                        <BOIInputText @bind-Value="@Request.Url"
-                                      @onkeyup="OnUrlKeyUp"
-                                      type="url"
-                                      id="register_username"
-                                      class="form-control"
-                                      autocomplete="username"
-                                      autocapitalize="none"
-                                      autofocus
-                                      required>
-                        </BOIInputText>
-                    </div>
+                    <BOIInputText @bind-Value="@Request.Url"
+                                  type="url"
+                                  id="subcreate_url_input"
+                                  class="form-control"
+                                  autocapitalize="none"
+                                  autofocus
+                                  required>
+                    </BOIInputText>
                 </Field>
                 <HelpText>Paste an URL to something you want to subscribe to, such as a channel, a playlist or a search.</HelpText>
             </RgFieldWrapper>
@@ -28,15 +29,19 @@
                           @bind-Value="Request.ParentFolderId"
                           Label="Folder:" LabelWidth="2"
                           Required="true" />
-            <div class="form-group row">
-                <div class="col-xs-12 fg-error">
-                    @ValidationMessage
-                </div>
-            </div>
 
             <div class="row">
                 <div class="col-xs-12 row">
-                    <button class="primary ml-auto" type="submit" disabled="@(!SubmitEnabled)">Create</button>
+                    <button class="primary ml-auto" type="submit" disabled="@(!SubmitEnabled)">
+                        @if (Submitting)
+                        {
+                            <span class="btn-spinner"></span><span>Creating&hellip;</span>
+                        }
+                        else
+                        {
+                            <span>Create</span>
+                        }
+                    </button>
                 </div>
             </div>
 

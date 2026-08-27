@@ -22,11 +22,19 @@ namespace Regard.Backend.Providers.YouTubeDL
                 || s1.Equals("c", StringComparison.InvariantCultureIgnoreCase)
                 || s1.Equals("user", StringComparison.InvariantCultureIgnoreCase);
 
-            if (isChannel)
+            if (isChannel && uri.Segments.Length >= 3)
             {
                 string channelId = uri.Segments[2].Trim('/');
                 var builder = new UriBuilder(uri);
                 builder.Path = $"{s1}/{channelId}/videos";
+                return builder.Uri;
+            }
+
+            // youtube.com/@Handle -> youtube.com/@Handle/videos (the channel's uploads tab)
+            else if (s1.StartsWith("@") && uri.Segments.Length == 2)
+            {
+                var builder = new UriBuilder(uri);
+                builder.Path = $"{s1}/videos";
                 return builder.Uri;
             }
 

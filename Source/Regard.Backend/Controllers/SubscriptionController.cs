@@ -105,6 +105,12 @@ namespace Regard.Backend.Controllers
             {
                 return BadRequest(responseFactory.Error("Invalid URL format!"));
             }
+            catch (Exception ex)
+            {
+                // Surface a clean message instead of a bare 500 (e.g. no provider can handle the URL,
+                // or a provider failed while resolving it).
+                return BadRequest(responseFactory.Error("Could not add subscription: " + ex.Message, ex.ToString()));
+            }
         }
 
         [HttpPost]

@@ -1,0 +1,26 @@
+.create-error {
+    margin-bottom: 1rem;
+    padding: .6rem .8rem;
+    border-radius: .4rem;
+    background: rgba(166, 83, 85, 0.18);
+    border: 1px solid var(--color-fg-error);
+    color: var(--color-fg-error);
+    font-size: .9rem;
+    line-height: 1.4;
+}
+
+.btn-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: .5em;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: create-spin .7s linear infinite;
+    vertical-align: -.15em;
+}
+
+@keyframes create-spin {
+    to { transform: rotate(360deg); }
+}
