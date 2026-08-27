@@ -23,7 +23,7 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 
 ---
 
-## Fixed in later passes (2026-08-27)
+## Fixed in later passes (2026-08-27 to 08-28)
 
 | Item (was) | Fix | Commit |
 |---|---|---|
@@ -36,6 +36,7 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 | **Empty state is a blank void** | Empty-state guidance in the video list and subscription tree. | `5e5bdb4` |
 | **Modals don't close on Escape** | Escape-to-close via a keydown registry + Modal interop. | `5e5bdb4` |
 | **Fake hardcoded "5:00" duration** (re-addressed) | Real `Video.Duration` from yt-dlp, shown as a `m:ss`/`h:mm:ss` badge. | `5e5bdb4` |
+| **Watch page for non-downloaded videos was all TODO stubs** | Full watch page: a privacy-gated YouTube embed (`youtube-nocookie`) when the user opts in, otherwise a placeholder frame with **Download now** + **Watch on {site}** (handles any yt-dlp domain). Adds title, metric views, relative date, duration, rating stars, linkified description, an **Up next** queue (same-sub → folder → all), and mark-watched on finish. New per-user "allow embedding" setting (default off). | `c419e66` |
 
 ---
 
@@ -53,7 +54,6 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 
 ## Incomplete / missing functionality (still open)
 
-- **[MISSING] Watch page for non-downloaded videos is all TODO stubs** — *"TODO: Show embedded video / View on original site / Download now / show something here"*. You cannot stream-preview, open on YouTube, or download from the watch page.
 - **[MISSING] "Import (todo)"** — Add-menu item labeled unfinished (OPML / URL-list import from ytsm not ported).
 - **[MISSING] Admin/server settings UI** — user download settings exist, but registrations toggle, sync schedule, and scheduler concurrency have no UI.
 - **[MISSING] Subtitle + filename-pattern controls** are backend-only (no UI).

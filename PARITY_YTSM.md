@@ -8,9 +8,10 @@ Based on a code inventory of both (ytsm at its current `master`) and a live feat
 Regard is a modern rewrite that **gained** things ytsm never had (multi-site via yt-dlp, no API
 key/quota, per-subscription title filters, Jellyfin integration, SignalR live updates, `@handle`
 support). Most of the ytsm gaps have now been closed — **User Settings UI**, **logout**,
-**video duration**, and **live job-progress notifications + a Job Log** all shipped (2026-08-27).
-What remains: a **usable watch page for non-downloaded videos**, **subscription import**, an
-**Admin settings** surface, **subtitle/filename-pattern UI**, and **rating / password reset**.
+**video duration**, **live job-progress notifications + a Job Log**, and a **fully functional watch
+page** (embed / watch-on-site / up-next) all shipped (2026-08-27 – 08-28). What remains:
+**subscription import**, an **Admin settings** surface, **subtitle/filename-pattern UI**, and
+**password reset**.
 
 Status key: ✅ done · ◻ still open.
 
@@ -18,21 +19,23 @@ Status key: ✅ done · ◻ still open.
 
 ## Features ytsm has that Regard is missing (ranked; status updated 2026-08-27)
 
-1. **Video duration & rating** — ✅ *duration done* / ◻ *rating open*. `Video.Duration` is now
-   mapped from the yt-dlp wrapper and shown as a `m:ss`/`h:mm:ss` badge (commit `5e5bdb4`). Rating
-   (likes/dislikes star widget) is still not rendered — and YouTube no longer exposes dislikes, so
-   the data source is weak; likely drop it.
+1. **Video duration & rating** — ✅ *both done*. `Video.Duration` is mapped from the yt-dlp wrapper
+   and shown as a `m:ss`/`h:mm:ss` badge (commit `5e5bdb4`). Rating now renders as a 5-star widget on
+   the watch page when `Video.Rating` has a value (commit `c419e66`). Note the data source stays weak
+   (YouTube dropped dislikes), so the value is often absent — the widget just hides itself then.
 
 2. **Settings UI (User + Admin)** — ✅ *User done* / ◻ *Admin open*. The `/settings` page now exists
    (commit `911731f`) with download max-resolution, codec exclude lists, transcode, merge container,
    and a raw `-f` override — plus a **Job Log** tab (`5e5bdb4`). **Admin** settings (allow-registrations,
    sync cron schedule, scheduler concurrency) still have no UI.
 
-3. ◻ **Watch page for non-downloaded videos.** ytsm embeds the **YouTube IFrame player** (watch
-   without downloading), a **"Watch on YouTube"** link, and a **"Watch All" up-next queue** with
-   summed duration and auto-advance/auto-mark-watched (`ytsm video.html`, `views/video.py`).
-   Regard's watch page for a not-yet-downloaded video is still TODO stubs. Only already-downloaded
-   videos play. **(Largest remaining gap.)**
+3. ✅ **Watch page for non-downloaded videos.** Done (commit `c419e66`). A non-downloaded video now
+   shows either a privacy-gated YouTube embed (`youtube-nocookie`, when the user opts in via the new
+   default-off "allow embedding" setting) or a placeholder frame with **Download now** + **Watch on
+   {site}** — the latter handles any yt-dlp domain, not just YouTube. Plus title, views, published
+   date, duration, a rating widget, description, and an **Up next** queue (unwatched: same-sub →
+   folder → all) with mark-watched on finish. ytsm's auto-advance was intentionally dropped
+   (mark-watched only).
 
 4. ◻ **Import subscriptions.** ytsm bulk-imports from **OPML** (YouTube's export) and plain URL lists,
    with a target folder + download-config for the batch (`ytsm index.py:389-484`,
@@ -83,8 +86,8 @@ so effectively both rely on an edit form to re-parent.
 2. ✅ ~~A Settings page + logout~~ — User Settings done (`911731f`), logout done (`5e5bdb4`).
    Remaining: an **Admin settings** surface (registrations, sync schedule, concurrency).
 3. ✅ ~~Wire the notifications panel~~ — done as a generic job-progress + Job Log system (`5e5bdb4`).
-4. ◻ **Watch page**: at minimum a YouTube embed + "Watch on YouTube" + a "Download now" button for
-   non-downloaded videos. **(Now the top remaining gap.)**
+4. ✅ ~~Watch page for non-downloaded videos~~ — done (`c419e66`): embed / watch-on-site / up-next.
 5. ◻ **Import (OPML/URL list)** — port ytsm's parser; the "Import (todo)" menu item is already there.
+   **(Now the top remaining gap.)**
 6. ◻ **Subtitle + filename-pattern UI**, and the **Admin settings** page (see #2).
 </content>
