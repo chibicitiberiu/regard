@@ -33,20 +33,13 @@ namespace Regard.Backend.Providers.Rss
 
         public async Task<bool> CanHandleSubscriptionUrl(Uri uri)
         {
-            try
-            {
-                await FetchFeed(uri);
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            return await TryFetchFeed(uri) != null;
         }
 
         public async Task<Subscription> CreateSubscription(Uri uri)
         {
-            var feed = await FetchFeed(uri);
+            var feed = await TryFetchFeed(uri)
+                ?? throw new Exception("The URL does not point to a valid RSS or Atom feed.");
             return new Subscription()
             {
                 SubscriptionProviderId = Id,
@@ -60,7 +53,8 @@ namespace Regard.Backend.Providers.Rss
 
         public async IAsyncEnumerable<Video> FetchVideos(Subscription subscription)
         {
-            var feed = await FetchFeed(new Uri(subscription.SubscriptionId));
+            var feed = await TryFetchFeed(new Uri(subscription.SubscriptionId))
+                ?? throw new Exception("The subscription URL no longer returns a valid RSS or Atom feed.");
 
             foreach (var link in feed.Items)
             {
@@ -78,12 +72,41 @@ namespace Regard.Backend.Providers.Rss
             }
         }
 
-        private async Task<SyndicationFeed> FetchFeed(Uri uri)
+        /// <summary>
+        /// Fetches and parses the feed at <paramref name="uri"/>, returning null (instead of
+        /// throwing) when the URL isn't a feed — e.g. a YouTube channel page served as text/html.
+        /// This keeps provider probing (CanHandleSubscriptionUrl) from raising a first-chance
+        /// XmlException on every non-feed URL.
+        /// </summary>
+        private static async Task<SyndicationFeed> TryFetchFeed(Uri uri)
         {
-            var httpClient = new HttpClient();
-            var response = await httpClient.GetAsync(uri);
-            var xmlReader = XmlReader.Create(await response.Content.ReadAsStreamAsync());
-            return SyndicationFeed.Load(xmlReader);
+            try
+            {
+                using var httpClient = new HttpClient();
+                using var response = await httpClient.GetAsync(uri);
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                // Only attempt XML parsing when the server says it's a feed. HTML pages
+                // (YouTube channels, search results, etc.) are rejected without a parse attempt.
+                var mediaType = response.Content.Headers.ContentType?.MediaType;
+                if (mediaType == null || !IsFeedContentType(mediaType))
+                    return null;
+
+                using var xmlReader = XmlReader.Create(await response.Content.ReadAsStreamAsync());
+                return SyndicationFeed.Load(xmlReader);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private static bool IsFeedContentType(string mediaType)
+        {
+            return mediaType.Contains("xml", StringComparison.OrdinalIgnoreCase)
+                || mediaType.Contains("rss", StringComparison.OrdinalIgnoreCase)
+                || mediaType.Contains("atom", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
