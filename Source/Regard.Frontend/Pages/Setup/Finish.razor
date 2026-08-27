@@ -1,7 +1,7 @@
 ﻿@page "/setup/finished"
 @inject AppController appCtrl
 
-<SetupCard Eyebrow="Setup · Done" Title="Setup complete!">
+<SetupCard Title="Setup complete!">
     <p>Everything is ready. You will be redirected to the home page in a moment.</p>
 
     <button class="btn btn-primary" @onclick="GoNext" disabled="@NextClicked">Finish</button>

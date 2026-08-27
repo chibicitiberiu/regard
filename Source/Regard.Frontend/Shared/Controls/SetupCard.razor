@@ -1,11 +1,9 @@
 @* Centered card used by the first-run setup wizard (Welcome / Admin / Finish). *@
+@inject Regard.Services.AppController AppCtrl
 
 <div class="setup-wrap">
     <div class="setup-card">
-        @if (!string.IsNullOrWhiteSpace(Eyebrow))
-        {
-            <div class="setup-eyebrow">@Eyebrow</div>
-        }
+        <div class="setup-eyebrow">@EyebrowText</div>
         @if (!string.IsNullOrWhiteSpace(Title))
         {
             <h1 class="setup-title">@Title</h1>
@@ -18,6 +16,13 @@
 
 @code {
     [Parameter] public string Title { get; set; }
-    [Parameter] public string Eyebrow { get; set; } = "Setup";
+
+    /// <summary>Optional eyebrow override; defaults to "Step N of X".</summary>
+    [Parameter] public string Eyebrow { get; set; }
+
     [Parameter] public RenderFragment ChildContent { get; set; }
+
+    private string EyebrowText =>
+        !string.IsNullOrWhiteSpace(Eyebrow) ? Eyebrow
+        : $"Step {AppCtrl.SetupStepNumber} of {AppCtrl.SetupStepCount}";
 }

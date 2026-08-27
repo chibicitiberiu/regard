@@ -21,6 +21,12 @@ namespace Regard.Services
             ("/setup/finished", _ => true)
         };
 
+        /// <summary>Total number of setup wizard steps (for "Step N of X" display).</summary>
+        public int SetupStepCount => SetupSteps.Length;
+
+        /// <summary>1-based index of the current setup step.</summary>
+        public int SetupStepNumber => appState.SetupStep + 1;
+
         private readonly IConfiguration configuration;
         private readonly AppState appState;
         private readonly NavigationManager navigationManager;

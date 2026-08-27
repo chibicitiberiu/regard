@@ -1,6 +1,6 @@
 ﻿@page "/setup/step1"
 
-<SetupCard Eyebrow="Setup · Step 2" Title="Create an administrator">
+<SetupCard Title="Create an administrator">
     @if (AppState.ServerStatus != null && AppState.ServerStatus.HaveUsers && pickUser)
     {
         <p>Enter the credentials of the user that should become the system administrator.</p>
