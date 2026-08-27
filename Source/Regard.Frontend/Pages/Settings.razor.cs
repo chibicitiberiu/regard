@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Regard.Common.API.Settings;
 using Regard.Services;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +17,8 @@ namespace Regard.Frontend.Pages
         protected bool saving = false;
         protected bool saved = false;
         protected string statusMessage = string.Empty;
+
+        protected ApiUserUsage usage;
 
         // "" = inherit default; "0" = unlimited; otherwise a height cap.
         protected string MaxResolutionStr { get; set; } = string.Empty;
@@ -63,8 +66,23 @@ namespace Regard.Frontend.Pages
             var s = resp?.Data;
             if (s != null)
                 LoadFrom(s);
+            usage = (await Backend.GetUserUsage())?.Data;
             loading = false;
         }
+
+        // Human-friendly size, one decimal, largest fitting unit.
+        protected static string FormatSize(long bytes)
+        {
+            const double gb = 1024d * 1024 * 1024, mb = 1024d * 1024, kb = 1024d;
+            if (bytes >= gb) return $"{bytes / gb:0.0} GB";
+            if (bytes >= mb) return $"{bytes / mb:0.0} MB";
+            if (bytes >= kb) return $"{bytes / kb:0.0} KB";
+            return $"{bytes} B";
+        }
+
+        protected int StoragePercent => (usage?.StorageQuotaBytes is long q && q > 0)
+            ? (int)Math.Min(100, 100 * usage.UsedBytes / q)
+            : 0;
 
         private void LoadFrom(ApiUserSettings s)
         {

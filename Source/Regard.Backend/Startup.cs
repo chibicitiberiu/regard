@@ -154,6 +154,7 @@ namespace Regard.Backend
             services.AddScoped<DeleteWatchedFilesJob>();
             services.AddScoped<DeleteSubscriptionFilesJob>();
             services.AddScoped<DeleteSubscriptionFolderFilesJob>();
+            services.AddScoped<DeleteUserJob>();
             services.AddScoped<DownloadVideoJob>();
             services.AddScoped<FetchThumbnailsJob>();
             services.AddScoped<ImportSubscriptionsJob>();
@@ -173,6 +174,7 @@ namespace Regard.Backend
             // Others
             services.AddScoped<SubscriptionManager>();
             services.AddScoped<VideoManager>();
+            services.AddScoped<UserQuotaService>();
             services.AddSingleton<StorageManager>();
             services.AddSingleton<ThumbnailService>();
             services.AddScoped<MetadataService>();

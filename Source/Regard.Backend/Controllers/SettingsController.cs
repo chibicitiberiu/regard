@@ -17,14 +17,17 @@ namespace Regard.Backend.Controllers
         private readonly UserManager<UserAccount> userManager;
         private readonly ApiResponseFactory responseFactory;
         private readonly IOptionManager optionManager;
+        private readonly UserQuotaService quotaService;
 
         public SettingsController(UserManager<UserAccount> userManager,
                                   ApiResponseFactory responseFactory,
-                                  IOptionManager optionManager)
+                                  IOptionManager optionManager,
+                                  UserQuotaService quotaService)
         {
             this.userManager = userManager;
             this.responseFactory = responseFactory;
             this.optionManager = optionManager;
+            this.quotaService = quotaService;
         }
 
         [HttpGet]
@@ -70,6 +73,27 @@ namespace Regard.Backend.Controllers
             SetOrUnset(Options.Ui_AllowEmbedding, user.Id, request.AllowEmbedding);
 
             return Ok(responseFactory.Success());
+        }
+
+        [HttpGet]
+        [Route("usage")]
+        [Authorize]
+        public async Task<IActionResult> GetUsage()
+        {
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(responseFactory.Error("Not authenticated."));
+
+            var usage = quotaService.GetUsage(user.Id);
+            var (countQuota, sizeQuotaBytes) = quotaService.GetHardQuota(user.Id);
+
+            return Ok(responseFactory.Success(new ApiUserUsage
+            {
+                VideoCount = usage.Count,
+                UsedBytes = usage.Bytes,
+                VideoQuota = countQuota,
+                StorageQuotaBytes = sizeQuotaBytes,
+            }));
         }
 
         private int? GetOrNull(OptionDefinition<int> pref, string userId)

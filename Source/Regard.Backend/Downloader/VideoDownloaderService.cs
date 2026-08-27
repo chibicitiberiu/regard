@@ -22,6 +22,7 @@ namespace Regard.Backend.Downloader
         private readonly DataContext dataContext;
         private readonly IOptionManager optionManager;
         private readonly RegardScheduler scheduler;
+        private readonly UserQuotaService userQuotaService;
         private static readonly IDictionary<int, VideoState> videos = new Dictionary<int, VideoState>();
         private static event EventHandler<VideoDownloadStateChangedEventArgs> videoStateChanged;
 
@@ -36,11 +37,13 @@ namespace Regard.Backend.Downloader
         /// </summary>
         public VideoDownloaderService(DataContext dataContext,
                                       IOptionManager optionManager,
-                                      RegardScheduler scheduler)
+                                      RegardScheduler scheduler,
+                                      UserQuotaService userQuotaService)
         {
             this.dataContext = dataContext;
             this.optionManager = optionManager;
             this.scheduler = scheduler;
+            this.userQuotaService = userQuotaService;
             //this.scheduler.ScheduledVideoDownload += OnVideoQueued;
         }
 
@@ -110,11 +113,7 @@ namespace Regard.Backend.Downloader
                     ? Math.Min(userLimit, userQuota)
                     : Math.Max(userLimit, userQuota);
 
-                var globalDownloadedCount = dataContext.Videos
-                    .AsQueryable()
-                    .Where(x => x.Subscription.UserId == sub.UserId)
-                    .Where(x => x.DownloadedPath != null)
-                    .Count();
+                var globalDownloadedCount = userQuotaService.GetUsage(sub.UserId).Count;
 
                 int canDownload = Math.Max(globalLimit - globalDownloadedCount, 0);
                 result = Math.Min(result, canDownload);
@@ -150,13 +149,9 @@ namespace Regard.Backend.Downloader
                     ? Math.Min(userLimit, userQuota)
                     : Math.Max(userLimit, userQuota);
 
-                var globalDownloadedSize = dataContext.Videos
-                    .AsQueryable()
-                    .Where(x => x.Subscription.UserId == sub.UserId)
-                    .Where(x => x.DownloadedSize != null)
-                    .Sum(x => x.DownloadedSize);
+                var globalDownloadedSize = userQuotaService.GetUsage(sub.UserId).Bytes;
 
-                long canDownload = Math.Max(globalLimit - globalDownloadedSize.Value, 0);
+                long canDownload = Math.Max(globalLimit - globalDownloadedSize, 0);
                 result = Math.Min(result, canDownload);
             }
 

@@ -69,6 +69,11 @@ namespace Regard.Backend.Controllers
 
             if (user != null && await userManager.CheckPasswordAsync(user, login.Password))
             {
+                // Manual login (no SignInManager) doesn't consult lockout, so enforce it here —
+                // this is what makes an admin "disable user" actually block sign-in.
+                if (await userManager.IsLockedOutAsync(user))
+                    return Unauthorized(responseFactory.Error("This account has been disabled."));
+
                 JwtSecurityToken token = await GenerateAuthToken(user, login.RememberMe);
 
                 return Ok(responseFactory.Success(new AuthResponse()

@@ -15,6 +15,27 @@
                 }
                 else
                 {
+                    @if (usage != null)
+                    {
+                        <section class="settings-section">
+                            <h3>Storage &amp; quota</h3>
+                            <div class="quota-summary">
+                                <div>
+                                    <strong>@usage.VideoCount</strong>@(usage.VideoQuota.HasValue ? $" of {usage.VideoQuota.Value}" : "") videos@(usage.VideoQuota.HasValue ? "" : " (no limit)")
+                                </div>
+                                <div>
+                                    <strong>@FormatSize(usage.UsedBytes)</strong>@(usage.StorageQuotaBytes.HasValue ? $" of {FormatSize(usage.StorageQuotaBytes.Value)}" : "") used@(usage.StorageQuotaBytes.HasValue ? "" : " (no limit)")
+                                </div>
+                                @if (usage.StorageQuotaBytes.HasValue)
+                                {
+                                    <div class="progress-bar quota-bar">
+                                        <div class="progress-bar-fill" style="width:@(StoragePercent)%"></div>
+                                    </div>
+                                }
+                            </div>
+                        </section>
+                    }
+
                     <section class="settings-section">
                         <h3>Downloads</h3>
 

@@ -1,0 +1,54 @@
+// Admin page: user table, action buttons, and the storage/quota summary (also used on Settings).
+
+.admin-users-table-wrap {
+    overflow-x: auto;
+}
+
+.admin-users-table {
+    .admin-user-name {
+        font-weight: 600;
+    }
+
+    .admin-user-email {
+        font-size: 0.8rem;
+    }
+
+    .admin-user-actions {
+        white-space: nowrap;
+
+        button {
+            margin: 0 0.25rem 0.25rem 0;
+        }
+    }
+}
+
+.button-small {
+    font-size: 0.85em;
+    padding: 0.2rem 0.55rem;
+}
+
+.button-danger {
+    background-color: var(--color-bg-error);
+    border-color: var(--color-bg-error);
+
+    &:disabled {
+        opacity: 0.5;
+    }
+}
+
+.text-muted {
+    color: var(--color-fg-secondary);
+}
+
+// Storage & quota summary block (Settings page + reused wording on Admin).
+.quota-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .quota-bar {
+        max-width: 320px;
+        height: 8px;
+        margin-top: 0.15rem;
+    }
+}

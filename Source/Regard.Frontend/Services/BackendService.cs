@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using Regard.Api;
 using Regard.Common.API;
+using Regard.Common.API.Admin;
 using Regard.Common.API.Auth;
 using Regard.Common.API.Response;
 using Regard.Common.API.Settings;
@@ -206,6 +207,34 @@ namespace Regard.Services
 
         public Task<(ApiResponse, HttpResponseMessage)> SaveSettings(ApiUserSettings data)
             => Post("api/settings", data);
+
+        public Task<ApiResponse<ApiUserUsage>> GetUserUsage()
+            => Get<ApiUserUsage>("api/settings/usage");
+
+        #endregion
+
+        #region Admin
+
+        public Task<ApiResponse<ApiServerSettings>> GetServerSettings()
+            => Get<ApiServerSettings>("api/admin/settings");
+
+        public Task<(ApiResponse, HttpResponseMessage)> SaveServerSettings(ApiServerSettings data)
+            => Post("api/admin/settings", data);
+
+        public Task<ApiResponse<List<ApiAdminUser>>> GetAdminUsers()
+            => Get<List<ApiAdminUser>>("api/admin/users");
+
+        public Task<(ApiResponse, HttpResponseMessage)> SetUserRole(SetUserRoleRequest data)
+            => Post("api/admin/users/role", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> SetUserEnabled(SetUserEnabledRequest data)
+            => Post("api/admin/users/enabled", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> SetUserQuota(SetUserQuotaRequest data)
+            => Post("api/admin/users/quota", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> DeleteUser(DeleteUserRequest data)
+            => Post("api/admin/users/delete", data);
 
         #endregion
 

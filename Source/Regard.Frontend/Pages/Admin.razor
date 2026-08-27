@@ -1,0 +1,174 @@
+@page "/admin"
+@attribute [Authorize(Roles = "admin")]
+@using Regard.Common.API.Admin
+
+<div class="settings-page admin-page">
+    <h2>Administration</h2>
+
+    <TabView>
+        <TabPage>
+            <Title>Server</Title>
+            <Content>
+                @if (loadingServer)
+                {
+                    <p>Loading…</p>
+                }
+                else
+                {
+                    <section class="settings-section">
+                        <h3>Registration</h3>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Allow new sign-ups:</label>
+                            <div class="col-xs-8">
+                                <label class="inline-check">
+                                    <input type="checkbox" @bind="AllowRegistrations" /> Users can register themselves
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3>Default per-user quota</h3>
+                        <p class="text-muted">
+                            Applied to every user unless you set a per-user override on the Users tab.
+                            Leave a field blank for no limit. These are hard caps — they block manual
+                            downloads too, not just the auto-downloader.
+                        </p>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Max videos per user:</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" min="0" @bind="DefaultVideoQuotaStr" placeholder="Unlimited" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Max storage per user (GB):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" min="0" step="0.1" @bind="DefaultStorageQuotaStr" placeholder="Unlimited" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3>Maintenance</h3>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Keep job history for (days):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" min="0" @bind="JobHistoryRetentionDays" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="form-group row">
+                        <div class="col-xs-12 row">
+                            <span class="@(serverSaved ? "fg-success" : "fg-error")">@serverStatus</span>
+                            <button class="primary ml-auto" @onclick="OnSaveServer" disabled="@savingServer">Save</button>
+                        </div>
+                    </div>
+                }
+            </Content>
+        </TabPage>
+
+        <TabPage>
+            <Title>Users</Title>
+            <Content>
+                @if (loadingUsers)
+                {
+                    <p>Loading…</p>
+                }
+                else
+                {
+                    @if (!string.IsNullOrEmpty(usersError))
+                    {
+                        <p class="fg-error">@usersError</p>
+                    }
+                    <div class="admin-users-table-wrap">
+                        <table class="job-log-table admin-users-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th>Usage</th>
+                                    <th>Quota</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in users)
+                                {
+                                    <tr @key="u.Id">
+                                        <td>
+                                            <div class="admin-user-name">@u.UserName @(IsSelf(u) ? "(you)" : "")</div>
+                                            @if (!string.IsNullOrEmpty(u.Email))
+                                            {
+                                                <div class="admin-user-email text-muted">@u.Email</div>
+                                            }
+                                        </td>
+                                        <td>@(u.IsAdmin ? "Admin" : "User")</td>
+                                        <td>@u.VideoCount videos · @FormatSize(u.UsedBytes)</td>
+                                        <td>@QuotaLabel(u)</td>
+                                        <td class="@(u.IsDisabled ? "fg-error" : "fg-success")">@(u.IsDisabled ? "Disabled" : "Enabled")</td>
+                                        <td class="admin-user-actions">
+                                            <button class="button-small" disabled="@(IsSelf(u) && u.IsAdmin)" @onclick="() => ToggleAdmin(u)">
+                                                @(u.IsAdmin ? "Remove admin" : "Make admin")
+                                            </button>
+                                            <button class="button-small" disabled="@IsSelf(u)" @onclick="() => ToggleEnabled(u)">
+                                                @(u.IsDisabled ? "Enable" : "Disable")
+                                            </button>
+                                            <button class="button-small" @onclick="() => OpenQuota(u)">Set quota</button>
+                                            <button class="button-small button-danger" disabled="@IsSelf(u)" @onclick="() => OpenDelete(u)">Delete</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </Content>
+        </TabPage>
+    </TabView>
+</div>
+
+<Modal @ref="quotaModal">
+    <Title>Set quota@(quotaTarget != null ? $" — {quotaTarget.UserName}" : "")</Title>
+    <Body>
+        <p class="text-muted">Leave a field blank to clear the override and inherit the server default.</p>
+        <div class="form-group row">
+            <label class="col-xs-5 col-form-label">Max videos:</label>
+            <div class="col-xs-7">
+                <input class="form-control" type="number" min="0" @bind="quotaVideoStr" placeholder="Default" />
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-xs-5 col-form-label">Max storage (GB):</label>
+            <div class="col-xs-7">
+                <input class="form-control" type="number" min="0" step="0.1" @bind="quotaStorageStr" placeholder="Default" />
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-xs-12 row">
+                <button class="ml-auto" @onclick="() => quotaModal.Close()">Cancel</button>
+                <button class="primary" @onclick="SaveQuota">Save</button>
+            </div>
+        </div>
+    </Body>
+</Modal>
+
+<Modal @ref="deleteModal">
+    <Title>Delete user</Title>
+    <Body>
+        @if (deleteTarget != null)
+        {
+            <p>
+                Delete <strong>@deleteTarget.UserName</strong> and all of their data — subscriptions,
+                videos, and downloaded files? This can't be undone.
+            </p>
+        }
+        <div class="form-group row">
+            <div class="col-xs-12 row">
+                <button class="ml-auto" @onclick="() => deleteModal.Close()">Cancel</button>
+                <button class="primary button-danger" @onclick="ConfirmDelete">Delete user</button>
+            </div>
+        </div>
+    </Body>
+</Modal>

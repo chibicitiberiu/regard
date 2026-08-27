@@ -34,6 +34,7 @@ namespace Regard.Frontend.Shared.Controls
         HideWatched,
         Queued,
         SignOut,
+        Admin,
     }
 
     public partial class Icon
@@ -66,6 +67,7 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.HideWatched, "visibility_off" },
             { Icons.Queued, "playlist_play" },
             { Icons.SignOut, "logout" },
+            { Icons.Admin, "admin_panel_settings" },
         };
 
         [Parameter(CaptureUnmatchedValues = true)]

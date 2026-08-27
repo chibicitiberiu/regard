@@ -32,6 +32,7 @@ namespace Regard.Backend.Downloader
         protected readonly IVideoDownloaderService videoDownloader;
         protected readonly IVideoStorageService videoStorage;
         protected readonly MetadataService metadataService;
+        protected readonly UserQuotaService userQuotaService;
 
         private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of ~?([\d\.]+)([KMG]i?B)");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
@@ -58,7 +59,8 @@ namespace Regard.Backend.Downloader
                                 IYoutubeDlService ytdlService,
                                 IVideoDownloaderService videoDownloader,
                                 IVideoStorageService videoStorage,
-                                MetadataService metadataService) : base(logger, dataContext, jobTrackerService)
+                                MetadataService metadataService,
+                                UserQuotaService userQuotaService) : base(logger, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
             this.optionManager = optionManager;
@@ -66,6 +68,7 @@ namespace Regard.Backend.Downloader
             this.videoDownloader = videoDownloader;
             this.videoStorage = videoStorage;
             this.metadataService = metadataService;
+            this.userQuotaService = userQuotaService;
         }
 
         public static Task Schedule(RegardScheduler scheduler, Video video)
@@ -97,6 +100,33 @@ namespace Regard.Backend.Downloader
             {
                 Job.RetryCount = 0;
                 throw new ArgumentException($"Download failed - video {VideoId} is already downloaded!");
+            }
+
+            // Hard-quota gate: block (and explain) before spending any bandwidth if the user is
+            // already at/over their count or size quota. Manual downloads otherwise bypass the count
+            // quota entirely (only size was checked, mid-download).
+            var quotaSub = dataContext.Subscriptions.Find(video.SubscriptionId);
+            if (quotaSub != null)
+            {
+                var (countQuota, sizeQuotaBytes) = userQuotaService.GetHardQuota(quotaSub.UserId);
+                var usage = userQuotaService.GetUsage(quotaSub.UserId);
+
+                if (countQuota.HasValue && usage.Count >= countQuota.Value)
+                {
+                    Job.RetryCount = 0;
+                    var msg = $"Can't download: video quota reached ({usage.Count} / {countQuota.Value} videos). " +
+                              "Delete some downloads or ask an admin to raise your quota.";
+                    JobLog(msg, Regard.Backend.Common.Model.MessageSeverity.Error);
+                    throw new Exception(msg);
+                }
+                if (sizeQuotaBytes.HasValue && usage.Bytes >= sizeQuotaBytes.Value)
+                {
+                    Job.RetryCount = 0;
+                    var msg = $"Can't download: storage quota reached ({usage.Bytes.Bytes()} / {sizeQuotaBytes.Value.Bytes()}). " +
+                              "Delete some downloads or ask an admin to raise your quota.";
+                    JobLog(msg, Regard.Backend.Common.Model.MessageSeverity.Error);
+                    throw new Exception(msg);
+                }
             }
 
             var opts = ResolveDownloadOptions(video).ToArray();
@@ -238,6 +268,8 @@ namespace Regard.Backend.Downloader
             if (maxSize.HasValue && sizeBytes > maxSize.Value)
             {
                 log.LogError($"Stopping download of {VideoId}, as the video has {sizeBytes.Bytes()} which would go above the allowed limit of {maxSize.Value.Bytes()}");
+                JobLog($"Download stopped: this video is {sizeBytes.Bytes()}, which would exceed your remaining storage quota ({maxSize.Value.Bytes()}). " +
+                       "Delete some downloads or ask an admin to raise your quota.", Regard.Backend.Common.Model.MessageSeverity.Error);
 
                 // Cancel download
                 cancellationTokenSrc.Cancel();
