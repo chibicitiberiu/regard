@@ -21,7 +21,9 @@
                             <h3>Storage &amp; quota</h3>
                             <div class="quota-summary">
                                 <div>
-                                    <strong>@usage.VideoCount</strong>@(usage.VideoQuota.HasValue ? $" of {usage.VideoQuota.Value}" : "") videos@(usage.VideoQuota.HasValue ? "" : " (no limit)")
+                                    <strong>@usage.VideoCount</strong>@(usage.VideoQuota.HasValue
+                                        ? $" of {usage.VideoQuota.Value} videos"
+                                        : (usage.VideoCount == 1 ? " video (no limit)" : " videos (no limit)"))
                                 </div>
                                 <div>
                                     <strong>@FormatSize(usage.UsedBytes)</strong>@(usage.StorageQuotaBytes.HasValue ? $" of {FormatSize(usage.StorageQuotaBytes.Value)}" : "") used@(usage.StorageQuotaBytes.HasValue ? "" : " (no limit)")
