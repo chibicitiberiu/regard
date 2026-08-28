@@ -15,11 +15,13 @@ using System.Threading.Tasks;
 namespace Regard.Backend.Jobs
 {
     /// <summary>
-    /// Polls Jellyfin for videos the configured user has marked played and marks the matching
-    /// Regard videos watched (which, per subscription settings, deletes the file and refills the
-    /// download window). One-way (Jellyfin -> Regard) and reconciling: every poll recomputes truth,
-    /// so it's idempotent. Videos are matched by full file path, so the download volume must be
-    /// mounted identically in both containers and DownloadDirectory must be absolute.
+    /// Two-way sync between Jellyfin and Regard for watched state and resume position. Jellyfin's played
+    /// items mark the matching Regard videos watched (which, per subscription settings, deletes the file
+    /// and refills the download window); resume positions are reconciled newer-wins (Jellyfin's
+    /// UserData.LastPlayedDate vs Regard's PlaybackPositionUpdated) and pushed back to Jellyfin when Regard
+    /// is ahead. Reconciling and idempotent: every poll recomputes truth. Videos are matched by full file
+    /// path, so the download volume must be mounted identically in both containers and DownloadDirectory
+    /// must be absolute.
     /// </summary>
     public class JellyfinSyncJob : JobBase
     {
@@ -87,37 +89,69 @@ namespace Regard.Backend.Jobs
                 return;
             }
 
-            var playedItems = await client.GetPlayedItemsAsync(userId);
-            var playedPaths = playedItems
-                .Where(i => !string.IsNullOrEmpty(i.Path))
-                .Select(i => Path.GetFullPath(Path.ChangeExtension(i.Path, null)))
-                .ToHashSet();
+            var jfItems = await client.GetItemsWithUserDataAsync(userId);
 
-            if (playedPaths.Count == 0)
+            // Index Jellyfin items by normalized full path (extension stripped), same key the match uses.
+            var jfByPath = new Dictionary<string, JellyfinItem>();
+            foreach (var it in jfItems)
             {
-                log.LogInformation("Jellyfin sync: no played items reported for user '{0}'.", jellyfinUser);
+                if (string.IsNullOrEmpty(it.Path))
+                    continue;
+                jfByPath[Path.GetFullPath(Path.ChangeExtension(it.Path, null))] = it;
+            }
+
+            if (jfByPath.Count == 0)
+            {
+                log.LogInformation("Jellyfin sync: no items reported for user '{0}'.", jellyfinUser);
                 return;
             }
 
-            // Match against the user's downloaded, unwatched videos by normalized full path.
+            // The user's downloaded videos (watched ones included, so Regard->Jellyfin can push played).
             var candidates = dataContext.Videos
-                .Where(v => v.Subscription.UserId == user.Id && v.DownloadedPath != null && !v.IsWatched)
+                .Where(v => v.Subscription.UserId == user.Id && v.DownloadedPath != null)
                 .ToList();
 
-            var matchedIds = candidates
-                .Where(v => playedPaths.Contains(Path.GetFullPath(v.DownloadedPath)))
-                .Select(v => v.Id)
-                .ToArray();
+            var markWatchedIds = new List<int>();
+            var adopts = new List<(int Id, int Seconds, DateTimeOffset Timestamp)>();
+            var pushes = new List<(string ItemId, long Ticks, bool Played)>();
 
-            if (matchedIds.Length == 0)
+            foreach (var v in candidates)
             {
-                log.LogInformation("Jellyfin sync: {0} played item(s), none matched an unwatched download.", playedPaths.Count);
-                return;
+                if (!jfByPath.TryGetValue(Path.GetFullPath(v.DownloadedPath), out var jf))
+                    continue;
+                var ud = jf.UserData;
+
+                var decision = JellyfinReconciler.Reconcile(
+                    v.IsWatched, v.PlaybackPositionSeconds, v.PlaybackPositionUpdated,
+                    ud?.Played ?? false, ud?.PlaybackPositionTicks, ud?.LastPlayedDate);
+
+                switch (decision.Action)
+                {
+                    case JellyfinSyncAction.MarkWatched:
+                        markWatchedIds.Add(v.Id);
+                        break;
+                    case JellyfinSyncAction.AdoptPosition:
+                        adopts.Add((v.Id, decision.PositionSeconds, decision.Timestamp));
+                        break;
+                    case JellyfinSyncAction.PushToJellyfin:
+                        pushes.Add((jf.Id, decision.PushTicks, decision.PushPlayed));
+                        break;
+                }
             }
 
-            await videoManager.MarkWatched(user, matchedIds);
-            log.LogInformation("Jellyfin sync: marked {0} video(s) watched (of {1} played item(s)).",
-                matchedIds.Length, playedPaths.Count);
+            if (markWatchedIds.Count > 0)
+                await videoManager.MarkWatched(user, markWatchedIds.ToArray());
+
+            foreach (var a in adopts)
+                videoManager.SetPlaybackPosition(user, a.Id, a.Seconds, a.Timestamp);
+
+            int pushed = 0;
+            foreach (var pu in pushes)
+                if (await client.UpdateUserDataAsync(userId, pu.ItemId, pu.Ticks, pu.Played))
+                    pushed++;
+
+            log.LogInformation("Jellyfin sync: {0} marked watched, {1} position(s) adopted, {2}/{3} pushed to Jellyfin.",
+                markWatchedIds.Count, adopts.Count, pushed, pushes.Count);
         }
     }
 }

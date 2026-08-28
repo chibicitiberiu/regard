@@ -14,11 +14,23 @@ namespace Regard.Backend.Jellyfin
         public string Name { get; set; }
     }
 
+    /// <summary>Per-user playback state Jellyfin tracks for an item.</summary>
+    public class JellyfinUserData
+    {
+        /// <summary>Resume position in 100-ns ticks (10,000,000 per second).</summary>
+        public long? PlaybackPositionTicks { get; set; }
+        public bool Played { get; set; }
+        public double? PlayedPercentage { get; set; }
+        /// <summary>When the item was last played — the only Jellyfin-side timestamp for newer-wins.</summary>
+        public DateTime? LastPlayedDate { get; set; }
+    }
+
     public class JellyfinItem
     {
         public string Id { get; set; }
         public string Name { get; set; }
         public string Path { get; set; }
+        public JellyfinUserData UserData { get; set; }
     }
 
     public class JellyfinItemsResponse
@@ -31,8 +43,19 @@ namespace Regard.Backend.Jellyfin
         /// <summary>Resolves a Jellyfin user id from its username (case-insensitive), or null if not found.</summary>
         Task<string> ResolveUserIdAsync(string username);
 
-        /// <summary>Returns all items the given user has marked played (with their file paths).</summary>
-        Task<IReadOnlyList<JellyfinItem>> GetPlayedItemsAsync(string userId);
+        /// <summary>
+        /// Returns the user's video items with their file paths and per-user playback state (played +
+        /// resume position). Unlike a played-only query this includes in-progress items, so positions can
+        /// be reconciled both ways.
+        /// </summary>
+        Task<IReadOnlyList<JellyfinItem>> GetItemsWithUserDataAsync(string userId);
+
+        /// <summary>
+        /// Writes back the user's playback state for one item (resume position + played). Best-effort: a
+        /// failure (offline, or an older Jellyfin that lacks the endpoint) returns false and never throws,
+        /// so local state is never corrupted.
+        /// </summary>
+        Task<bool> UpdateUserDataAsync(string userId, string itemId, long positionTicks, bool played);
 
         /// <summary>Verifies the configured base URL + API key can reach Jellyfin.</summary>
         Task<bool> TestConnectionAsync();
@@ -68,11 +91,28 @@ namespace Regard.Backend.Jellyfin
                 .Id;
         }
 
-        public async Task<IReadOnlyList<JellyfinItem>> GetPlayedItemsAsync(string userId)
+        public async Task<IReadOnlyList<JellyfinItem>> GetItemsWithUserDataAsync(string userId)
         {
+            // No IsPlayed filter: in-progress items must come back too so resume positions sync both ways.
             var response = await http.GetFromJsonAsync<JellyfinItemsResponse>(
-                $"Users/{userId}/Items?Filters=IsPlayed&Recursive=true&Fields=Path&IncludeItemTypes=Video,Movie,Episode");
+                $"Users/{userId}/Items?Recursive=true&Fields=Path,UserData&IncludeItemTypes=Video,Movie,Episode");
             return response?.Items ?? new List<JellyfinItem>();
+        }
+
+        public async Task<bool> UpdateUserDataAsync(string userId, string itemId, long positionTicks, bool played)
+        {
+            try
+            {
+                // Jellyfin 10.9+ accepts the full user-data DTO here (older spelling:
+                // /UserItems/{itemId}/UserData?userId=). Best-effort: any non-success is swallowed.
+                var body = new { PlaybackPositionTicks = positionTicks, Played = played };
+                var resp = await http.PostAsJsonAsync($"Users/{userId}/Items/{itemId}/UserData", body);
+                return resp.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public async Task<bool> TestConnectionAsync()
