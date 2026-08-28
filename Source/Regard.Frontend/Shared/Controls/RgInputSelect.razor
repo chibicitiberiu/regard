@@ -19,7 +19,7 @@
             {
                 @foreach (var item in ItemsSource)
                 {
-                    <option value="@KeyFunc(item)">@DisplayTextFunc(item)</option>
+                    <option value="@FormatValueAsString(KeyFunc(item))">@DisplayTextFunc(item)</option>
                 }
             }
         </select>

@@ -51,10 +51,13 @@ namespace Regard.Frontend.Shared.Controls
                 }
 
                 ItemsSource = itemsSource;
+                // The null "(unset)" entry is the default option, so the hidden placeholder is redundant.
+                ShowDefaultOption = false;
             }
             else if (typeof(TKey) == typeof(bool?))
             {
                 ItemsSource = new bool?[] { null, true, false }.Cast<TKey>();
+                ShowDefaultOption = false;
             }
         }
     }

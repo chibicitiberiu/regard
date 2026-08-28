@@ -57,8 +57,28 @@ namespace Regard.Frontend.Shared.Controls
             Task.Run(StateHasChanged);
         }
 
+        // Sentinel for the "unset"/inherit option of a nullable select. Both the option markup and the
+        // bound value are formatted through FormatValueAsString, so they always compare equal — the base
+        // implementation returns null for a null value, which renders as an omitted option value and
+        // never matches, leaving nullable tri-states showing the wrong option on load.
+        private const string NullToken = "__null";
+
+        protected override string FormatValueAsString(TKey value)
+        {
+            if (value == null)
+                return NullToken;
+            return base.FormatValueAsString(value);
+        }
+
         protected override bool TryParseValueFromString(string value, out TKey result, out string validationErrorMessage)
         {
+            if (value == NullToken)
+            {
+                result = default;
+                validationErrorMessage = null;
+                return true;
+            }
+
             if (typeof(TKey) == typeof(string))
             {
                 result = (TKey)(object)value;
