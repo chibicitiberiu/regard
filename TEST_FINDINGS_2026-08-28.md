@@ -41,41 +41,24 @@ Legend: **[BUG]** defect · **[UX]** usability · **[ROBUST]** edge-case robustn
 
 ---
 
-## Open findings (not fixed — recommendations)
+## Follow-up fixes (open items addressed)
 
-### A. [ROBUST] SQLite `disk I/O error` under concurrent writes
-Seen once when a download job's completion save overlapped a `video/list` read that also enriches (a
-write). It surfaced as `SQLite Error 10` (`SQLITE_IOERR`, **not** `SQLITE_BUSY`, so `busy_timeout`
-doesn't help) in `JobBase.PersistJobState`, plus a `500` on `video/list`. Ruled out while chasing it:
-the job log is buffered in memory and persisted once at completion, and `OnJobProgress` never calls
-`SaveChanges` — so this is *not* per-progress-line write amplification, just two ordinary
-reader/writer connections colliding.
+Revisited under the "investigate still open issues" pass and fixed:
 
-The DB is on **local ext4**, not a network/overlay FS — so "the filesystem can't do WAL" is *not* the
-cause here. What stands out is the disk sitting at **98% full (~4.8 GB free)**: WAL grows and
-auto-checkpoints, and a checkpoint/allocation stumbling on a near-full disk shows up as an I/O error.
-On a healthy local disk with headroom, WAL handles concurrent readers + one writer fine and this
-shouldn't occur. Switching to `journal_mode=MEMORY` would only mask it and is *less* durable — **not**
-a fix, and it was reverted.
+| Item | Fix | Kind | Commit |
+|------|-----|------|--------|
+| **B — downloaded-but-missing file showed a dead player** | The watch page tracks a `streamFailed` flag on the media error and falls through to the placeholder with a tailored *"This video couldn't be played… Download it again, or watch it on the original site"* and a **Download again** action, instead of a black frame. Verified against a video flagged downloaded with a 404 stream. | [ROBUST] | `56d2f49` |
+| **C — FolderEdit offered the folder itself as a parent** | `FolderSelect` gained `ExcludeSubtreeRootId`; FolderEdit passes its own id, so the folder and its whole subtree drop out of the list (backend guard #3 still enforces it). Verified: `/folder/edit/1` now lists only `<none>`. | [UX] | `994e946` |
+| **F — double slash in the resolved download path** | Collapse runs of the path separator left by an empty `{FolderPath}` (root-level sub), keeping a single leading separator so an absolute path stays absolute. | [POLISH] | `897f4c2` |
+| **A — SQLite journal mode not tunable** | `journal_mode` is now overridable via `REGARD_SQLITE_JOURNAL_MODE` (WAL/DELETE/TRUNCATE/PERSIST/MEMORY/OFF); default and any invalid value stay **WAL**, so a local-disk deployment is unchanged. Gives the one class of real users who need it — a DB on a filesystem that can't do WAL — an escape hatch. Verified `=DELETE` switches the mode and the app runs. | [ROBUST] | `570f15a` |
 
-Recommendations:
-1. Operational — keep disk headroom; the download target filling up is the real trigger here.
-2. Optional hardening — make `journal_mode` configurable (default WAL) so a user whose DB genuinely lives
-   on a filesystem that can't do WAL (a network share) has an escape hatch to `DELETE`/`TRUNCATE`. This
-   is the one change that would help a class of *real* users; a healthy local-disk deployment needs nothing.
-3. If it recurs on a disk with headroom, wrap the few load-bearing `SaveChanges` in a short retry — but
-   don't add that speculatively; the evidence here points at disk pressure, not a code defect.
+On **A**, the trigger here remains **disk pressure** (the machine's disk sits at ~98% full): on a healthy
+local disk WAL handles concurrent readers + one writer fine, and this shouldn't occur. The env override is
+a hardening for the network-share case, **not** a substitute for disk headroom, and `MEMORY` was never
+shipped. Chasing it also ruled out write amplification — the job log is buffered and persisted once, and
+`OnJobProgress` never calls `SaveChanges`.
 
-### B. [ROBUST] Downloaded-but-missing file shows a dead player
-If a video is flagged downloaded but its file is gone (deleted out from under the DB), the watch page
-renders a black `<video>` whose source 404s (`/api/video/view` → 404 → ORB in the console). Better to
-treat "downloaded but file missing" as not-downloaded and fall back to the existing placeholder UI (which
-already looks right). Edge case; low priority. (This is exactly what the stale row 149 hits in dev.)
-
-### C. [UX] FolderEdit parent dropdown lists the folder itself (and its descendants)
-Now safe — the backend guard (#3) rejects such a move with a clear message — but the dropdown still offers
-those options, so the user only learns on Save. Better to exclude the edited folder and its subtree from
-the `FolderSelect` on that page. Low priority.
+## Still open (intentionally not changed)
 
 ### D. [by-design] REST `/api/jobs` always reports `cancellable: false`
 That flag is populated only on the SignalR push (the bell), which is the sole surface that offers cancel.
@@ -83,11 +66,7 @@ No functional impact — noted so a future REST consumer doesn't rely on it.
 
 ### E. [UX] Search filters on Enter/blur, not as-you-type
 `<input type=search @onchange>` fires on `change`. Fine for a title search; a switch to `oninput` (debounced)
-would feel more live. Preference, not a defect.
-
-### F. [POLISH] Double slash in download paths
-Merged files log as `.../videos//CGP Grey/...` — `DownloadDirectory` has a trailing slash and the join adds
-another. Harmless (the OS collapses it), cosmetic only.
+would feel more live. Preference, not a defect — left as is.
 
 ---
 
