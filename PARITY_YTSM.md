@@ -9,9 +9,10 @@ Regard is a modern rewrite that **gained** things ytsm never had (multi-site via
 key/quota, per-subscription title filters, Jellyfin integration, SignalR live updates, `@handle`
 support). Most of the ytsm gaps have now been closed — **User Settings UI**, **logout**,
 **video duration**, **live job-progress notifications + a Job Log**, a **fully functional watch page**
-(embed / watch-on-site / up-next), **subscription import** (OPML + URL list), and an **Admin settings +
-user-management surface** (registration toggle, global/per-user quotas, enable/disable, delete) all
-shipped (2026-08-27 – 08-28). What remains: a **subtitle/filename-pattern UI** and **password reset**.
+(embed / watch-on-site / up-next), **subscription import** (OPML + URL list), an **Admin settings +
+user-management surface** (registration toggle, global/per-user quotas, enable/disable, delete), and
+**subtitle options** (user + per-subscription) all shipped (2026-08-27 – 08-28). What remains: a
+**filename-pattern UI** and **password reset**.
 
 Status key: ✅ done · ◻ still open.
 
@@ -59,9 +60,11 @@ Status key: ✅ done · ◻ still open.
    override (commit `911731f`). The `download_file_pattern` equivalent is still backend-only. Note
    the shipped default format is still uncapped (now user-capable via Settings).
 
-8. ◻ **Subtitle options in-UI.** ytsm lets you toggle subtitles, languages, auto-subs, format. Regard
-   downloads subtitles too (`DownloadVideoJob` `Ytdl_WriteSubtitles`, `--sub-langs`) but the
-   options are backend-only with no UI.
+8. ✅ **Subtitle options in-UI.** Done (commit `db8f188`). Both the user Settings page (a Subtitles
+   section: on/off with auto-captions, language mode, and format sub-options) and the per-subscription
+   edit form (the same five as inherit/on/off overrides) now expose `Ytdl_WriteSubtitles`,
+   `Ytdl_WriteAutoSub`, `Ytdl_AllSubs`, `Ytdl_SubFormat`, `Ytdl_SubLang`. Also fixed the arg emission
+   (language/format only when subtitles are enabled; "all" mutually exclusive with a language list).
 
 ## Roughly at parity
 Nestable **folders**; **video search** (Regard: `VideoList.razor.cs` `SetQuery/OnQueryChanged` is
@@ -94,6 +97,7 @@ so effectively both rely on an edit form to re-parent.
 6. ✅ ~~Admin settings~~ — done (`536c707`): `/admin` page — registration toggle, global + per-user
    quotas (with in-Settings usage transparency + clear download-block messages), and user management
    (promote/demote, enable/disable, delete). Sync-cron/concurrency intentionally excluded.
-7. ◻ **Subtitle + filename-pattern UI** (backend-only today) — **now the top remaining gap**.
-8. ◻ **Password reset** (email flow).
+7. ✅ ~~Subtitle UI~~ — done (`db8f188`): user Settings + per-subscription, plus the arg-emission fix.
+8. ◻ **Filename-pattern UI** (`download_file_pattern` is still backend-only) — **now the top remaining gap**.
+9. ◻ **Password reset** (email flow).
 </content>
