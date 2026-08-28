@@ -484,6 +484,20 @@ namespace Regard.Backend.Services
             if (folder == null)
                 throw new ArgumentException("Folder not found");
 
+            // Prevent cycles: the new parent must not be the folder itself or one of its
+            // descendants. Walk up the prospective parent's ancestor chain — if we reach this
+            // folder, the move would form a loop that breaks tree rendering and recursive queries.
+            for (int? ancestorId = newParentFolderId; ancestorId.HasValue;)
+            {
+                if (ancestorId.Value == folderId)
+                    throw new ArgumentException("A folder can't be moved into itself or one of its subfolders.");
+
+                ancestorId = dataContext.SubscriptionFolders.AsQueryable()
+                    .Where(x => x.Id == ancestorId.Value && x.UserId == user.Id)
+                    .Select(x => x.ParentId)
+                    .FirstOrDefault();
+            }
+
             folder.Name = newName;
             folder.ParentId = newParentFolderId;
             ValidateFolderName(folder.Name, folder.ParentId, folderId);
