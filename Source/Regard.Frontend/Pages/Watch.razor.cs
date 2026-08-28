@@ -165,8 +165,9 @@ namespace Regard.Frontend.Pages
                 video.IsWatched = false;
         }
 
-        // Downloaded-video playback finished: mark watched (no auto-advance).
-        private async Task OnPlaybackEnded()
+        // Fired once the playhead crosses ~90% of the downloaded video (and again on end as a fallback):
+        // mark it watched. Idempotent — only marks if not already watched, and never runs on page open.
+        private async Task OnMarkWatchedFromPlayback()
         {
             if (video != null && !video.IsWatched)
                 await OnMarkWatched();

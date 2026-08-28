@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,8 +20,14 @@ namespace Regard.Frontend.Shared.Controls
 
     }
 
-    public partial class Video
+    public partial class Video : IAsyncDisposable
     {
+        private ElementReference videoElement;
+        private DotNetObjectReference<Video> selfRef;
+        private bool watchProgressRegistered;
+
+        [Inject] protected IJSRuntime JS { get; set; }
+
         [Parameter] public string Class { get; set; }
 
         [Parameter] public bool ShowControls { get; set; } = true;
@@ -39,7 +46,31 @@ namespace Regard.Frontend.Shared.Controls
 
         [Parameter] public EventCallback<ErrorEventArgs> Error { get; set; }
 
+        /// <summary>
+        /// Fraction of the duration (0..1) at which <see cref="WatchedThresholdReached"/> fires once.
+        /// 0 (default) disables progress tracking. Set to e.g. 0.9 to count a video as watched near the end.
+        /// </summary>
+        [Parameter] public double WatchedThreshold { get; set; }
+
+        [Parameter] public EventCallback WatchedThresholdReached { get; set; }
+
         [Parameter] public RenderFragment ChildContent { get; set; }
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender && WatchedThreshold > 0 && WatchedThresholdReached.HasDelegate)
+            {
+                selfRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("RegardHelpers.addWatchProgressHandler", videoElement, selfRef, WatchedThreshold);
+                watchProgressRegistered = true;
+            }
+        }
+
+        [JSInvokable]
+        public async Task OnWatchThresholdReached()
+        {
+            await WatchedThresholdReached.InvokeAsync(null);
+        }
 
         protected async Task OnEnded(EventArgs _)
         {
@@ -53,6 +84,16 @@ namespace Regard.Frontend.Shared.Controls
         protected async Task OnError(ErrorEventArgs e)
         {
             await Error.InvokeAsync(e);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (watchProgressRegistered)
+            {
+                try { await JS.InvokeVoidAsync("RegardHelpers.removeWatchProgressHandler", videoElement); }
+                catch (Exception) { /* circuit/JS already gone during teardown */ }
+            }
+            selfRef?.Dispose();
         }
     }
 }

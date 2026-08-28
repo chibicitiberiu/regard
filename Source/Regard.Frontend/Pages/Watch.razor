@@ -16,7 +16,9 @@
                 {
                     <Video ShowControls="true"
                            AutoPlay="true"
-                           Ended="OnPlaybackEnded"
+                           WatchedThreshold="0.9"
+                           WatchedThresholdReached="OnMarkWatchedFromPlayback"
+                           Ended="OnMarkWatchedFromPlayback"
                            Error="e => OnStreamError()">
                         <source src="@videoStreamUri" type="@video.StreamMimeType"
                                 @onerror="e => OnStreamError()" />
