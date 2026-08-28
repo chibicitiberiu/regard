@@ -2,9 +2,9 @@
 @layout AuthLayout
 @inject AppController appCtrl
 
-<h3>Register</h3>
-
-<RegisterForm SubmitText="Register" Registered="OnFormCompleted" />
+<SetupCard Title="Create your account" Eyebrow="Sign up">
+    <RegisterForm SubmitText="Register" Registered="OnFormCompleted" />
+</SetupCard>
 
 @code {
     private void OnFormCompleted()

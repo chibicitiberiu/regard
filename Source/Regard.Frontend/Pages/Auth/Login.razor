@@ -2,9 +2,9 @@
 @layout AuthLayout
 @inject AppController appCtrl
 
-<h3>Login</h3>
-
-<LoginForm SubmitText="Login" LoggedIn="OnFormCompleted" />
+<SetupCard Title="Welcome back" Eyebrow="Sign in">
+    <LoginForm SubmitText="Login" LoggedIn="OnFormCompleted" />
+</SetupCard>
 
 @code {
 
