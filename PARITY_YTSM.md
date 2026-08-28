@@ -12,8 +12,8 @@ support). Most of the ytsm gaps have now been closed — **User Settings UI**, *
 (embed / watch-on-site / up-next), **subscription import** (OPML + URL list), an **Admin settings +
 user-management surface** (registration toggle, global/per-user quotas, enable/disable, delete), and
 **subtitle options** (user + per-subscription), and a **download path/filename pattern** (user default +
-per-subscription, with token help and a live preview) all shipped (2026-08-27 – 08-28). What remains:
-**password reset**.
+per-subscription, with token help and a live preview), and **password reset** (email with a server-log
+fallback) all shipped (2026-08-27 – 08-28). **Every ranked ytsm-parity gap is now closed.**
 
 Status key: ✅ done · ◻ still open.
 
@@ -47,9 +47,11 @@ Status key: ✅ done · ◻ still open.
    to channel URLs, and runs the batch as a background job (bell progress + per-URL Job Log) with a
    per-import auto-download toggle. (Export still absent — neither app has it.)
 
-5. **Logout / password reset** — ✅ *logout done* / ◻ *password reset open*. The user dropdown now
-   shows the signed-in name + a Log out action (commit `5e5bdb4`). Password reset (email flow) is
-   still absent.
+5. **Logout / password reset** — ✅ *both done*. The user dropdown shows the signed-in name + a Log out
+   action (commit `5e5bdb4`). Password reset (commit `993fb79`): anonymous `/auth/forgot-password` +
+   `/auth/reset-password` pages backed by Identity reset tokens; the link is emailed via MailKit when SMTP
+   is configured (global `Smtp:*` options), otherwise written to the server log for the admin. Forgot
+   returns a generic response (no account enumeration).
 
 6. ✅ **Job-progress notifications in the UI.** Done (commit `5e5bdb4`). The notification bell now
    shows live in-progress jobs (progress bar + current step) via SignalR, plus recent messages and
@@ -103,5 +105,6 @@ so effectively both rely on an edit form to re-parent.
 7. ✅ ~~Subtitle UI~~ — done (`db8f188`): user Settings + per-subscription, plus the arg-emission fix.
 8. ✅ ~~Filename-pattern UI~~ — done (`170fd3d`): user-level default on Settings + the existing per-sub
    override, both with token help and a live example preview.
-9. ◻ **Password reset** (email flow) — **now the last remaining ytsm-parity gap**.
+9. ✅ ~~Password reset~~ — done (`993fb79`): email delivery via MailKit with a server-log fallback when
+   SMTP is unconfigured; anti-enumeration generic responses. **This was the last open ytsm-parity gap.**
 </content>
