@@ -12,14 +12,14 @@
     <div class="watch-layout">
         <div class="watch-main">
             <div class="watch-player">
-                @if (video.IsDownloaded)
+                @if (video.IsDownloaded && !streamFailed)
                 {
                     <Video ShowControls="true"
                            AutoPlay="true"
                            Ended="OnPlaybackEnded"
-                           Error="e => { errorMessage = e.Message; StateHasChanged(); }">
+                           Error="e => OnStreamError()">
                         <source src="@videoStreamUri" type="@video.StreamMimeType"
-                                @onerror="e => { errorMessage = e.Message; StateHasChanged(); }" />
+                                @onerror="e => OnStreamError()" />
                     </Video>
                 }
                 else if (video.EmbedUrl != null)
@@ -35,9 +35,13 @@
                     <div class="watch-unavailable">
                         <div class="watch-unavailable-inner">
                             <div class="watch-unavailable-glyph">&#9654;</div>
-                            <p class="watch-unavailable-title">This video isn't downloaded</p>
+                            <p class="watch-unavailable-title">@(streamFailed ? "This video couldn't be played" : "This video isn't downloaded")</p>
                             <p class="text-muted">
-                                @if (!embeddingAllowed)
+                                @if (streamFailed)
+                                {
+                                    <span>The downloaded file couldn't be loaded &mdash; it may have been moved or removed. Download it again, or watch it on the original site.</span>
+                                }
+                                else if (!embeddingAllowed)
                                 {
                                     <span>Embedding external players is turned off. Download it, or watch it on the original site.</span>
                                 }
@@ -48,7 +52,7 @@
                             </p>
                             <div class="watch-unavailable-actions">
                                 <button class="primary" @onclick="OnDownloadNow" disabled="@downloadQueued">
-                                    @(downloadQueued ? "Queued…" : "Download now")
+                                    @(downloadQueued ? "Queued…" : (streamFailed ? "Download again" : "Download now"))
                                 </button>
                                 @if (watchOnHost != null)
                                 {

@@ -22,6 +22,7 @@ namespace Regard.Frontend.Pages
         private string watchOnHost;      // null when OriginalUrl isn't a usable http(s) link
         private bool embeddingAllowed;   // effective user setting, for the placeholder message
         private bool downloadQueued;
+        private bool streamFailed;        // the downloaded file wouldn't load (missing/unreadable) -> show the fallback
         private List<ApiVideo> upNext;
 
         [Inject] protected BackendService Backend { get; set; }
@@ -42,6 +43,7 @@ namespace Regard.Frontend.Pages
             errorMessage = null;
             watchOnHost = null;
             downloadQueued = false;
+            streamFailed = false;
 
             var (resp, httpResp) = await Backend.VideoList(new VideoListRequest() { Ids = new[] { VideoId } });
             if (!httpResp.IsSuccessStatusCode)
@@ -168,6 +170,15 @@ namespace Regard.Frontend.Pages
         {
             if (video != null && !video.IsWatched)
                 await OnMarkWatched();
+        }
+
+        // The <video> couldn't load its source (e.g. the downloaded file was moved/removed while the DB
+        // still flags it downloaded). Fall through to the same placeholder a not-downloaded video shows,
+        // instead of leaving a dead black player. Not an error banner — this is a recoverable state.
+        private void OnStreamError()
+        {
+            streamFailed = true;
+            StateHasChanged();
         }
 
         private string ThumbUrl(ApiVideo v)
