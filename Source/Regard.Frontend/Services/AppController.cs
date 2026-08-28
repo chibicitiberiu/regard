@@ -115,7 +115,10 @@ namespace Regard.Services
             // Update server status
             appState.ServerStatus = (await backend.SetupServerStatus()).Data;
 
-            navigationManager.NavigateTo("/");
+            // Force a full reload (like the login/logout paths): the token was set on a scoped auth-state
+            // provider, not the singleton the app's AuthorizeView subscribes to, so a soft navigation
+            // would briefly re-render the login screen until the next reload.
+            navigationManager.NavigateTo("/", forceLoad: true);
         }
 
         #endregion
