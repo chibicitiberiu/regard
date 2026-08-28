@@ -85,10 +85,33 @@ namespace Regard.Backend.Services
         /// Marks the given videos as watched. For downloaded videos whose subscription has
         /// Subscriptions_DeleteWatched enabled, deletes the files and refills the download window.
         /// </summary>
+        /// <summary>
+        /// Writes a resume position for a single video. Deliberately lightweight: a single targeted UPDATE
+        /// with no VideoUpdated event, because this is high-frequency playback telemetry (every few seconds)
+        /// and must not fan out through ToApi + SignalR on each tick. Owner-scoped.
+        /// <paramref name="updatedAt"/> defaults to now; pass an explicit value when adopting an external
+        /// (Jellyfin) position so the timestamp reflects that source rather than "just now".
+        /// </summary>
+        public void SetPlaybackPosition(UserAccount user, int videoId, int seconds, DateTimeOffset? updatedAt = null)
+        {
+            var video = dataContext.Videos.AsQueryable()
+                .Where(v => v.Id == videoId && v.Subscription.UserId == user.Id)
+                .FirstOrDefault();
+            // Never store a resume point for an already-watched video: a late progress report (racing the
+            // ~90% mark-watched, which clears the position) must not resurrect one.
+            if (video == null || video.IsWatched)
+                return;
+
+            video.PlaybackPositionSeconds = seconds;
+            video.PlaybackPositionUpdated = updatedAt ?? DateTimeOffset.Now;
+            dataContext.SaveChanges();
+        }
+
         public async Task MarkWatched(UserAccount user, int[] videoIds)
         {
-            // Set the flag (+ notify the frontend) via the shared update path.
-            Update(user, videoIds, video => video.IsWatched = true);
+            // Set the flag (+ notify the frontend) via the shared update path. A finished video restarts
+            // from 0, so clear any resume position at the same time.
+            Update(user, videoIds, video => { video.IsWatched = true; video.PlaybackPositionSeconds = null; });
 
             // Forward auto-delete: delete downloaded files (and refill) for subs that opt in.
             var toDelete = dataContext.Videos.AsQueryable()

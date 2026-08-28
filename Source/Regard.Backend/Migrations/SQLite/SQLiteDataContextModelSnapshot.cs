@@ -534,6 +534,12 @@ namespace Regard.Backend.Migrations.SQLite
                         .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("PlaybackPositionSeconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("PlaybackPositionUpdated")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("PlaylistIndex")
                         .HasColumnType("INTEGER");
 

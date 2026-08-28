@@ -154,6 +154,87 @@
         if (!(videoElement instanceof Node) || !isFinite(seconds))
             return;
         try { videoElement.currentTime = Math.max(0, seconds); } catch (e) { /* not ready yet */ }
+    },
+
+    // Seek once, as soon as metadata is available, to resume where playback was left off.
+    seekOnLoad: function (videoElement, seconds) {
+        if (!(videoElement instanceof Node) || !isFinite(seconds) || seconds <= 0)
+            return;
+        var seek = function () {
+            try { videoElement.currentTime = seconds; } catch (e) { /* ignore */ }
+        };
+        if (videoElement.readyState >= 1)            // metadata already loaded
+            seek();
+        else
+            videoElement.addEventListener("loadedmetadata", seek, { once: true });
+    },
+
+    // --- Playback position reporting ---------------------------------------------------------
+    // Reports currentTime back to .NET (OnPositionReport) at most every `minDelta` seconds while
+    // playing, and once on pause/ended, so the resume point survives leaving the page. Also flushed
+    // synchronously from the component's DisposeAsync (in-app navigation, where no unload fires).
+
+    positionReportHandlers: [],
+
+    addPositionReportHandler: function (videoElement, dotNetObjectRef, minDelta) {
+        this.removePositionReportHandler(videoElement);
+        var delta = (minDelta && minDelta > 0) ? minDelta : 5;
+
+        var handler = {
+            element: videoElement,
+            dotNetObjectRef: dotNetObjectRef,
+            minDelta: delta,
+            lastReported: -1e9,
+            report: null,
+            onTime: null,
+            onPause: null
+        };
+        handler.report = function () {
+            var d = videoElement.duration;
+            if (!isFinite(d) || d <= 0)              // live/unknown -> nothing meaningful to resume
+                return;
+            var t = videoElement.currentTime;
+            handler.lastReported = t;
+            try { handler.dotNetObjectRef.invokeMethodAsync("OnPositionReport", t); } catch (e) { }
+        };
+        handler.onTime = function () {
+            var t = videoElement.currentTime;
+            if (Math.abs(t - handler.lastReported) >= handler.minDelta)
+                handler.report();
+        };
+        handler.onPause = function () { handler.report(); };
+
+        videoElement.addEventListener("timeupdate", handler.onTime);
+        videoElement.addEventListener("pause", handler.onPause);
+        videoElement.addEventListener("ended", handler.onPause);
+        this.positionReportHandlers.push(handler);
+    },
+
+    // Report the current position immediately (used by the component's dispose-time flush).
+    flushPositionReport: function (videoElement) {
+        if (!(videoElement instanceof Node))
+            return;
+        for (var i = 0; i < this.positionReportHandlers.length; i++) {
+            var h = this.positionReportHandlers[i];
+            if (h.element.isSameNode(videoElement)) {
+                h.report();
+                return;
+            }
+        }
+    },
+
+    removePositionReportHandler: function (videoElement) {
+        if (!(videoElement instanceof Node))
+            return;
+        for (var i = this.positionReportHandlers.length - 1; i >= 0; i--) {
+            var h = this.positionReportHandlers[i];
+            if (h.element.isSameNode(videoElement)) {
+                h.element.removeEventListener("timeupdate", h.onTime);
+                h.element.removeEventListener("pause", h.onPause);
+                h.element.removeEventListener("ended", h.onPause);
+                this.positionReportHandlers.splice(i, 1);
+            }
+        }
     }
 }
 

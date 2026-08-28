@@ -70,6 +70,13 @@
                             <span class="video-badge video-badge-duration">@item.ApiVideo.Duration.Value.ToDurationString()</span>
                         </div>
                     }
+                    @if (!item.ApiVideo.IsWatched && item.ApiVideo.PlaybackPositionSeconds > 0 && item.ApiVideo.Duration > 0)
+                    {
+                        <div class="video-progress">
+                            <div class="video-progress-fill"
+                                 style="width:@(System.Math.Min(100, item.ApiVideo.PlaybackPositionSeconds.Value * 100 / item.ApiVideo.Duration.Value))%"></div>
+                        </div>
+                    }
                 </NavLink>
             </div>
             <div class="video-body">

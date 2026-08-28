@@ -84,5 +84,11 @@ namespace Regard.Common.API.Model
         /// segments cut (<see cref="SponsorsRemoved"/> true) — the timeline no longer matches.
         /// </summary>
         public System.Collections.Generic.List<ApiChapter> Chapters { get; set; }
+
+        /// <summary>
+        /// Resume point in whole seconds, or null when the video is watched / not yet started. Present on
+        /// list items too so thumbnails can draw a progress bar.
+        /// </summary>
+        public int? PlaybackPositionSeconds { get; set; }
     }
 }

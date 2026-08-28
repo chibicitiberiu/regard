@@ -206,7 +206,19 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> MarkNotWatched([FromBody] VideoMarkNotWatchedRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            videoManager.Update(user, request.VideoIds, video => video.IsWatched = false);
+            // Also clear any resume position so an explicitly-unwatched video starts from the beginning.
+            videoManager.Update(user, request.VideoIds,
+                video => { video.IsWatched = false; video.PlaybackPositionSeconds = null; });
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("report_progress")]
+        [Authorize]
+        public async Task<IActionResult> ReportProgress([FromBody] VideoReportProgressRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            videoManager.SetPlaybackPosition(user, request.VideoId, request.PositionSeconds);
             return Ok(responseFactory.Success());
         }
 

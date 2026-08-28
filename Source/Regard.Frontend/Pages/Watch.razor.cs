@@ -35,6 +35,11 @@ namespace Regard.Frontend.Pages
         // meaningful; the YouTube embed and trimmed files show the list read-only.
         private bool ChaptersSeekable => HasChapters && video.IsDownloaded && !streamFailed && !video.SponsorsRemoved;
 
+        // Resume point handed to the player: only for an unwatched video that has one.
+        private double ResumeFromSeconds =>
+            (video != null && !video.IsWatched && video.PlaybackPositionSeconds.HasValue)
+                ? video.PlaybackPositionSeconds.Value : 0;
+
         [Inject] protected BackendService Backend { get; set; }
 
         [Inject] protected AppState AppState { get; set; }
@@ -181,6 +186,20 @@ namespace Regard.Frontend.Pages
         {
             if (video != null && !video.IsWatched)
                 await OnMarkWatched();
+        }
+
+        // Throttled playback-position callback (also fires on pause/ended and on the player's dispose).
+        // Persist the resume point and keep the chapter highlight in sync. Skips once watched, so a video
+        // that just crossed the 90% watched mark doesn't immediately get a fresh resume position.
+        private async Task OnPositionReport(double seconds)
+        {
+            currentPlaybackSeconds = seconds;
+            if (video == null || video.IsWatched)
+                return;
+
+            int secs = (int)seconds;
+            video.PlaybackPositionSeconds = secs;
+            await Backend.VideoReportProgress(new VideoReportProgressRequest { VideoId = VideoId, PositionSeconds = secs });
         }
 
         // The <video> couldn't load its source (e.g. the downloaded file was moved/removed while the DB

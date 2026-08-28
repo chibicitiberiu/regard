@@ -16,4 +16,12 @@ namespace Regard.Common.API.Subscriptions
     public class VideoMarkWatchedRequest : VideoSimpleRequest { }
 
     public class VideoMarkNotWatchedRequest : VideoSimpleRequest { }
+
+    /// <summary>Report the current playback position (resume point) for a single video.</summary>
+    public class VideoReportProgressRequest
+    {
+        public int VideoId { get; set; }
+
+        public int PositionSeconds { get; set; }
+    }
 }

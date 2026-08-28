@@ -293,6 +293,9 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> VideoMarkNotWatched(VideoMarkNotWatchedRequest data)
             => Post("api/video/mark_not_watched", data);
 
+        public Task<(ApiResponse, HttpResponseMessage)> VideoReportProgress(VideoReportProgressRequest data)
+            => Post("api/video/report_progress", data);
+
         public Task<(ApiResponse, HttpResponseMessage)> VideoAdd(VideoAddRequest data)
             => Post("api/video/add", data);
 

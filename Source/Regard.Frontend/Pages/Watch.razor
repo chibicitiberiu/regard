@@ -21,6 +21,8 @@
                            WatchedThresholdReached="OnMarkWatchedFromPlayback"
                            Ended="OnMarkWatchedFromPlayback"
                            SkipSegments="video.SponsorSegments"
+                           PositionChanged="OnPositionReport"
+                           StartPosition="@ResumeFromSeconds"
                            Error="e => OnStreamError()">
                         <source src="@videoStreamUri" type="@video.StreamMimeType"
                                 @onerror="e => OnStreamError()" />
@@ -210,6 +212,13 @@
                             @if (v.Duration.HasValue)
                             {
                                 <span class="upnext-duration">@v.Duration.Value.ToDurationString()</span>
+                            }
+                            @if (!v.IsWatched && v.PlaybackPositionSeconds > 0 && v.Duration > 0)
+                            {
+                                <div class="video-progress">
+                                    <div class="video-progress-fill"
+                                         style="width:@(System.Math.Min(100, v.PlaybackPositionSeconds.Value * 100 / v.Duration.Value))%"></div>
+                                </div>
                             }
                         </div>
                         <div class="upnext-text">

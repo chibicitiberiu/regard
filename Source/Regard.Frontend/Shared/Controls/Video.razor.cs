@@ -26,6 +26,7 @@ namespace Regard.Frontend.Shared.Controls
         private DotNetObjectReference<Video> selfRef;
         private bool watchProgressRegistered;
         private bool skipSegmentsRegistered;
+        private bool positionReportRegistered;
 
         [Inject] protected IJSRuntime JS { get; set; }
 
@@ -58,18 +59,44 @@ namespace Regard.Frontend.Shared.Controls
         /// <summary>SponsorBlock segments to skip during playback (original-timeline seconds). Null = none.</summary>
         [Parameter] public IReadOnlyList<Regard.Common.API.Model.ApiSponsorSegment> SkipSegments { get; set; }
 
+        /// <summary>Raised (throttled, ~5 s) with the current playback position in seconds, plus once on
+        /// pause/ended and on dispose. Setting a delegate enables position reporting.</summary>
+        [Parameter] public EventCallback<double> PositionChanged { get; set; }
+
+        /// <summary>Seconds to resume from once metadata loads. 0 (default) starts at the beginning.</summary>
+        [Parameter] public double StartPosition { get; set; }
+
         [Parameter] public RenderFragment ChildContent { get; set; }
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
-            if (firstRender && WatchedThreshold > 0 && WatchedThresholdReached.HasDelegate)
-            {
+            if (!firstRender)
+                return;
+
+            bool needWatchProgress = WatchedThreshold > 0 && WatchedThresholdReached.HasDelegate;
+            bool needPositionReport = PositionChanged.HasDelegate;
+
+            // One DotNetObjectReference shared by every JS handler that calls back into this component,
+            // so position reporting works even when the watched-threshold handler isn't wired.
+            if (needWatchProgress || needPositionReport)
                 selfRef = DotNetObjectReference.Create(this);
+
+            if (needWatchProgress)
+            {
                 await JS.InvokeVoidAsync("RegardHelpers.addWatchProgressHandler", videoElement, selfRef, WatchedThreshold);
                 watchProgressRegistered = true;
             }
 
-            if (firstRender && SkipSegments != null && SkipSegments.Count > 0)
+            if (needPositionReport)
+            {
+                await JS.InvokeVoidAsync("RegardHelpers.addPositionReportHandler", videoElement, selfRef, 5);
+                positionReportRegistered = true;
+            }
+
+            if (StartPosition > 0)
+                await JS.InvokeVoidAsync("RegardHelpers.seekOnLoad", videoElement, StartPosition);
+
+            if (SkipSegments != null && SkipSegments.Count > 0)
             {
                 var segs = SkipSegments.Select(s => new { start = s.Start, end = s.End }).ToArray();
                 await JS.InvokeVoidAsync("RegardHelpers.addSkipSegmentsHandler", videoElement, segs);
@@ -90,6 +117,12 @@ namespace Regard.Frontend.Shared.Controls
             catch (Exception) { /* player/JS not ready */ }
         }
 
+        [JSInvokable]
+        public async Task OnPositionReport(double seconds)
+        {
+            await PositionChanged.InvokeAsync(seconds);
+        }
+
         protected async Task OnEnded(EventArgs _)
         {
             await Ended.InvokeAsync(null);
@@ -106,6 +139,17 @@ namespace Regard.Frontend.Shared.Controls
 
         public async ValueTask DisposeAsync()
         {
+            if (positionReportRegistered)
+            {
+                // Flush the final position BEFORE removing the handler — in-app navigation disposes the
+                // component without firing pause/unload, so this is the only chance to save where we were.
+                try
+                {
+                    await JS.InvokeVoidAsync("RegardHelpers.flushPositionReport", videoElement);
+                    await JS.InvokeVoidAsync("RegardHelpers.removePositionReportHandler", videoElement);
+                }
+                catch (Exception) { /* circuit/JS already gone during teardown */ }
+            }
             if (watchProgressRegistered)
             {
                 try { await JS.InvokeVoidAsync("RegardHelpers.removeWatchProgressHandler", videoElement); }

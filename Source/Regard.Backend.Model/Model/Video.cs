@@ -102,6 +102,18 @@ namespace Regard.Backend.Model
         /// </summary>
         public string Chapters { get; set; }
 
+        /// <summary>
+        /// Resume point: seconds into the video where playback was last left off, or null once watched /
+        /// never started. Cleared when the video is marked watched (a finished video restarts from 0).
+        /// </summary>
+        public int? PlaybackPositionSeconds { get; set; }
+
+        /// <summary>
+        /// When <see cref="PlaybackPositionSeconds"/> was last written. Drives newer-wins reconciliation
+        /// with Jellyfin's UserData.LastPlayedDate during two-way sync.
+        /// </summary>
+        public DateTimeOffset? PlaybackPositionUpdated { get; set; }
+
         public override string ToString()
         {
             return $"({SubscriptionId}:{Id}:{Name ?? OriginalUrl})";
