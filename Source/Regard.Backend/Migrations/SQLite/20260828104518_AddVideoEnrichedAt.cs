@@ -16,6 +16,10 @@ namespace Regard.Backend.Migrations.SQLite
                 table: "Videos",
                 type: "TEXT",
                 nullable: true);
+
+            // Videos that already exist were synced with full (non-flat) metadata, so treat them as
+            // enriched — otherwise the UI would hide their valid published dates until re-opened.
+            migrationBuilder.Sql("UPDATE Videos SET EnrichedAt = LastUpdated WHERE EnrichedAt IS NULL;");
         }
 
         /// <inheritdoc />
