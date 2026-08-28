@@ -152,7 +152,8 @@ namespace Regard.Backend.Services
         public async Task<Subscription> Create(UserAccount userAccount,
                                                Uri uri,
                                                int? parentFolderId,
-                                               bool allowDuplicate = false)
+                                               bool allowDuplicate = false,
+                                               bool autoDownload = true)
         {
             // Verify parent folder ID exists
             SubscriptionFolder parent = null;
@@ -188,6 +189,11 @@ namespace Regard.Backend.Services
             sub.ParentFolder = parent;
             dataContext.Subscriptions.Add(sub);
             dataContext.SaveChanges();
+
+            // AutoDownload defaults to true globally, so only persist a per-subscription override when
+            // the user opted out — and before the create-time sync, so ProcessDownloadRules honors it.
+            if (!autoDownload)
+                optionManager.SetForSubscription(Options.Subscriptions_AutoDownload, sub.Id, false);
 
             SubscriptionCreated?.Invoke(this, new SubscriptionCreatedEventArgs() { User = userAccount, Subscription = sub });
 

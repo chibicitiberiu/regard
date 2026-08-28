@@ -102,7 +102,7 @@ namespace Regard.Backend.Controllers
                 var url = new Uri(request.Url);
                 var user = await userManager.GetUserAsync(User);
 
-                var result = await subscriptionManager.Create(user, url, request.ParentFolderId, request.AllowDuplicate);
+                var result = await subscriptionManager.Create(user, url, request.ParentFolderId, request.AllowDuplicate, request.AutoDownload);
                 return Ok(responseFactory.Success(modelFactory.ToApi(result)));
             }
             catch (UriFormatException)

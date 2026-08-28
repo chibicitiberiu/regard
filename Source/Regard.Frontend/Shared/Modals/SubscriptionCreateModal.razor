@@ -30,6 +30,14 @@
                           Label="Folder:" LabelWidth="2"
                           Required="true" />
 
+            <RgFieldWrapper Id="subcreate_opts" Label="Options:" LabelWidth="2" Required="false">
+                <Field>
+                    <label class="inline-check">
+                        <input type="checkbox" id="subcreate_autodownload" @bind="Request.AutoDownload" /> Automatically download new videos
+                    </label>
+                </Field>
+            </RgFieldWrapper>
+
             <div class="row">
                 <div class="col-xs-12 row">
                     <button class="primary ml-auto" type="submit" disabled="@(!SubmitEnabled)">
