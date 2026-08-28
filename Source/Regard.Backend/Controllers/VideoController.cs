@@ -77,8 +77,30 @@ namespace Regard.Backend.Controllers
                 query = query.Where(x => validSubscriptionIds.Contains(x.SubscriptionId));
             }
 
-            if (request.IsWatched.HasValue)
+            // WatchState (grid toolbar) takes precedence over the legacy IsWatched tri-state, which is
+            // still used by programmatic callers (e.g. the watch-page "Up next" queue).
+            if (request.WatchState.HasValue)
+            {
+                switch (request.WatchState.Value)
+                {
+                    case Regard.Model.VideoWatchState.Watched:
+                        query = query.Where(x => x.IsWatched);
+                        break;
+                    case Regard.Model.VideoWatchState.Started:
+                        query = query.Where(x => !x.IsWatched && x.PlaybackPositionSeconds >= Regard.Model.PlaybackConstants.MinInProgressSeconds);
+                        break;
+                    case Regard.Model.VideoWatchState.Unwatched:
+                        query = query.Where(x => !x.IsWatched && (x.PlaybackPositionSeconds == null || x.PlaybackPositionSeconds < Regard.Model.PlaybackConstants.MinInProgressSeconds));
+                        break;
+                    case Regard.Model.VideoWatchState.All:
+                    default:
+                        break;
+                }
+            }
+            else if (request.IsWatched.HasValue)
+            {
                 query = query.Where(x => x.IsWatched == request.IsWatched.Value);
+            }
 
             if (request.IsDownloaded.HasValue)
             {
@@ -218,7 +240,7 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> ReportProgress([FromBody] VideoReportProgressRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            videoManager.SetPlaybackPosition(user, request.VideoId, request.PositionSeconds);
+            videoManager.SetPlaybackPosition(user, request.VideoId, request.PositionSeconds, request.DurationSeconds);
             return Ok(responseFactory.Success());
         }
 

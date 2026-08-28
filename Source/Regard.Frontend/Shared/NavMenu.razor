@@ -1,4 +1,5 @@
 ﻿@using Regard.Common.API.Model
+@using System.Linq
 
 <nav class="navbar navbar-fixed-top">
     <NavLink class="navbar-brand nav-link logo-small" href="" Match="NavLinkMatch.All" @onclick="LogoClicked">
@@ -18,47 +19,60 @@
                                    Placement="Popper.Placement.Bottom"
                                    Offset="15">
                         <div class="notifications-panel">
-                            @if (Notifications.ActiveJobs.Count == 0 && Notifications.RecentMessages.Count == 0)
+                            @if (Notifications.Notifications.Count == 0)
                             {
                                 <div class="np-empty">Nothing happening right now.</div>
                             }
-
-                            @if (Notifications.ActiveJobs.Count > 0)
+                            else
                             {
-                                <div class="np-section-title">Active jobs</div>
-                                <ListView Model="ApiJobInfo" ItemsSource="Notifications.ActiveJobs" Class="np-list">
-                                    <ItemTemplate Context="job">
-                                        <div class="np-job">
-                                            <div class="np-job-header">
-                                                <div class="np-job-name">@job.Name</div>
-                                                @if (job.Cancellable && job.State == ApiJobState.Running)
+                                <div class="np-header">
+                                    <span class="np-section-title">Notifications</span>
+                                    @if (Notifications.Notifications.Any(n => !n.Ongoing))
+                                    {
+                                        <button class="button-undecorated np-clear" @onclick="OnClearAll">Clear all</button>
+                                    }
+                                </div>
+                                <ListView Model="ApiNotification" ItemsSource="Notifications.Notifications" Class="np-list">
+                                    <ItemTemplate Context="n">
+                                        <div class="np-item np-item-@n.Severity.ToString().ToLowerInvariant() @(HasPrimaryAction(n) ? "np-clickable" : "")"
+                                             @onclick="() => OnNotificationClick(n)">
+                                            <div class="np-item-main">
+                                                <div class="np-item-title">@n.Title</div>
+                                                @if (!string.IsNullOrEmpty(n.Text))
                                                 {
-                                                    <button class="button-undecorated np-job-cancel" title="Cancel download"
-                                                            @onclick="() => CancelJob(job)">
+                                                    <div class="np-item-text">@n.Text</div>
+                                                }
+                                                @if (n.Progress.HasValue || n.Ongoing)
+                                                {
+                                                    <div class="progress-bar">
+                                                        <div class="progress-bar-fill @(n.Progress.HasValue ? "" : "indeterminate")"
+                                                             style="@ProgressWidth(n)"></div>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <div class="np-item-actions">
+                                                @if (n.Ongoing && n.Cancellable && n.JobId.HasValue)
+                                                {
+                                                    <button class="button-undecorated np-action" title="Cancel"
+                                                            @onclick="() => OnCancel(n)" @onclick:stopPropagation="true">
+                                                        <Icon Glyph="Icons.Close" />
+                                                    </button>
+                                                }
+                                                @if (n.Severity == ApiNotificationSeverity.Error && n.VideoId.HasValue)
+                                                {
+                                                    <button class="button-undecorated np-action np-retry" title="Retry download"
+                                                            @onclick="() => OnRetry(n)" @onclick:stopPropagation="true">
+                                                        <Icon Glyph="Icons.Synchronize" /> Retry
+                                                    </button>
+                                                }
+                                                @if (!n.Ongoing)
+                                                {
+                                                    <button class="button-undecorated np-action" title="Dismiss"
+                                                            @onclick="() => OnDismiss(n)" @onclick:stopPropagation="true">
                                                         <Icon Glyph="Icons.Close" />
                                                     </button>
                                                 }
                                             </div>
-                                            @if (!string.IsNullOrEmpty(job.Detail))
-                                            {
-                                                <div class="np-job-detail">@job.Detail</div>
-                                            }
-                                            <div class="progress-bar">
-                                                <div class="progress-bar-fill @(job.Progress.HasValue ? "" : "indeterminate")"
-                                                     style="@ProgressWidth(job)"></div>
-                                            </div>
-                                        </div>
-                                    </ItemTemplate>
-                                </ListView>
-                            }
-
-                            @if (Notifications.RecentMessages.Count > 0)
-                            {
-                                <div class="np-section-title">Recent</div>
-                                <ListView Model="ApiMessage" ItemsSource="Notifications.RecentMessages" Class="np-list">
-                                    <ItemTemplate Context="msg">
-                                        <div class="np-msg np-msg-@msg.Severity.ToString().ToLowerInvariant()">
-                                            @msg.Message
                                         </div>
                                     </ItemTemplate>
                                 </ListView>

@@ -39,8 +39,11 @@ namespace Regard.Frontend.Popper
         [JsonPropertyName("placement")]
         public Placement Placement { get; set; }
 
+        // Popper.js v2's option key is "strategy" (NOT "positioningStrategy"); the wrong name meant this
+        // was silently ignored and every dropdown fell back to the default "absolute" strategy, which gets
+        // clipped by a scrolling ancestor (e.g. the video grid).
         [JsonConverter(typeof(EnumDescriptionConverter<PositioningStrategy>))]
-        [JsonPropertyName("positioningStrategy")]
+        [JsonPropertyName("strategy")]
         public PositioningStrategy PositioningStrategy { get; set; }
 
         [JsonPropertyName("modifiers")]

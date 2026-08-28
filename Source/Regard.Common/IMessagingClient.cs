@@ -26,15 +26,12 @@ namespace Regard.Common
         Task NotifyVideoUpdated(ApiVideo video);
 
         /// <summary>
-        /// Pushed when an "important" job (download/sync) changes state or progresses. Drives the
-        /// live job list in the notification bell.
+        /// Pushed when a notification is created or updated in place (keyed by ApiNotification.Key).
+        /// Drives the whole notification bell — live job progress and terminal outcomes alike.
         /// </summary>
-        Task NotifyJobUpdated(ApiJobInfo job);
+        Task NotifyNotification(ApiNotification notification);
 
-        /// <summary>
-        /// Pushed for a user-facing message (info/warning/error, incl. job failures). Drives the
-        /// recent-messages list and toasts.
-        /// </summary>
-        Task NotifyMessage(ApiMessage message);
+        /// <summary>Pushed when a notification is removed (dismissed, cleared, or a silent job finish).</summary>
+        Task NotifyNotificationRemoved(string key);
     }
 }

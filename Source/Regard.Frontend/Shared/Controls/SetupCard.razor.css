@@ -104,10 +104,12 @@
 
 .setup-body ::deep a {
     color: var(--color-fg-primary);
-    text-decoration: none;
+    text-decoration: underline;
+    text-underline-offset: 2px;
 }
 .setup-body ::deep a:hover {
     text-decoration: underline;
+    filter: brightness(1.15);
 }
 
 /* Form fields inside the card (admin step) */

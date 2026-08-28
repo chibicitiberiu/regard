@@ -145,6 +145,7 @@ namespace Regard.Backend
             });
             services.AddScoped<RegardScheduler>();
             services.AddSingleton<JobTrackerService>();
+            services.AddSingleton<NotificationService>();
             services.AddSingleton<DownloadCancellationRegistry>();
             services.AddSingleton<UserLogger>();
 
@@ -161,9 +162,6 @@ namespace Regard.Backend
                 c.Timeout = TimeSpan.FromSeconds(10);
                 c.DefaultRequestHeaders.UserAgent.ParseAdd("Regard/1.0 (+https://github.com/chibicitiberiu/regard)");
             });
-
-            // Bridges job/message events to SignalR clients (live progress + toasts).
-            services.AddHostedService<JobNotificationBroadcaster>();
 
             services.AddScoped<DeleteFilesJob>();
             services.AddScoped<DeleteWatchedFilesJob>();
@@ -198,6 +196,7 @@ namespace Regard.Backend
             services.AddSingleton<IYoutubeDlService, YoutubeDLService>();
             services.AddSingleton<ApiResponseFactory>();
             services.AddSingleton<ApiModelFactory>();
+            services.AddSingleton<VideoUpdateNotifier>();
 
             // Email (password-reset delivery). Scoped to match the scoped IOptionManager it reads.
             services.AddScoped<IEmailService, EmailService>();

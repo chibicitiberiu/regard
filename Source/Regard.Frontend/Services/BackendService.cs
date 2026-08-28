@@ -201,6 +201,9 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionEdit(SubscriptionEditRequest data)
             => Post("api/subscription/edit", data);
 
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionMove(SubscriptionMoveRequest data)
+            => Post("api/subscription/move", data);
+
         public Task<(ApiResponse<SubscriptionFilterPreviewResponse>, HttpResponseMessage)> SubscriptionFilterPreview(SubscriptionFilterPreviewRequest data)
             => Post<SubscriptionFilterPreviewRequest, SubscriptionFilterPreviewResponse>("api/subscription/filter_preview", data);
 
@@ -257,6 +260,19 @@ namespace Regard.Services
 
         #endregion
 
+        #region Notifications
+
+        public Task<ApiResponse<Regard.Common.API.Notifications.NotificationListResponse>> GetRecentNotifications(int take = 50)
+            => Get<Regard.Common.API.Notifications.NotificationListResponse>($"api/notifications/recent?take={take}");
+
+        public Task<(ApiResponse, HttpResponseMessage)> DismissNotification(long id)
+            => Post($"api/notifications/{id}/dismiss", (object)null);
+
+        public Task<(ApiResponse, HttpResponseMessage)> ClearNotifications()
+            => Post("api/notifications/clear", (object)null);
+
+        #endregion
+
         #region Subscription folders
 
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderCreate(SubscriptionFolderCreateRequest data)
@@ -273,6 +289,9 @@ namespace Regard.Services
 
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderEdit(SubscriptionFolderEditRequest data)
             => Post("api/subscriptionfolder/edit", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> SubscriptionFolderMove(SubscriptionFolderMoveRequest data)
+            => Post("api/subscriptionfolder/move", data);
 
         #endregion
 

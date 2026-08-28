@@ -113,6 +113,9 @@
 }
 
 .menu-item {
+    display: flex;
+    align-items: center;
+    gap: .5em;
     transition: background-color linear 0.25s, opacity 0.25s, text-shadow 0.25s;
     padding: .5em 1em;
     margin: .1em 0;
@@ -126,4 +129,26 @@
         background-color: var(--color-bg-secondary);
         transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s;
     }
+}
+
+// Two-line menu entry: a bold label with a dim one-line description underneath (used by the sidebar
+// Add menu to explain what each item does).
+.menu-item-label {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.menu-item-desc {
+    font-size: .78em;
+    opacity: .6;
+}
+
+// Small uppercase heading that groups options inside a menu (e.g. the video Filter popup's sections).
+.menu-section-label {
+    padding: .4em 1em .15em;
+    font-size: .72em;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    opacity: .55;
 }

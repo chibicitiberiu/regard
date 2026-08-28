@@ -13,7 +13,7 @@ $neon-green-text: #cdffe0;
     // base colors
     --color-fg: #dddddd;
     --color-fg-window: #f8f9fa;
-    --color-fg-primary: $neon-magenta-text;
+    --color-fg-primary: #{$neon-magenta-text};
     --color-fg-secondary: rgba(255, 255, 255, .75);
     --color-fg-success: #70FF97;
     --color-fg-info: #80EEFF;
@@ -30,7 +30,7 @@ $neon-green-text: #cdffe0;
     --color-bg-error: #A65355;
     --color-bg-input: #302638;
 
-    --color-shadow-primary: $neon-magenta-glow;
+    --color-shadow-primary: #{$neon-magenta-glow};
 
     // other config
     --border-radius-btn: .25em;

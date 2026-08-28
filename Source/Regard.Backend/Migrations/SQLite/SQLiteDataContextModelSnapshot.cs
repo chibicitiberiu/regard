@@ -234,6 +234,55 @@ namespace Regard.Backend.Migrations.SQLite
                     b.ToTable("Messages");
                 });
 
+            modelBuilder.Entity("Regard.Backend.Common.Model.Notification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Cancellable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("JobId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Ongoing")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PrimaryAction")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<float?>("Progress")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Text")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("VideoDbId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Key");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("Regard.Backend.Model.Option", b =>
                 {
                     b.Property<string>("Key")
@@ -663,6 +712,16 @@ namespace Regard.Backend.Migrations.SQLite
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Job");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Regard.Backend.Common.Model.Notification", b =>
+                {
+                    b.HasOne("Regard.Backend.Model.UserAccount", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("User");
                 });

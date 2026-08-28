@@ -70,6 +70,15 @@ namespace Regard.Backend.Jobs
                 retryIntervalSecs: 0);
         }
 
+        // "Import complete" — a plain informative terminal notification (no click action).
+        protected override JobNotification GetSuccessNotification()
+            => new JobNotification
+            {
+                Title = "Import complete",
+                Text = $"Imported {added} subscription{(added == 1 ? "" : "s")}"
+                     + (skipped + failed > 0 ? $" ({skipped} skipped, {failed} failed)" : ""),
+            };
+
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
             var treeJson = Job.JobData.TryGetValue(Data_Tree, out var t) ? t?.ToString() : null;

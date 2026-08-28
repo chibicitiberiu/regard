@@ -70,6 +70,19 @@ namespace Regard.Backend.Configuration
         );
 
         /// <summary>
+        /// How many days to keep bell notifications before they age out. Deliberately shorter than the
+        /// Job Log retention, so a failed download's captured log stays inspectable in the Job Log after
+        /// its notification is gone. 0 = never prune.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_NotificationRetentionDays = new OptionDefinition<int>(
+            7,
+            "server.notification_retention_days",
+            "NotificationRetentionDays",
+            "REGARD_NOTIFICATION_RETENTION_DAYS",
+            0
+        );
+
+        /// <summary>
         /// If enabled, videos will be downloaded automatically
         /// </summary>
         public static readonly OptionDefinition<bool> Subscriptions_AutoDownload = new OptionDefinition<bool>(

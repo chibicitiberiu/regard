@@ -289,6 +289,23 @@ namespace Regard.Backend.Controllers
         }
 
         [HttpPost]
+        [Route("move")]
+        [Authorize]
+        public async Task<IActionResult> Move([FromBody] SubscriptionMoveRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            try
+            {
+                subscriptionManager.MoveSubscription(user, request.Id, request.ParentFolderId);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(responseFactory.Error(ex.Message));
+            }
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
         [Route("edit")]
         [Authorize]
         public async Task<IActionResult> Edit([FromBody] SubscriptionEditRequest request)

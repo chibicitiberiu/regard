@@ -1,10 +1,16 @@
-﻿<div class="toolbar">
+﻿<div class="video-list">
+<div class="toolbar">
 
     <input type="search" placeholder="Search" @onchange="@OnQueryChanged" />
 
     <div class="button-group">
         <button @ref="orderButton" type="button" title="Order" @onclick="OnOrderClicked">
             <Icon Glyph="Icons.Sort" />
+        </button>
+        <button @ref="filterButton" type="button" title="Filter"
+                class="@CssUtils.BoolToClass(HasActiveFilter, "primary")"
+                @onclick="OnFilterClicked">
+            <Icon Glyph="Icons.Filter" />
         </button>
     </div>
 
@@ -18,34 +24,50 @@
         }
     </Menu>
 
-    <div class="button-group">
-        <button type="button" title="@(hideWatched ? "Show" : "Hide") watched"
-                @onclick="OnToggleHideWatched">
-            <Icon Glyph="@(hideWatched ? Icons.HideWatched : Icons.ShowWatched)"
-                  Class="@CssUtils.BoolToClass(hideWatched, "text-muted")" />
-        </button>
-
-        <button @ref="downloadedButton" type="button" title="Downloaded" @onclick="OnFilterClicked">
-            <Icon Glyph="Icons.Downloaded" />
-        </button>
-    </div>
-
-    <Menu AttachTo="downloadedButton" @bind-IsVisible="downloadedMenuVisible">
+    <Menu AttachTo="filterButton" @bind-IsVisible="filterMenuVisible">
+        <li class="menu-section-label">Watch state</li>
+        <CheckMenuItem IsChecked="@(watchState == Regard.Model.VideoWatchState.All)"
+                       Click="() => SetWatchState(Regard.Model.VideoWatchState.All)">All</CheckMenuItem>
+        <CheckMenuItem IsChecked="@(watchState == Regard.Model.VideoWatchState.Unwatched)"
+                       Click="() => SetWatchState(Regard.Model.VideoWatchState.Unwatched)">Unwatched</CheckMenuItem>
+        <CheckMenuItem IsChecked="@(watchState == Regard.Model.VideoWatchState.Started)"
+                       Click="() => SetWatchState(Regard.Model.VideoWatchState.Started)">Started</CheckMenuItem>
+        <CheckMenuItem IsChecked="@(watchState == Regard.Model.VideoWatchState.Watched)"
+                       Click="() => SetWatchState(Regard.Model.VideoWatchState.Watched)">Watched</CheckMenuItem>
+        <MenuSeparator />
+        <li class="menu-section-label">Downloaded</li>
         <CheckMenuItem IsChecked="@(!isDownloaded.HasValue)"
-                       Click="() => SetFilterIsDownloaded(null)">
-            All videos
-        </CheckMenuItem>
-        <CheckMenuItem IsChecked="@(isDownloaded.HasValue && isDownloaded.Value)"
-                       Click="() => SetFilterIsDownloaded(true)">
-            Downloaded only
-        </CheckMenuItem>
-        <CheckMenuItem IsChecked="@(isDownloaded.HasValue && !isDownloaded.Value)"
-                       Click="() => SetFilterIsDownloaded(false)">
-            Not downloaded
-        </CheckMenuItem>
+                       Click="() => SetFilterIsDownloaded(null)">All</CheckMenuItem>
+        <CheckMenuItem IsChecked="@(isDownloaded == true)"
+                       Click="() => SetFilterIsDownloaded(true)">Downloaded</CheckMenuItem>
+        <CheckMenuItem IsChecked="@(isDownloaded == false)"
+                       Click="() => SetFilterIsDownloaded(false)">Not downloaded</CheckMenuItem>
     </Menu>
+
+    @if (CanAddVideo)
+    {
+        <div class="button-group toolbar-add-video">
+            <button type="button" title="Add a video to this subscription" @onclick="OnAddVideoClicked">
+                <Icon Glyph="Icons.VideoAdd" />
+            </button>
+        </div>
+    }
 </div>
 
+<VideoAddModal @ref="videoAddModal" />
+
+@if (initialized && videos.Count == 0)
+{
+    <div class="empty-state">
+        <p class="empty-state-title">@EmptyStateTitle</p>
+        @if (EmptyStateHint != null)
+        {
+            <p class="empty-state-hint">@EmptyStateHint</p>
+        }
+    </div>
+}
+else
+{
 <ListView Model="VideoViewModel"
           ItemsSource="videos"
           Class="video-gallery">
@@ -57,7 +79,7 @@
                     <div class="video-badges">
                         @if (item.ApiVideo.IsWatched)
                         {
-                            <Icon Glyph="Icons.Watched" Class="video-badge" title="Watched"/>
+                            <Icon Glyph="Icons.Watched" Class="video-badge" title="Watched" />
                         }
                         @if (item.ApiVideo.IsDownloaded)
                         {
@@ -70,7 +92,7 @@
                             <span class="video-badge video-badge-duration">@item.ApiVideo.Duration.Value.ToDurationString()</span>
                         </div>
                     }
-                    @if (!item.ApiVideo.IsWatched && item.ApiVideo.PlaybackPositionSeconds > 0 && item.ApiVideo.Duration > 0)
+                    @if (!item.ApiVideo.IsWatched && item.ApiVideo.PlaybackPositionSeconds >= Regard.Model.PlaybackConstants.MinInProgressSeconds && item.ApiVideo.Duration > 0)
                     {
                         <div class="video-progress">
                             <div class="video-progress-fill"
@@ -129,18 +151,13 @@
         </div>
     </ItemTemplate>
 </ListView>
-
-@if (initialized && videos.Count == 0)
-{
-    <div class="empty-state">
-        <p>No videos here yet.</p>
-    </div>
 }
 
 @if (totalVideoCount > videosPerPage)
 {
-    <PaginationControl Page="page" 
+    <PaginationControl Page="page"
                        PageChanged="SetPage"
                        ItemCount="totalVideoCount"
                        ItemsPerPage="videosPerPage" />
 }
+</div>

@@ -4,11 +4,34 @@
     }
 }
 
+// Root drop zone: appears at the top of the tree while dragging, so an item can be moved out to the
+// top level (there may be no empty space to drop onto otherwise).
+.tree-root-dropzone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: .5em .75em;
+    margin: .1em 0 .35em;
+    border: 1px dashed var(--color-fg-secondary);
+    border-radius: var(--border-radius-btn);
+    font-size: .85em;
+    opacity: .7;
+    color: var(--color-fg-secondary);
+
+    &.drag-over {
+        opacity: 1;
+        color: var(--color-fg-primary);
+        border-color: var(--color-fg-primary);
+        background-color: var(--color-bg-primary);
+    }
+}
+
 .tree-item-children {
     display: flex;
     flex-direction: column;
     align-content: stretch;
     padding-left: 2em;
+    margin: 0;   // drop the browser default <ul> margin (showed as a gap between Home and the first row)
 }
 
 .tree-item {
@@ -30,7 +53,14 @@
         display: flex;
         flex-direction: row;
         flex-grow: 1;
+        width: 100%;
+        box-sizing: border-box;
         align-items: center;
+
+        // Make the whole row a drag handle: without this, grabbing the label text starts a text
+        // selection/drag instead of the element drag, so only the non-text padding was draggable.
+        user-select: none;
+        -webkit-user-select: none;
 
         transition: background-color linear 0.25s, opacity 0.25s, text-shadow 0.25s;
         padding: .4em .75em;
@@ -42,6 +72,14 @@
             color: var(--color-fg-secondary);
             background-color: var(--color-bg-secondary);
             transition: background-color linear 0.15s, opacity 0.15s, text-shadow 0.15s;
+        }
+
+        // Drop target highlight during a drag-and-drop reparent — fills the whole row so the target is
+        // obvious.
+        &.drag-over {
+            background-color: var(--color-bg-primary);
+            box-shadow: inset 0 0 0 2px var(--color-fg-primary);
+            transition: none;
         }
     }
 
@@ -72,6 +110,25 @@
     flex-grow: 1;
 }
 
+// The "..." row menu is hidden until you hover the row (or it's selected / focused) — no need to
+// select an item first just to reveal it.
 .tree-subscription-menu {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity linear .15s;
+}
 
+.tree-item-content:hover .tree-subscription-menu,
+.tree-item-content:focus-within .tree-subscription-menu,
+.tree-item.selected > .tree-item-content .tree-subscription-menu {
+    visibility: visible;
+    opacity: 1;
+}
+
+// "Home" is a real tree row (rendered in the tree's HeaderContent), so it inherits .tree-item-content
+// styling (padding, hover, icon). Only its selected/active look needs defining — mirror .tree-item.selected.
+.tree-item-content.home-active {
+    color: var(--color-bg-secondary);
+    background: var(--color-fg-secondary);
+    box-shadow: 0 0 .5em var(--color-fg-secondary);
 }

@@ -5,7 +5,7 @@
       "name": "Regard.Backend",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build-backend",
+      "preLaunchTask": "build",
       "program": "${workspaceFolder}/Source/Regard.Backend/bin/Debug/net10.0/Regard.Backend.dll",
       "cwd": "${workspaceFolder}/Source/Regard.Backend",
       "console": "internalConsole",

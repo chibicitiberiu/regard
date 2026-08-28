@@ -273,6 +273,26 @@ namespace Regard.Backend.Services
             SubscriptionUpdated?.Invoke(this, new SubscriptionUpdatedEventArgs() { User = user, Subscription = subscription });
         }
 
+        /// <summary>
+        /// Reparents a subscription and nothing else. Kept separate from <see cref="Update"/> so a
+        /// drag-and-drop / "move to folder" never runs through the full-replace edit path (which would
+        /// clear the subscription's name and every unset option).
+        /// </summary>
+        public void MoveSubscription(UserAccount user, int subscriptionId, int? newParentFolderId)
+        {
+            var subscription = Get(user, subscriptionId);
+            if (subscription == null)
+                throw new ArgumentException("Subscription not found");
+
+            // Name is unchanged, but re-validate against the destination folder to reject a collision.
+            ValidateName(subscription.Name, newParentFolderId, subscriptionId);
+            subscription.ParentFolderId = newParentFolderId;
+
+            dataContext.SaveChanges();
+
+            SubscriptionUpdated?.Invoke(this, new SubscriptionUpdatedEventArgs() { User = user, Subscription = subscription });
+        }
+
         public async Task Delete(UserAccount userAccount,
                                  int[] ids,
                                  bool deleteFiles)
@@ -501,6 +521,37 @@ namespace Regard.Backend.Services
             folder.Name = newName;
             folder.ParentId = newParentFolderId;
             ValidateFolderName(folder.Name, folder.ParentId, folderId);
+
+            dataContext.SaveChanges();
+
+            FolderUpdated?.Invoke(this, new SubscriptionFolderUpdatedEventArgs() { User = user, Folder = folder });
+        }
+
+        /// <summary>
+        /// Reparents a folder and nothing else (name and every option preserved). Runs the same
+        /// cycle guard as <see cref="UpdateFolder"/>. Kept separate from the full-replace edit path.
+        /// </summary>
+        public void MoveFolder(UserAccount user, int folderId, int? newParentFolderId)
+        {
+            var folder = GetFolder(user, folderId);
+            if (folder == null)
+                throw new ArgumentException("Folder not found");
+
+            // Prevent cycles: the new parent must not be the folder itself or one of its descendants.
+            for (int? ancestorId = newParentFolderId; ancestorId.HasValue;)
+            {
+                if (ancestorId.Value == folderId)
+                    throw new ArgumentException("A folder can't be moved into itself or one of its subfolders.");
+
+                ancestorId = dataContext.SubscriptionFolders.AsQueryable()
+                    .Where(x => x.Id == ancestorId.Value && x.UserId == user.Id)
+                    .Select(x => x.ParentId)
+                    .FirstOrDefault();
+            }
+
+            // Name unchanged; re-validate against the destination to reject a collision.
+            ValidateFolderName(folder.Name, newParentFolderId, folderId);
+            folder.ParentId = newParentFolderId;
 
             dataContext.SaveChanges();
 

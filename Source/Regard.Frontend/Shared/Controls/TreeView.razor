@@ -1,6 +1,17 @@
-﻿@typeparam Model
+@typeparam Model
 
-<div class="tree-view">
+<div class="tree-view @(draggedItem != null ? "dragging" : "")"
+     @ondragover:preventDefault="EnableDragDrop" @ondrop="OnDropRoot">
+    @HeaderContent
+    @if (EnableDragDrop && ShowRootDropZone())
+    {
+        <div class="tree-root-dropzone @(dragOverRoot ? "drag-over" : "")"
+             @ondragover:preventDefault="true"
+             @ondragover="OnDragOverRoot"
+             @ondrop="OnDropRoot" @ondrop:stopPropagation="true">
+            @RootDropLabel
+        </div>
+    }
     <ul class="tree-item-children">
         @foreach (var child in Root.Children)
         {
@@ -16,7 +27,16 @@
         return __builder =>
         {
             <li class="tree-item @item.CssClasses">
-                <div class="tree-item-content" @onclick="() => OnItemClicked(item)">
+                <div class="tree-item-content @(item == dragOverItem ? "drag-over" : "")"
+                     draggable="@(EnableDragDrop ? "true" : "false")"
+                     @ondragstart="() => OnDragStart(item)"
+                     @ondragstart:stopPropagation="true"
+                     @ondragend="OnDragEnd"
+                     @ondragover:preventDefault="EnableDragDrop"
+                     @ondragover="() => OnDragOver(item)"
+                     @ondrop="() => OnDrop(item)"
+                     @ondrop:stopPropagation="true"
+                     @onclick="() => OnItemClicked(item)">
                     @ItemTemplate(item)
                 </div>
                 @if (item.IsExpanded)

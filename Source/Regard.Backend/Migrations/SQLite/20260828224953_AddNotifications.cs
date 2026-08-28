@@ -1,0 +1,57 @@
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace Regard.Backend.Migrations.SQLite
+{
+    /// <inheritdoc />
+    public partial class AddNotifications : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "Notifications",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Key = table.Column<string>(type: "TEXT", nullable: true),
+                    UserId = table.Column<string>(type: "TEXT", nullable: true),
+                    Timestamp = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", nullable: true),
+                    Text = table.Column<string>(type: "TEXT", nullable: true),
+                    Severity = table.Column<int>(type: "INTEGER", nullable: false),
+                    Progress = table.Column<float>(type: "REAL", nullable: true),
+                    Ongoing = table.Column<bool>(type: "INTEGER", nullable: false),
+                    VideoDbId = table.Column<int>(type: "INTEGER", nullable: true),
+                    JobId = table.Column<long>(type: "INTEGER", nullable: true),
+                    PrimaryAction = table.Column<int>(type: "INTEGER", nullable: false),
+                    Cancellable = table.Column<bool>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Notifications_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_UserId_Key",
+                table: "Notifications",
+                columns: new[] { "UserId", "Key" });
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "Notifications");
+        }
+    }
+}

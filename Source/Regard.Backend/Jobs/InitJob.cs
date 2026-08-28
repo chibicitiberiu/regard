@@ -22,6 +22,7 @@ namespace Regard.Backend.Jobs
         private readonly IYoutubeDlService ytdlService;
         private readonly RegardScheduler scheduler;
         private readonly JobTrackerService jobTracker;
+        private readonly NotificationService notificationService;
         private readonly Configuration.IOptionManager optionManager;
 
         public InitJob(ILogger<InitJob> logger,
@@ -31,6 +32,7 @@ namespace Regard.Backend.Jobs
                        IYoutubeDlService ytdlService,
                        RegardScheduler scheduler,
                        JobTrackerService jobTracker,
+                       NotificationService notificationService,
                        Configuration.IOptionManager optionManager)
         {
             this.log = logger;
@@ -40,6 +42,7 @@ namespace Regard.Backend.Jobs
             this.ytdlService = ytdlService;
             this.scheduler = scheduler;
             this.jobTracker = jobTracker;
+            this.notificationService = notificationService;
             this.optionManager = optionManager;
         }
 
@@ -58,6 +61,24 @@ namespace Regard.Backend.Jobs
             catch (Exception ex)
             {
                 log.LogError(ex, "Failed to prune old jobs.");
+            }
+
+            // Notifications: drop any leftover "in progress" ones (a crash mid-job would strand them as
+            // stale), then age out old ones (kept shorter than the Job Log so failures stay inspectable).
+            try
+            {
+                int cleared = notificationService.ClearStaleOngoing();
+                if (cleared > 0)
+                    log.LogInformation("Cleared {0} stale in-progress notification(s).", cleared);
+
+                int nRetention = optionManager.GetGlobal(Configuration.Options.Server_NotificationRetentionDays);
+                int nPruned = notificationService.PruneOld(nRetention);
+                if (nPruned > 0)
+                    log.LogInformation("Pruned {0} old notification(s).", nPruned);
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Failed to prune notifications.");
             }
 
             // Initialize providers

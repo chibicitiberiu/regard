@@ -39,6 +39,8 @@ namespace Regard.Backend.DB
 
         public DbSet<JobInfo> Jobs { get; set; }
 
+        public DbSet<Notification> Notifications { get; set; }
+
         protected DataContext(IConfiguration configuration)
         {
             this.Configuration = configuration;
@@ -142,6 +144,20 @@ namespace Regard.Backend.DB
                 .HasForeignKey(x => x.UserId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Notifications. VideoDbId / JobId are deliberately plain scalars (no FK) so a notification
+            // outlives the video or job it points at (the click targets just tolerate a 404). Index on
+            // (UserId, Key) backs the upsert lookup; not unique because UserId is nullable (ownerless
+            // system notifications) and the app-level upsert is the real dedup.
+            modelBuilder.Entity<Notification>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(x => new { x.UserId, x.Key });
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

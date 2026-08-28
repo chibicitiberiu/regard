@@ -33,8 +33,8 @@ namespace Regard.Frontend.Services
         public event EventHandler<ApiSubscriptionFolder> SubscriptionFolderUpdated;
         public event EventHandler<int[]> SubscriptionFoldersDeleted;
         public event EventHandler<ApiVideo> VideoUpdated;
-        public event EventHandler<ApiJobInfo> JobUpdated;
-        public event EventHandler<ApiMessage> MessageReceived;
+        public event EventHandler<ApiNotification> NotificationReceived;
+        public event EventHandler<string> NotificationRemoved;
 
         public MessagingService(IConfiguration configuration, AuthenticationService authService)
         {
@@ -142,8 +142,8 @@ namespace Regard.Frontend.Services
             connection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderUpdated", NotifySubscriptionFolderUpdated);
             connection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
             connection.On<ApiVideo>("NotifyVideoUpdated", NotifyVideoUpdated);
-            connection.On<ApiJobInfo>("NotifyJobUpdated", NotifyJobUpdated);
-            connection.On<ApiMessage>("NotifyMessage", NotifyMessage);
+            connection.On<ApiNotification>("NotifyNotification", NotifyNotification);
+            connection.On<string>("NotifyNotificationRemoved", NotifyNotificationRemoved);
 
             return connection;
         }
@@ -203,14 +203,14 @@ namespace Regard.Frontend.Services
             VideoUpdated?.Invoke(this, video);
         }
 
-        private void NotifyJobUpdated(ApiJobInfo job)
+        private void NotifyNotification(ApiNotification notification)
         {
-            JobUpdated?.Invoke(this, job);
+            NotificationReceived?.Invoke(this, notification);
         }
 
-        private void NotifyMessage(ApiMessage message)
+        private void NotifyNotificationRemoved(string key)
         {
-            MessageReceived?.Invoke(this, message);
+            NotificationRemoved?.Invoke(this, key);
         }
     }
 }

@@ -25,6 +25,13 @@ namespace Regard.Frontend.Shared.Subscription
         private string deleteItemName = "";
         private bool loaded = false;
 
+        private Dialog moveDialog;
+        private string moveItemName = "";
+        private int? moveTargetFolderId = null;
+        private int? moveExcludeSubtreeRootId = null;
+
+        private bool isHomeActive = true;
+
         private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeFolders = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
 
         [Inject] protected AppState AppState { get; set; }
@@ -32,6 +39,8 @@ namespace Regard.Frontend.Shared.Subscription
         [Inject] protected SubscriptionManagerService SubscriptionManager { get; set; }
 
         [Inject] protected AppController AppController { get; set; }
+
+        [Inject] protected NavigationManager Navigation { get; set; }
 
         [Parameter] public EventCallback<SubscriptionItemViewModelBase> SelectedItemChanged { get; set; }
 
@@ -44,6 +53,8 @@ namespace Regard.Frontend.Shared.Subscription
             // listeners and the tree would stay empty until the next change (e.g. a manual Refresh).
             AppState.Folders.DictionaryChanged += Folders_DictionaryChanged;
             AppState.Subscriptions.DictionaryChanged += Subscriptions_DictionaryChanged;
+            AppState.PropertyChanged += AppState_PropertyChanged;
+            isHomeActive = AppState.SelectedSubscription == null;
 
             await SubscriptionManager.Load();
             loaded = true;
@@ -98,6 +109,22 @@ namespace Regard.Frontend.Shared.Subscription
         public void DeselectAll()
         {
             treeView.SelectedItem = null;
+        }
+
+        private void AppState_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(AppState.SelectedSubscription))
+            {
+                // Home is the all-videos root view: active exactly when nothing in the tree is selected.
+                isHomeActive = AppState.SelectedSubscription == null;
+                StateHasChanged();
+            }
+        }
+
+        private void OnHomeClicked()
+        {
+            DeselectAll();                 // clears tree selection -> AppController navigates to "/"
+            Navigation.NavigateTo("/");    // explicit, in case nothing was selected (already deselected)
         }
 
         private void Subscriptions_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscription> e)
@@ -220,6 +247,14 @@ namespace Regard.Frontend.Shared.Subscription
 
         protected virtual async Task OnSelectedItemChanged(TreeViewNode<SubscriptionItemViewModelBase> item)
         {
+            if (item == null)
+            {
+                // Deselected (e.g. Home / logo): clear the selection so the root view shows.
+                AppState.SelectedSubscription = null;
+                await SelectedItemChanged.InvokeAsync(null);
+                return;
+            }
+
             if (item.Data is SubscriptionFolderViewModel vmFolder)
                 AppState.SelectedSubscription = vmFolder.Folder;
 
@@ -286,6 +321,94 @@ namespace Regard.Frontend.Shared.Subscription
 
             if (item.Data is SubscriptionViewModel subVm)
                 await SubscriptionManager.Synchronize(subVm.Subscription);
+        }
+
+        // --- Move to folder (menu action) ---------------------------------------------------------
+
+        protected async Task OnMoveItem(TreeViewNode<SubscriptionItemViewModelBase> item)
+        {
+            moveItemName = item.Data.Name;
+
+            if (item.Data is SubscriptionFolderViewModel folderVm)
+            {
+                moveTargetFolderId = folderVm.ParentId;
+                moveExcludeSubtreeRootId = folderVm.Folder.Id;   // hide itself + descendants as targets
+                await moveDialog.ShowDialog(async result =>
+                {
+                    if (result == DialogResult.Primary)
+                        await SubscriptionManager.Move(folderVm.Folder, moveTargetFolderId);
+                });
+            }
+            else if (item.Data is SubscriptionViewModel subVm)
+            {
+                moveTargetFolderId = subVm.ParentId;
+                moveExcludeSubtreeRootId = null;
+                await moveDialog.ShowDialog(async result =>
+                {
+                    if (result == DialogResult.Primary)
+                        await SubscriptionManager.Move(subVm.Subscription, moveTargetFolderId);
+                });
+            }
+        }
+
+        // --- Drag and drop --------------------------------------------------------------------------
+
+        /// <summary>The folder a drop onto <paramref name="target"/> would move the item into (null = root).</summary>
+        private int? ResolveDestinationFolderId(TreeViewNode<SubscriptionItemViewModelBase> target)
+        {
+            if (target == null)
+                return null;   // dropped on empty tree space -> root
+            if (target.Data is SubscriptionFolderViewModel folderVm)
+                return folderVm.Folder.Id;
+            if (target.Data is SubscriptionViewModel subVm)
+                return subVm.ParentId;   // drop beside a sub -> its containing folder
+            return null;
+        }
+
+        /// <summary>True if moving <paramref name="draggedFolderId"/> under <paramref name="destFolderId"/> would loop.</summary>
+        private bool WouldCreateCycle(int draggedFolderId, int? destFolderId)
+        {
+            int? current = destFolderId;
+            int guard = 0;
+            while (current.HasValue && guard++ < 4096)
+            {
+                if (current.Value == draggedFolderId)
+                    return true;
+                current = AppState.Folders.TryGetValue(current.Value, out var f) ? (int?)f.ParentId : null;
+            }
+            return false;
+        }
+
+        private bool CanDropItem(TreeViewNode<SubscriptionItemViewModelBase> dragged, TreeViewNode<SubscriptionItemViewModelBase> target)
+        {
+            if (dragged == null)
+                return false;
+
+            int? dest = ResolveDestinationFolderId(target);
+
+            if (dragged.Data is SubscriptionFolderViewModel folderVm)
+            {
+                if (dest == folderVm.Folder.Id)
+                    return false;                                   // into itself
+                if (WouldCreateCycle(folderVm.Folder.Id, dest))
+                    return false;                                   // into a descendant
+                return dest != folderVm.ParentId;                   // already there -> no-op
+            }
+            if (dragged.Data is SubscriptionViewModel subVm)
+            {
+                return dest != subVm.ParentId;                      // already there -> no-op
+            }
+            return false;
+        }
+
+        private async Task OnItemDropped((TreeViewNode<SubscriptionItemViewModelBase> Dragged, TreeViewNode<SubscriptionItemViewModelBase> Target) drop)
+        {
+            int? dest = ResolveDestinationFolderId(drop.Target);
+
+            if (drop.Dragged.Data is SubscriptionFolderViewModel folderVm)
+                await SubscriptionManager.Move(folderVm.Folder, dest);
+            else if (drop.Dragged.Data is SubscriptionViewModel subVm)
+                await SubscriptionManager.Move(subVm.Subscription, dest);
         }
     }
 }

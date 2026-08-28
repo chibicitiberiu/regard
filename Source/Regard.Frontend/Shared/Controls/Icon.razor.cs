@@ -35,6 +35,11 @@ namespace Regard.Frontend.Shared.Controls
         Queued,
         SignOut,
         Admin,
+        Home,
+        VideoAdd,
+        ThumbUp,
+        ThumbDown,
+        Error,
     }
 
     public partial class Icon
@@ -68,6 +73,11 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.Queued, "playlist_play" },
             { Icons.SignOut, "logout" },
             { Icons.Admin, "admin_panel_settings" },
+            { Icons.Home, "home" },
+            { Icons.VideoAdd, "video_call" },
+            { Icons.ThumbUp, "thumb_up" },
+            { Icons.ThumbDown, "thumb_down" },
+            { Icons.Error, "error_outline" },
         };
 
         [Parameter(CaptureUnmatchedValues = true)]

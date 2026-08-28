@@ -4,7 +4,9 @@ using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
 using Regard.Common.Utils;
 using Regard.Common.Utils.Collections;
+using Microsoft.JSInterop;
 using Regard.Frontend.Services;
+using Regard.Frontend.Shared.Modals;
 using Regard.Model;
 using Regard.Services;
 using System;
@@ -35,17 +37,75 @@ namespace Regard.Frontend.Shared.Video
         private ElementReference orderButton;
         private bool orderMenuVisible = false;
 
-        private bool hideWatched;
-        
+        private VideoWatchState watchState = VideoWatchState.All;
         private bool? isDownloaded;
-        private ElementReference downloadedButton;
-        private bool downloadedMenuVisible = false;
+        private ElementReference filterButton;
+        private bool filterMenuVisible = false;
+
+        private VideoAddModal videoAddModal;
+
+        /// <summary>True when the list is scoped to a single subscription (not the home or folder view).</summary>
+        private bool CanAddVideo => selectedSubscription.HasValue;
+
+        /// <summary>True when any non-default filter is active (drives the Filter button accent).</summary>
+        private bool HasActiveFilter => watchState != VideoWatchState.All || isDownloaded.HasValue;
+
+        // Context-aware empty-state text so the page never sits blank.
+        private string EmptyStateTitle
+        {
+            get
+            {
+                if (selectedSubscription.HasValue)
+                    return HasActiveFilter ? "No videos match this filter." : "No videos in this subscription yet.";
+                if (selectedFolder.HasValue)
+                {
+                    if (!FolderHasSubscriptions(selectedFolder.Value))
+                        return "No subscriptions in this folder yet.";
+                    return HasActiveFilter ? "No videos match this filter." : "No videos in this folder yet.";
+                }
+                return HasActiveFilter ? "No videos match this filter." : "No videos yet.";
+            }
+        }
+
+        private string EmptyStateHint
+        {
+            get
+            {
+                if (HasActiveFilter)
+                    return "Try adjusting or clearing the filter.";
+                if (selectedSubscription.HasValue)
+                    return "New videos appear here after the next sync.";
+                if (selectedFolder.HasValue)
+                    return FolderHasSubscriptions(selectedFolder.Value) ? null : "Drag subscriptions into this folder, or add one.";
+                return "Add a subscription from the sidebar to get started.";
+            }
+        }
+
+        /// <summary>True if the folder (or any nested subfolder) contains at least one subscription.</summary>
+        private bool FolderHasSubscriptions(int folderId)
+        {
+            var ids = new HashSet<int> { folderId };
+            bool changed = true;
+            while (changed)
+            {
+                changed = false;
+                foreach (var f in AppState.Folders.Values)
+                {
+                    int? parent = (int?)f.ParentId;
+                    if (parent.HasValue && ids.Contains(parent.Value) && ids.Add(f.Id))
+                        changed = true;
+                }
+            }
+            return AppState.Subscriptions.Values.Any(s => s.ParentFolderId.HasValue && ids.Contains(s.ParentFolderId.Value));
+        }
 
         [Inject] protected BackendService Backend { get; set; }
 
         [Inject] protected MessagingService Messaging { get; set; }
 
         [Inject] protected AppState AppState { get; set; }
+
+        [Inject] protected Microsoft.JSInterop.IJSRuntime JS { get; set; }
 
         [Parameter] public int? SelectedSubscription
         {
@@ -64,8 +124,56 @@ namespace Regard.Frontend.Shared.Video
             await base.OnInitializedAsync();
             Messaging.VideoUpdated += Messaging_VideoUpdated;
 
+            await LoadFilterState();
             await Populate();
             initialized = true;
+        }
+
+        private const string FilterStorageKey = "regard.videoFilters";
+
+        private class PersistedFilters
+        {
+            public VideoWatchState WatchState { get; set; }
+            public bool? IsDownloaded { get; set; }
+            public VideoOrder Order { get; set; }
+        }
+
+        // Filters persist for the browser session (sessionStorage) so they survive navigation and reloads.
+        private async Task LoadFilterState()
+        {
+            try
+            {
+                var json = await JS.InvokeAsync<string>("sessionStorage.getItem", FilterStorageKey);
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var s = System.Text.Json.JsonSerializer.Deserialize<PersistedFilters>(json);
+                    if (s != null)
+                    {
+                        watchState = s.WatchState;
+                        isDownloaded = s.IsDownloaded;
+                        order = s.Order;
+                    }
+                }
+            }
+            catch
+            {
+                // sessionStorage unavailable / malformed value -> keep defaults.
+            }
+        }
+
+        private async Task SaveFilterState()
+        {
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(new PersistedFilters
+                {
+                    WatchState = watchState,
+                    IsDownloaded = isDownloaded,
+                    Order = order,
+                });
+                await JS.InvokeVoidAsync("sessionStorage.setItem", FilterStorageKey, json);
+            }
+            catch { }
         }
 
         public async Task SetSelectedSubscription(int? subscriptionId)
@@ -99,6 +207,7 @@ namespace Regard.Frontend.Shared.Video
         {
             this.page = page;
             await Populate();
+            await ScrollToTop();
         }
 
         public async Task SetQuery(string value)
@@ -106,6 +215,19 @@ namespace Regard.Frontend.Shared.Video
             this.query = value;
             this.page = 0;
             await Populate();
+            await ScrollToTop();
+        }
+
+        private async Task ScrollToTop()
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("RegardHelpers.scrollToTop", ".video-gallery");
+            }
+            catch
+            {
+                // Non-fatal: a missing element / prerender just means no scroll reset.
+            }
         }
 
         private async Task OnQueryChanged(ChangeEventArgs e)
@@ -117,7 +239,9 @@ namespace Regard.Frontend.Shared.Video
         {
             this.order = order;
             this.page = 0;
+            await SaveFilterState();
             await Populate();
+            await ScrollToTop();
         }
 
         private void OnOrderClicked()
@@ -125,28 +249,33 @@ namespace Regard.Frontend.Shared.Video
             orderMenuVisible = true;
         }
 
-        public async Task SetHideWatched(bool value)
-        {
-            this.hideWatched = value;
-            this.page = 0;
-            await Populate();
-        }
-
-        private async Task OnToggleHideWatched()
-        {
-            await SetHideWatched(!hideWatched);
-        }
-
         private void OnFilterClicked()
         {
-            downloadedMenuVisible = true;
+            filterMenuVisible = true;
+        }
+
+        public async Task SetWatchState(VideoWatchState value)
+        {
+            this.watchState = value;
+            this.page = 0;
+            await SaveFilterState();
+            await Populate();
+            await ScrollToTop();
         }
 
         private async Task SetFilterIsDownloaded(bool? isDownloaded)
         {
             this.isDownloaded = isDownloaded;
             this.page = 0;
+            await SaveFilterState();
             await Populate();
+            await ScrollToTop();
+        }
+
+        private async Task OnAddVideoClicked()
+        {
+            if (videoAddModal != null && selectedSubscription.HasValue)
+                await videoAddModal.Show(selectedSubscription.Value);
         }
 
         public async Task Populate()
@@ -158,7 +287,7 @@ namespace Regard.Frontend.Shared.Video
                     SubscriptionFolderId = selectedFolder,
                     SubscriptionId = selectedSubscription,
                     Query = query,
-                    IsWatched = (hideWatched) ? false : null,
+                    WatchState = watchState,
                     IsDownloaded = isDownloaded,
                     Order = order,
                     Limit = videosPerPage,
@@ -193,17 +322,24 @@ namespace Regard.Frontend.Shared.Video
 
         private void Messaging_VideoUpdated(object sender, ApiVideo e)
         {
-            Console.WriteLine($"Video updated: {e.Id}");
-
-            for (int i = 0; i < videos.Count; i++)
+            // This fires on the SignalR callback context, not a UI event, so marshal to the renderer's
+            // sync context with InvokeAsync — otherwise the collection change + StateHasChanged don't
+            // actually re-render the card.
+            _ = InvokeAsync(() =>
             {
-                if (videos[i].ApiVideo.Id == e.Id)
+                for (int i = 0; i < videos.Count; i++)
                 {
-                    videos[i].ApiVideo = e;
-                    FixRelativeUrl(e);
-                    break;
+                    if (videos[i].ApiVideo.Id == e.Id)
+                    {
+                        FixRelativeUrl(e);
+                        // Replace the item (not just set a property): ListView only re-renders on
+                        // collection changes, so a plain property assignment wouldn't refresh the card.
+                        videos[i] = new VideoViewModel(e);
+                        StateHasChanged();
+                        break;
+                    }
                 }
-            }
+            });
         }
 
         void OnVideoShowContextMenu(VideoViewModel videoVM)
@@ -212,14 +348,19 @@ namespace Regard.Frontend.Shared.Video
             StateHasChanged();
         }
 
-        async Task OnVideoMarkWatched(VideoViewModel videoVM) 
+        async Task OnVideoMarkWatched(VideoViewModel videoVM)
         {
             await Backend.VideoMarkWatched(new VideoMarkWatchedRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
+            // Refresh so the card reflects the change immediately (ListView only re-renders on collection
+            // changes, and the SignalR video-updated push isn't reliably delivered) and any watch-state
+            // filter re-applies (a now-watched video leaves the "Unwatched"/"Started" view).
+            await Populate();
         }
 
         async Task OnVideoMarkNotWatched(VideoViewModel videoVM)
         {
             await Backend.VideoMarkNotWatched(new VideoMarkNotWatchedRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
+            await Populate();
         }
 
         async Task OnVideoDownload(VideoViewModel videoVM)
@@ -230,6 +371,7 @@ namespace Regard.Frontend.Shared.Video
         async Task OnVideoDeleteFiles(VideoViewModel videoVM)
         {
             await Backend.VideoDeleteFiles(new VideoDeleteFilesRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
+            await Populate();   // reflect the removed download badge immediately
         }
 
         public void Dispose()

@@ -1,0 +1,50 @@
+@page "/jobs/{Id:long}"
+@using Regard.Common.API.Model
+@inject Regard.Services.BackendService Backend
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+
+<div class="job-detail">
+    <button class="button-undecorated job-detail-back" @onclick="GoBack">
+        &larr; Back
+    </button>
+
+    @if (loading)
+    {
+        <p>Loading…</p>
+    }
+    else if (job == null)
+    {
+        <div class="np-empty">This job could not be found. It may have been pruned from the history.</div>
+    }
+    else
+    {
+        <h2 class="job-detail-title">@job.Name</h2>
+        <div class="job-detail-meta">
+            <span class="job-state job-state-@job.State.ToString().ToLowerInvariant()">@job.State</span>
+            <span>Started: @FormatTime(job.Started)</span>
+            <span>Finished: @FormatTime(job.Completed)</span>
+        </div>
+        <pre class="job-log-output">@(string.IsNullOrEmpty(job.Log) ? "(no output captured)" : job.Log)</pre>
+    }
+</div>
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private ApiJobInfo job;
+    private bool loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        job = null;
+        var resp = await Backend.GetJobLog(Id);
+        job = resp?.Data;
+        loading = false;
+    }
+
+    private void GoBack() => Nav.NavigateTo("/");
+
+    private static string FormatTime(System.DateTimeOffset? time)
+        => time.HasValue ? time.Value.LocalDateTime.ToString("g") : "—";
+}

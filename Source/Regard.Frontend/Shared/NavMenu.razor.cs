@@ -1,20 +1,20 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Regard.Common.API.Model;
+using Regard.Common.API.Subscriptions;
 using Regard.Frontend.Services;
-using Regard.Frontend.Shared.Controls;
 using Regard.Services;
-using Regard.Utils;
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
+using System.Globalization;
 using System.Threading.Tasks;
 
 namespace Regard.Frontend.Shared
 {
     public partial class NavMenu : IDisposable
     {
+        private const string LastSeenStorageKey = "regard.notif.lastSeen";
+
         private ElementReference notificationsLink;
         private ElementReference userLink;
 
@@ -25,6 +25,8 @@ namespace Regard.Frontend.Shared
         [Inject] protected NotificationsService Notifications { get; set; }
 
         [Inject] protected BackendService Backend { get; set; }
+
+        [Inject] protected IJSRuntime JS { get; set; }
 
         private string username;
 
@@ -44,28 +46,96 @@ namespace Regard.Frontend.Shared
             await base.OnInitializedAsync();
             username = await Auth.GetUsername();
 
-            Notifications.ActiveJobs.CollectionChanged += OnNotificationsChanged;
-            Notifications.RecentMessages.CollectionChanged += OnNotificationsChanged;
+            Notifications.Notifications.CollectionChanged += OnNotificationsChanged;
+            Notifications.ActivityChanged += OnActivityChanged;
+
+            // NavMenu renders in both the Authorized and NotAuthorized layouts, so this runs even when
+            // signed out — only seed (a request that would 401) when there's a token. Init is idempotent,
+            // so two NavMenu instances calling it is safe.
+            string token = null;
+            try { token = await Auth.GetToken(); } catch { }
+            if (!string.IsNullOrEmpty(token))
+            {
+                await LoadLastSeen();
+                await Notifications.InitializeAsync(Backend);
+            }
         }
 
         private void OnNotificationsChanged(object sender, NotifyCollectionChangedEventArgs e)
             => InvokeAsync(StateHasChanged);
 
-        private static string ProgressWidth(ApiJobInfo job)
-            => job.Progress.HasValue
-                ? $"width:{(int)(Math.Clamp(job.Progress.Value, 0f, 1f) * 100)}%"
+        private void OnActivityChanged(object sender, EventArgs e)
+            => InvokeAsync(StateHasChanged);
+
+        private async Task LoadLastSeen()
+        {
+            try
+            {
+                var raw = await JS.InvokeAsync<string>("localStorage.getItem", LastSeenStorageKey);
+                if (long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out long id))
+                    Notifications.SetLastSeen(id);
+            }
+            catch
+            {
+                // localStorage unavailable / malformed -> treat everything as unseen.
+            }
+        }
+
+        private static string ProgressWidth(ApiNotification n)
+            => n.Progress.HasValue
+                ? $"width:{(int)(Math.Clamp(n.Progress.Value, 0f, 1f) * 100)}%"
                 : string.Empty;
 
-        private async Task CancelJob(ApiJobInfo job)
+        private static bool HasPrimaryAction(ApiNotification n)
+            => (n.PrimaryAction == ApiNotificationAction.OpenVideo && n.VideoId.HasValue)
+            || (n.PrimaryAction == ApiNotificationAction.OpenLogs && n.JobId.HasValue);
+
+        private void OnNotificationClick(ApiNotification n)
         {
-            // Optimistic: the SignalR Cancelled push will remove it from the list shortly.
-            await Backend.JobCancel(job.Id);
+            if (n.PrimaryAction == ApiNotificationAction.OpenVideo && n.VideoId.HasValue)
+            {
+                HideAllPanels();
+                NavigationManager.NavigateTo($"/watch/{n.VideoId.Value}");
+            }
+            else if (n.PrimaryAction == ApiNotificationAction.OpenLogs && n.JobId.HasValue)
+            {
+                HideAllPanels();
+                NavigationManager.NavigateTo($"/jobs/{n.JobId.Value}");
+            }
+        }
+
+        private async Task OnRetry(ApiNotification n)
+        {
+            if (!n.VideoId.HasValue)
+                return;
+            // Re-download; drop the failed notification (a fresh "Downloading" one will arrive).
+            await Backend.VideoDownload(new VideoDownloadRequest { VideoIds = new[] { n.VideoId.Value } });
+            Notifications.RemoveByKey(n.Key);
+            await Backend.DismissNotification(n.Id);
+        }
+
+        private async Task OnCancel(ApiNotification n)
+        {
+            if (n.JobId.HasValue)
+                await Backend.JobCancel(n.JobId.Value);
+        }
+
+        private async Task OnDismiss(ApiNotification n)
+        {
+            Notifications.RemoveByKey(n.Key);
+            await Backend.DismissNotification(n.Id);
+        }
+
+        private async Task OnClearAll()
+        {
+            Notifications.ClearTerminalLocal();
+            await Backend.ClearNotifications();
         }
 
         public void Dispose()
         {
-            Notifications.ActiveJobs.CollectionChanged -= OnNotificationsChanged;
-            Notifications.RecentMessages.CollectionChanged -= OnNotificationsChanged;
+            Notifications.Notifications.CollectionChanged -= OnNotificationsChanged;
+            Notifications.ActivityChanged -= OnActivityChanged;
         }
 
         private async Task Logout()
@@ -84,12 +154,18 @@ namespace Regard.Frontend.Shared
             UserPanelVisible = false;
         }
 
-        private void ToggleNotificationsPanel()
+        private async Task ToggleNotificationsPanel()
         {
             bool visible = NotificationsPanelVisible;
             HideAllPanels();
             if (!visible)
+            {
                 NotificationsPanelVisible = true;
+                // Opening the panel marks everything read; persist the marker so it sticks across reloads.
+                long id = Notifications.MarkAllSeen();
+                try { await JS.InvokeVoidAsync("localStorage.setItem", LastSeenStorageKey, id.ToString(CultureInfo.InvariantCulture)); }
+                catch { }
+            }
         }
 
         private void ToggleUserPanel()

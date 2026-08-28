@@ -111,6 +111,18 @@ namespace Regard.Frontend.Shared.Modals
             await modal.Show();
         }
 
+        /// <summary>
+        /// Shows the modal targeting a specific subscription. Sets the target on every call — Reset()
+        /// deliberately does not touch SelectedSubscriptionId, so a stale value would otherwise persist
+        /// and the added video would land in the wrong subscription (or subscription 0).
+        /// </summary>
+        public async Task Show(int subscriptionId)
+        {
+            Reset();
+            SelectedSubscriptionId = subscriptionId;
+            await modal.Show();
+        }
+
         public async Task Dismiss()
         {
             await modal.Close();

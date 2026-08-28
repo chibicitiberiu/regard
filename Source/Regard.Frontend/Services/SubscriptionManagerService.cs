@@ -107,6 +107,41 @@ namespace Regard.Frontend.Services
             await backend.SubscriptionFolderSynchronize(new SubscriptionFolderSynchronizeRequest() { Id = folder.Id });
         }
 
+        /// <summary>Reparents a subscription (parent-only, preserves settings). Returns false on failure.</summary>
+        public async Task<bool> Move(ApiSubscription subscription, int? parentFolderId)
+        {
+            using var scope = serviceProvider.CreateScope();
+            var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
+
+            var (_, http) = await backend.SubscriptionMove(new SubscriptionMoveRequest()
+            {
+                Id = subscription.Id,
+                ParentFolderId = parentFolderId,
+            });
+            // The backend SubscriptionUpdated -> SignalR bridge isn't active, so nothing pushes the new
+            // parent to us; re-load so the tree reflects the move immediately. (Mutating the cached
+            // ApiSubscription in place would desync the incremental tree update and duplicate the node.)
+            if (http.IsSuccessStatusCode)
+                await Load(force: true);
+            return http.IsSuccessStatusCode;
+        }
+
+        /// <summary>Reparents a folder (parent-only, preserves settings). Returns false on failure.</summary>
+        public async Task<bool> Move(ApiSubscriptionFolder folder, int? parentFolderId)
+        {
+            using var scope = serviceProvider.CreateScope();
+            var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
+
+            var (_, http) = await backend.SubscriptionFolderMove(new SubscriptionFolderMoveRequest()
+            {
+                Id = folder.Id,
+                ParentFolderId = parentFolderId,
+            });
+            if (http.IsSuccessStatusCode)
+                await Load(force: true);
+            return http.IsSuccessStatusCode;
+        }
+
         public async Task Delete(ApiSubscription subscription, bool deleteDownloadedFiles)
         {
             using var scope = serviceProvider.CreateScope();

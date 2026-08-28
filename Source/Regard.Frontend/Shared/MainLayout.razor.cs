@@ -16,26 +16,18 @@ namespace Regard.Frontend.Shared
         private SubscriptionCreateModal subscriptionCreateModal;
         private SubscriptionCreateEmptyModal subscriptionCreateEmptyModal;
         private FolderCreateModal folderCreateModal;
-        private VideoAddModal videoAddModal;
         private ImportModal importModal;
 
         private ElementReference addButton;
         private bool isAddMenuVisible = false;
 
         private SubscriptionTree subscriptionTree;
-        private bool isSubscriptionSelected = false;
 
         [Inject] protected AppController AppCtrl { get; set; }
 
         [Inject] protected AppState AppState { get; set; }
 
         [Inject] protected SubscriptionManagerService SubscriptionManager { get; set; }
-
-        protected override void OnInitialized()
-        {
-            base.OnInitialized();
-            AppState.PropertyChanged += AppState_PropertyChanged;
-        }
 
         private void OnToolbarAddClicked()
         {
@@ -57,33 +49,14 @@ namespace Regard.Frontend.Shared
             await folderCreateModal?.Show();
         }
 
-        private async Task OnAddVideo()
-        {
-            await videoAddModal?.Show();
-        }
-
         private async Task OnImport()
         {
             await importModal?.Show();
         }
 
-        private void OnRefresh()
-        {
-            AppState.RequestRefresh();
-        }
-
         private async Task OnSynchronize()
         {
             await SubscriptionManager.SynchronizeAll();
-        }
-
-        private void AppState_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == "SelectedSubscription")
-            {
-                isSubscriptionSelected = (AppState.SelectedSubscription != null) && AppState.SelectedSubscription.IsLeft;
-                StateHasChanged();
-            }
         }
 
         private void OnLogoClicked()

@@ -35,10 +35,17 @@ namespace Regard.Frontend.Pages
         // meaningful; the YouTube embed and trimmed files show the list read-only.
         private bool ChaptersSeekable => HasChapters && video.IsDownloaded && !streamFailed && !video.SponsorsRemoved;
 
-        // Resume point handed to the player: only for an unwatched video that has one.
+        private const int MinInProgressSeconds = Regard.Model.PlaybackConstants.MinInProgressSeconds;
+        private const int ResumeRewindSeconds = Regard.Model.PlaybackConstants.ResumeRewindSeconds;
+
+        // Resume point handed to the player: only for an unwatched video that's actually "in progress"
+        // (>= MinInProgressSeconds), rewound a little for context (clamped to 0).
         private double ResumeFromSeconds =>
-            (video != null && !video.IsWatched && video.PlaybackPositionSeconds.HasValue)
-                ? video.PlaybackPositionSeconds.Value : 0;
+            (video != null && !video.IsWatched
+                && video.PlaybackPositionSeconds.HasValue
+                && video.PlaybackPositionSeconds.Value >= MinInProgressSeconds)
+                ? System.Math.Max(0, video.PlaybackPositionSeconds.Value - ResumeRewindSeconds)
+                : 0;
 
         [Inject] protected BackendService Backend { get; set; }
 
@@ -191,15 +198,32 @@ namespace Regard.Frontend.Pages
         // Throttled playback-position callback (also fires on pause/ended and on the player's dispose).
         // Persist the resume point and keep the chapter highlight in sync. Skips once watched, so a video
         // that just crossed the 90% watched mark doesn't immediately get a fresh resume position.
-        private async Task OnPositionReport(double seconds)
+        private async Task OnPositionReport((double Seconds, double Duration) report)
         {
-            currentPlaybackSeconds = seconds;
+            currentPlaybackSeconds = report.Seconds;
             if (video == null || video.IsWatched)
                 return;
 
-            int secs = (int)seconds;
+            int secs = (int)report.Seconds;
+
+            // Don't record a resume point for a barely-started video — under MinInProgressSeconds it isn't
+            // meaningfully "in progress" (so no bar, no "Started" state, no resume).
+            if (secs < MinInProgressSeconds)
+                return;
+
             video.PlaybackPositionSeconds = secs;
-            await Backend.VideoReportProgress(new VideoReportProgressRequest { VideoId = VideoId, PositionSeconds = secs });
+
+            // Backfill duration so the grid's resume bar can be drawn (enrichment doesn't always set it).
+            int? dur = (report.Duration > 0 && double.IsFinite(report.Duration)) ? (int?)report.Duration : null;
+            if (dur.HasValue && (video.Duration == null || video.Duration <= 0))
+                video.Duration = dur;
+
+            await Backend.VideoReportProgress(new VideoReportProgressRequest
+            {
+                VideoId = VideoId,
+                PositionSeconds = secs,
+                DurationSeconds = dur,
+            });
         }
 
         // The <video> couldn't load its source (e.g. the downloaded file was moved/removed while the DB

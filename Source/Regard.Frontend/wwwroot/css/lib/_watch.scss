@@ -68,9 +68,17 @@
 }
 
 .watch-unavailable-glyph {
+    display: block;
     font-size: 2.5rem;
     opacity: 0.6;
     margin-bottom: 0.5rem;
+}
+
+// Like/dislike icons sit inline with their counts.
+.watch-vote-icon {
+    font-size: 1.15em;
+    vertical-align: text-bottom;
+    margin-right: .2em;
 }
 
 .watch-unavailable-title {

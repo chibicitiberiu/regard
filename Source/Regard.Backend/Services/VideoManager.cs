@@ -92,7 +92,7 @@ namespace Regard.Backend.Services
         /// <paramref name="updatedAt"/> defaults to now; pass an explicit value when adopting an external
         /// (Jellyfin) position so the timestamp reflects that source rather than "just now".
         /// </summary>
-        public void SetPlaybackPosition(UserAccount user, int videoId, int seconds, DateTimeOffset? updatedAt = null)
+        public void SetPlaybackPosition(UserAccount user, int videoId, int seconds, int? durationSeconds = null, DateTimeOffset? updatedAt = null)
         {
             var video = dataContext.Videos.AsQueryable()
                 .Where(v => v.Id == videoId && v.Subscription.UserId == user.Id)
@@ -104,6 +104,12 @@ namespace Regard.Backend.Services
 
             video.PlaybackPositionSeconds = seconds;
             video.PlaybackPositionUpdated = updatedAt ?? DateTimeOffset.Now;
+
+            // Backfill duration from the player when it's known but wasn't captured during enrichment.
+            // Without a duration the resume progress bar can't be drawn (it needs position/duration).
+            if (durationSeconds.HasValue && durationSeconds.Value > 0 && (video.Duration == null || video.Duration <= 0))
+                video.Duration = durationSeconds.Value;
+
             dataContext.SaveChanges();
         }
 

@@ -42,12 +42,12 @@ namespace Regard.Backend.Jobs
             if (Job == null)
                 throw new ArgumentException("Invalid job ID");
 
-            jobTrackerService.OnJobStarted(Job);
+            jobTrackerService.OnJobStarted(Job, GetOngoingNotification());
 
             try
             {
                 await ExecuteJob(context);
-                jobTrackerService.OnJobCompleted(Job);
+                jobTrackerService.OnJobCompleted(Job, GetSuccessNotification());
             }
             catch (JobCancelledException)
             {
@@ -59,7 +59,7 @@ namespace Regard.Backend.Jobs
             {
                 log.LogError(ex, "{0} failed with exception!", GetType().Name);
                 JobLog($"Job failed: {ex.Message}", MessageSeverity.Error);
-                jobTrackerService.OnJobFailed(Job, ex.Message);
+                jobTrackerService.OnJobFailed(Job, ex.Message, null, GetFailureNotification(ex));
             }
             finally
             {
@@ -74,8 +74,32 @@ namespace Regard.Backend.Jobs
         {
             Job.Progress = fraction;
             Job.Detail = detail;
-            jobTrackerService.OnJobProgress(Job.Id, fraction, detail);
+            jobTrackerService.OnJobProgress(Job.Id, fraction, detail, GetOngoingNotification());
         }
+
+        #region User-facing notification hooks
+
+        /// <summary>
+        /// Title/body for the live "in progress" notification. Default is the job's name + current step;
+        /// override to give a friendlier label (e.g. "Downloading" / a video title).
+        /// </summary>
+        protected virtual JobNotification GetOngoingNotification()
+            => new JobNotification { Title = Job?.Name, Text = Job?.Detail };
+
+        /// <summary>
+        /// The terminal notification to show on success, or null to silently clear the in-progress one.
+        /// Override for jobs with a meaningful outcome (a finished download, a completed import).
+        /// </summary>
+        protected virtual JobNotification GetSuccessNotification() => null;
+
+        /// <summary>
+        /// The terminal notification to show on the FINAL failure, or null to fall back to a generic
+        /// "{job}: {reason}" message. Called from the catch, where the job's entity may not be loaded —
+        /// overrides must null-guard their state and return null in that case.
+        /// </summary>
+        protected virtual JobNotification GetFailureNotification(Exception ex) => null;
+
+        #endregion
 
         /// <summary>
         /// Appends a line to the per-run job log (shown later in the Settings Job Log). Thread-safe.

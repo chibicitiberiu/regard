@@ -3,6 +3,7 @@ using Humanizer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Quartz;
+using Regard.Backend.Common.Model;
 using Regard.Backend.Common.Services;
 using Regard.Backend.Common.Utils;
 using Regard.Common.SponsorBlock;
@@ -37,6 +38,7 @@ namespace Regard.Backend.Downloader
         protected readonly UserQuotaService userQuotaService;
         protected readonly DownloadCancellationRegistry cancellationRegistry;
         protected readonly VideoManager videoManager;
+        protected readonly VideoUpdateNotifier videoUpdateNotifier;
 
         private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of ~?([\d\.]+)([KMG]i?B)");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
@@ -67,7 +69,8 @@ namespace Regard.Backend.Downloader
                                 MetadataService metadataService,
                                 UserQuotaService userQuotaService,
                                 DownloadCancellationRegistry cancellationRegistry,
-                                VideoManager videoManager) : base(logger, dataContext, jobTrackerService)
+                                VideoManager videoManager,
+                                VideoUpdateNotifier videoUpdateNotifier) : base(logger, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
             this.optionManager = optionManager;
@@ -78,6 +81,7 @@ namespace Regard.Backend.Downloader
             this.userQuotaService = userQuotaService;
             this.cancellationRegistry = cancellationRegistry;
             this.videoManager = videoManager;
+            this.videoUpdateNotifier = videoUpdateNotifier;
         }
 
         public static Task Schedule(RegardScheduler scheduler, Video video)
@@ -91,6 +95,31 @@ namespace Regard.Backend.Downloader
                 retryCount: 3,
                 retryIntervalSecs: 15 * 60);
         }
+
+        // Live "in progress" notification. video is only loaded once ExecuteJob runs, so the very first
+        // (pre-load) tick just says "Downloading"; every progress tick after that carries the title.
+        protected override JobNotification GetOngoingNotification()
+            => new JobNotification { Title = "Downloading", Text = video?.Name };
+
+        // "Download complete" — click opens the (now downloaded) video.
+        protected override JobNotification GetSuccessNotification()
+            => video == null ? null : new JobNotification
+            {
+                Title = "Download complete",
+                Text = video.Name,
+                VideoDbId = video.Id,
+                PrimaryAction = NotificationPrimaryAction.OpenVideo,
+            };
+
+        // "Download failed" — Error + VideoDbId makes the bell show a Retry button; the body click goes
+        // to the job logs. Null-guarded: an early failure (invalid id) throws before video is loaded.
+        protected override JobNotification GetFailureNotification(Exception ex)
+            => video == null ? null : new JobNotification
+            {
+                Title = "Download failed",
+                Text = video.Name,
+                VideoDbId = video.Id,
+            };
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
@@ -211,6 +240,14 @@ namespace Regard.Backend.Downloader
                             SbAction.Remove).Count > 0;
                 await dataContext.SaveChangesAsync();
             }
+
+            // Tell the owner's connected clients the video is now downloaded, so its card's badge updates
+            // live (the DB write above bypasses VideoManager.Update, so nothing else notifies).
+            var ownerId = dataContext.Subscriptions.AsQueryable()
+                .Where(s => s.Id == video.SubscriptionId)
+                .Select(s => s.UserId)
+                .FirstOrDefault();
+            await videoUpdateNotifier.NotifyVideoUpdated(video, ownerId);
 
             if (configuration.GetValue<bool>("Metadata:Enabled"))
                 await WriteEpisodeMetadata();

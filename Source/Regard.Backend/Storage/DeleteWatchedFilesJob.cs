@@ -28,8 +28,9 @@ namespace Regard.Backend.Jobs
                                      JobTrackerService jobTrackerService,
                                      ILogger<DeleteFilesJob> logger,
                                      DataContext dataContext,
-                                     IVideoDownloaderService videoDownloader)
-            : base(videoStorage, subscriptionManager, jobTrackerService, logger, dataContext)
+                                     IVideoDownloaderService videoDownloader,
+                                     VideoUpdateNotifier videoUpdateNotifier)
+            : base(videoStorage, subscriptionManager, jobTrackerService, logger, dataContext, videoUpdateNotifier)
         {
             this.videoDownloader = videoDownloader;
         }

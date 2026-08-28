@@ -23,5 +23,12 @@ namespace Regard.Common.API.Subscriptions
         public int VideoId { get; set; }
 
         public int PositionSeconds { get; set; }
+
+        /// <summary>
+        /// The player's known media duration in seconds, if any. Lets the backend backfill Video.Duration
+        /// when it wasn't captured during metadata enrichment — without it the resume progress bar can't be
+        /// drawn (it needs position/duration).
+        /// </summary>
+        public int? DurationSeconds { get; set; }
     }
 }

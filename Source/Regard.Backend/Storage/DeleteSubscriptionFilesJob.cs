@@ -24,8 +24,9 @@ namespace Regard.Backend.Jobs
                                           SubscriptionManager subscriptionManager,
                                           JobTrackerService jobTrackerService,
                                           ILogger<DeleteFilesJob> logger,
-                                          DataContext dataContext)
-            : base(videoStorage, subscriptionManager, jobTrackerService, logger, dataContext)
+                                          DataContext dataContext,
+                                          VideoUpdateNotifier videoUpdateNotifier)
+            : base(videoStorage, subscriptionManager, jobTrackerService, logger, dataContext, videoUpdateNotifier)
         {
         }
 

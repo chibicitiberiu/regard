@@ -1,7 +1,23 @@
 ﻿<SortedTreeView @ref="treeView"
                 Model="SubscriptionItemViewModelBase"
                 TSortKey="string"
-                SelectedItemChanged="OnSelectedItemChanged">
+                SelectedItemChanged="OnSelectedItemChanged"
+                EnableDragDrop="true"
+                CanDrop="CanDropItem"
+                ItemDropped="OnItemDropped">
+    <HeaderContent>
+        <div class="tree-item tree-item-home">
+            <div class="tree-item-content @(isHomeActive ? "home-active" : "")" @onclick="OnHomeClicked">
+                @* Placeholder chevron (hidden) so Home's icon lines up with the folder/subscription rows,
+                   which each reserve space for an expand button. *@
+                <button class="button-undecorated tree-item-expand-button v-hidden" tabindex="-1">
+                    <Icon Glyph="Icons.ChevronDown" Class="tree-item-expand-icon" />
+                </button>
+                <div class="tree-subscription-icon"><Icon Glyph="Icons.Home" /></div>
+                <div class="tree-subscription-name">Home</div>
+            </div>
+        </div>
+    </HeaderContent>
     <ItemTemplate Context="item">
         <button class="button-undecorated tree-item-expand-button @CssUtils.BoolToClass(item.Children.Count == 0, "v-hidden")"
                 @onclick="() => OnExpandToggle(item)" @onclick:stopPropagation="true">
@@ -21,12 +37,13 @@
             @item.Data.Name
         </div>
         <button @ref="item.Data.ContextMenuLinkReference"
-                class="button-undecorated tree-subscription-menu @CssUtils.BoolToClass(!item.IsSelected, "v-hidden")"
+                class="button-undecorated tree-subscription-menu"
                 @onclick="() => OnShowMenu(item)" @onclick:stopPropagation="true">
             <Icon Glyph="Icons.Menu" />
         </button>
         <Menu AttachTo="item.Data.ContextMenuLinkReference" @bind-IsVisible="item.Data.IsContextMenuVisible">
             <MenuItem Click="() => OnEditItem(item)">Edit</MenuItem>
+            <MenuItem Click="() => OnMoveItem(item)">Move to folder…</MenuItem>
             <MenuItem Click="() => OnSynchronizeItem(item)">Synchronize</MenuItem>
             <MenuItem Click="() => OnDeleteItem(item)">Delete</MenuItem>
         </Menu>
@@ -69,6 +86,24 @@
                    disabled="@(deleteFolder && !deleteRecursive)" />
             <label for="chk_delete_files">Delete all downloaded videos</label>
         </div>
+    </div>
+
+</Dialog>
+
+<Dialog @ref="moveDialog"
+        PrimaryButtonCaption="Move"
+        SecondaryButtonCaption="Cancel"
+        Caption="Move to folder">
+
+    <div class="form-group">
+        Move <em>@moveItemName</em> to:
+    </div>
+    <div class="form-group">
+        <FolderSelect Id="move_target_folder"
+                      @bind-Value="moveTargetFolderId"
+                      ExcludeSubtreeRootId="moveExcludeSubtreeRootId"
+                      Label="Destination folder:"
+                      Required="false" />
     </div>
 
 </Dialog>

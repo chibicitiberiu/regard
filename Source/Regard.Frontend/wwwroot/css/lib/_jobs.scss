@@ -47,26 +47,74 @@
     text-transform: uppercase;
 }
 
-.np-list {
-    .list-view-items { list-style: none; margin: 0; padding: 0; }
-    .list-view-item { padding: 0.4rem 0.75rem; border-top: 1px solid var(--color-bg-secondary); }
+.np-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.np-clear {
+    font-size: 0.8rem;
+    color: var(--color-fg-secondary);
+    cursor: pointer;
+    padding: 0.5rem 0.75rem 0.25rem;
+
+    &:hover { color: var(--color-fg); }
 }
 
-.np-job-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.np-job-name { font-weight: 500; }
-.np-job-cancel {
+.np-list {
+    .list-view-items { list-style: none; margin: 0; padding: 0; }
+    .list-view-item { border-top: 1px solid var(--color-bg-secondary); }
+}
+
+// A single notification: body (title/text/progress) + a right-hand action column.
+.np-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid transparent;
+
+    &.np-clickable { cursor: pointer; }
+    &.np-clickable:hover { background-color: var(--color-bg-secondary); }
+}
+.np-item-main { flex: 1 1 auto; min-width: 0; }
+.np-item-title { font-weight: 500; }
+.np-item-text {
+    font-size: 0.85rem;
+    color: var(--color-fg-secondary);
+    overflow-wrap: anywhere;
+}
+
+// Severity accents on the left border.
+.np-item-success { border-left-color: var(--color-fg-success); }
+.np-item-error   { border-left-color: var(--color-fg-error); }
+.np-item-warning { border-left-color: var(--color-fg-warning); }
+.np-item-info    { border-left-color: var(--color-fg-info); }
+
+.np-item-actions {
     flex: 0 0 auto;
-    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.np-action {
+    padding: 0.15rem 0.35rem;
     line-height: 1;
     color: var(--color-fg-secondary);
     cursor: pointer;
+    border-radius: 3px;
+    white-space: nowrap;
 
-    &:hover { color: var(--color-fg-error); }
+    &:hover { color: var(--color-fg); background-color: var(--color-bg-window); }
 }
-.np-job-detail { font-size: 0.85rem; color: var(--color-fg-secondary); }
-.np-msg { font-size: 0.9rem; }
-.np-msg-warning { color: var(--color-fg-warning); }
-.np-msg-error { color: var(--color-fg-error); }
+.np-retry {
+    color: var(--color-fg-info);
+    font-size: 0.85rem;
+
+    &:hover { color: var(--color-fg); }
+}
 
 .toast {
     padding: 0.75rem 1rem;
@@ -104,6 +152,26 @@
 }
 
 .job-log-name summary { cursor: pointer; }
+
+// Standalone job-detail page (deep-linked from a notification's "open logs").
+.job-detail { padding: 1rem; }
+.job-detail-back {
+    color: var(--color-fg-secondary);
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+
+    &:hover { color: var(--color-fg); }
+}
+.job-detail-title { margin: 0 0 0.5rem; }
+.job-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    color: var(--color-fg-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+}
 
 .job-log-pager {
     display: flex;

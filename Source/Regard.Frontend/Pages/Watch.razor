@@ -48,7 +48,7 @@
                 {
                     <div class="watch-unavailable">
                         <div class="watch-unavailable-inner">
-                            <div class="watch-unavailable-glyph">&#9654;</div>
+                            <Icon Glyph="@(streamFailed ? Icons.Error : Icons.NotDownloaded)" Class="watch-unavailable-glyph" />
                             <p class="watch-unavailable-title">@(streamFailed ? "This video couldn't be played" : "This video isn't downloaded")</p>
                             <p class="text-muted">
                                 @if (streamFailed)
@@ -126,8 +126,8 @@
                 @if (video.Likes.HasValue && video.Dislikes.HasValue)
                 {
                     <div class="watch-votes">
-                        <span class="watch-vote" title="Likes">&#x1F44D; @(((double)video.Likes.Value).ToMetric(decimals: 1))</span>
-                        <span class="watch-vote" title="Dislikes (estimated)">&#x1F44E; @(((double)video.Dislikes.Value).ToMetric(decimals: 1))</span>
+                        <span class="watch-vote" title="Likes"><Icon Glyph="Icons.ThumbUp" Class="watch-vote-icon" /> @(((double)video.Likes.Value).ToMetric(decimals: 1))</span>
+                        <span class="watch-vote" title="Dislikes (estimated)"><Icon Glyph="Icons.ThumbDown" Class="watch-vote-icon" /> @(((double)video.Dislikes.Value).ToMetric(decimals: 1))</span>
                         <span class="watch-votes-credit text-muted">
                             via <a href="https://returnyoutubedislike.com" target="_blank" rel="noopener noreferrer">Return YouTube Dislike</a>
                         </span>
@@ -213,7 +213,7 @@
                             {
                                 <span class="upnext-duration">@v.Duration.Value.ToDurationString()</span>
                             }
-                            @if (!v.IsWatched && v.PlaybackPositionSeconds > 0 && v.Duration > 0)
+                            @if (!v.IsWatched && v.PlaybackPositionSeconds >= Regard.Model.PlaybackConstants.MinInProgressSeconds && v.Duration > 0)
                             {
                                 <div class="video-progress">
                                     <div class="video-progress-fill"

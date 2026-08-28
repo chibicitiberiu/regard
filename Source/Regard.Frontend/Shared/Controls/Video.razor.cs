@@ -61,7 +61,7 @@ namespace Regard.Frontend.Shared.Controls
 
         /// <summary>Raised (throttled, ~5 s) with the current playback position in seconds, plus once on
         /// pause/ended and on dispose. Setting a delegate enables position reporting.</summary>
-        [Parameter] public EventCallback<double> PositionChanged { get; set; }
+        [Parameter] public EventCallback<(double Seconds, double Duration)> PositionChanged { get; set; }
 
         /// <summary>Seconds to resume from once metadata loads. 0 (default) starts at the beginning.</summary>
         [Parameter] public double StartPosition { get; set; }
@@ -118,9 +118,9 @@ namespace Regard.Frontend.Shared.Controls
         }
 
         [JSInvokable]
-        public async Task OnPositionReport(double seconds)
+        public async Task OnPositionReport(double seconds, double duration)
         {
-            await PositionChanged.InvokeAsync(seconds);
+            await PositionChanged.InvokeAsync((seconds, duration));
         }
 
         protected async Task OnEnded(EventArgs _)

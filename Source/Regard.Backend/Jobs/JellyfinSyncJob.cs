@@ -143,7 +143,7 @@ namespace Regard.Backend.Jobs
                 await videoManager.MarkWatched(user, markWatchedIds.ToArray());
 
             foreach (var a in adopts)
-                videoManager.SetPlaybackPosition(user, a.Id, a.Seconds, a.Timestamp);
+                videoManager.SetPlaybackPosition(user, a.Id, a.Seconds, updatedAt: a.Timestamp);
 
             int pushed = 0;
             foreach (var pu in pushes)

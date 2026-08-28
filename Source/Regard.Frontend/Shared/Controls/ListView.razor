@@ -6,7 +6,10 @@
         {
             @foreach (var item in ItemsSource)
             {
-                <li class="list-view-item">
+                @* Key each row by its model object so replacing an item (e.g. a video card refreshed after
+                   a download) recreates that row's subtree cleanly, instead of reusing the old per-card
+                   components (whose element refs / Popper state would be stale, breaking the context menu). *@
+                <li class="list-view-item" @key="item">
                     @ItemTemplate(item)
                 </li>
             }

@@ -3,28 +3,49 @@
     clickOutsideHandlers: [],
 
     _onClick: function (event) {
-        for (var i = 0; i < window.RegardHelpers.clickOutsideHandlers.length; i++) {
-            var handler = window.RegardHelpers.clickOutsideHandlers[i];
-            if (!handler.element.contains(event.target)) {
-                handler.dotNetObjectRef.invokeMethodAsync("InvokeClickOutside");
+        var handlers = window.RegardHelpers.clickOutsideHandlers;
+        // Iterate backwards so we can prune stale entries in place.
+        for (var i = handlers.length - 1; i >= 0; i--) {
+            var handler = handlers[i];
+            // Self-heal: if a panel's element is gone from the DOM, its .NET object may already be
+            // disposed and invoking it throws "no tracked object with id". Drop it and skip.
+            if (!handler.element || !document.contains(handler.element)) {
+                handlers.splice(i, 1);
+                continue;
+            }
+            // A click inside the popup OR on its trigger button is NOT "outside". Excluding the trigger
+            // is what makes this robust: the very click that opens the menu targets the trigger, so it can
+            // never dismiss the menu it just opened (a slow/debug build could otherwise beat the old
+            // time-based guard and close the menu instantly — the popup then never appears).
+            var insidePopup = handler.element.contains(event.target);
+            var onTrigger = handler.trigger && handler.trigger.contains && handler.trigger.contains(event.target);
+            if (!insidePopup && !onTrigger) {
+                var p = handler.dotNetObjectRef.invokeMethodAsync("InvokeClickOutside");
+                // Swallow a rejection if the ref was disposed between the DOM check and the call.
+                if (p && typeof p.catch === "function")
+                    p.catch(function () { });
             }
         }
     },
 
-    addClickOutsideHandler: function (element, dotNetObjectRef) {
-        this.removeClickOutsideHandler(element);
+    // Keyed by a stable id (not the DOM element): a panel's @ref is nulled before its dispose runs, so
+    // removing by element would leak the handler (and its disposed .NET ref). `trigger` is the element
+    // that toggles the panel (so clicking it doesn't count as an outside click).
+    addClickOutsideHandler: function (element, dotNetObjectRef, id, trigger) {
+        if (!(element instanceof Node))
+            return;
+        this.removeClickOutsideHandler(id);
         this.clickOutsideHandlers.push({
+            id: id,
             element: element,
+            trigger: (trigger instanceof Node) ? trigger : null,
             dotNetObjectRef: dotNetObjectRef
         });
     },
 
-    removeClickOutsideHandler: function (element) {
-        if (!(element instanceof Node))
-            return;
-
-        for (var i = 0; i < this.clickOutsideHandlers.length; i++) {
-            if (this.clickOutsideHandlers[i].element.isSameNode(element)) {
+    removeClickOutsideHandler: function (id) {
+        for (var i = this.clickOutsideHandlers.length - 1; i >= 0; i--) {
+            if (this.clickOutsideHandlers[i].id === id) {
                 this.clickOutsideHandlers.splice(i, 1);
             }
         }
@@ -195,7 +216,8 @@
                 return;
             var t = videoElement.currentTime;
             handler.lastReported = t;
-            try { handler.dotNetObjectRef.invokeMethodAsync("OnPositionReport", t); } catch (e) { }
+            // Report the duration too so the backend can backfill Video.Duration (needed to draw the bar).
+            try { handler.dotNetObjectRef.invokeMethodAsync("OnPositionReport", t, d); } catch (e) { }
         };
         handler.onTime = function () {
             var t = videoElement.currentTime;
@@ -235,6 +257,14 @@
                 this.positionReportHandlers.splice(i, 1);
             }
         }
+    },
+
+    // Resets the scroll position of the element matching the given selector (e.g. the video grid on
+    // page/filter change). No-op if it isn't in the DOM.
+    scrollToTop: function (selector) {
+        var el = document.querySelector(selector);
+        if (el)
+            el.scrollTop = 0;
     }
 }
 

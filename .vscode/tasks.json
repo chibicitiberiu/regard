@@ -2,14 +2,14 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build-backend",
+      "label": "build",
       "command": "dotnet",
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/Source/Regard.Backend/Regard.Backend.csproj"
+        "${workspaceFolder}/Source/Regard.sln"
       ],
       "problemMatcher": "$msCompile"
-    }
+    },
   ]
 }
