@@ -54,6 +54,7 @@ namespace Regard.Backend.Controllers
                 AllSubs = GetOrNull(Options.Ytdl_AllSubs, user.Id),
                 SubFormat = GetOrNull(Options.Ytdl_SubFormat, user.Id),
                 SubLang = GetOrNull(Options.Ytdl_SubLang, user.Id),
+                DownloadPath = GetOrNull(Options.Subscriptions_DownloadPath, user.Id),
             };
             return Ok(responseFactory.Success(settings));
         }
@@ -81,6 +82,7 @@ namespace Regard.Backend.Controllers
             SetOrUnset(Options.Ytdl_AllSubs, user.Id, request.AllSubs);
             SetOrUnset(Options.Ytdl_SubFormat, user.Id, request.SubFormat);
             SetOrUnset(Options.Ytdl_SubLang, user.Id, request.SubLang);
+            SetOrUnset(Options.Subscriptions_DownloadPath, user.Id, request.DownloadPath);
 
             return Ok(responseFactory.Success());
         }

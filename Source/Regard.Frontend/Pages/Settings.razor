@@ -198,6 +198,26 @@
                 </div>
             </div>
 
+            <div class="form-group row">
+                <label class="col-xs-4 col-form-label">Download location:</label>
+                <div class="col-xs-8">
+                    <input class="form-control" @bind="DownloadPath" @bind:event="oninput"
+                           placeholder="(default template)" autocapitalize="none" />
+                    <small class="text-muted">
+                        Path and filename template for downloads (yt-dlp <code>-o</code>). Available tokens:
+                        <code>@("{DownloadDirectory}")</code> (your download root),
+                        <code>@("{FolderPath}")</code> (the subscription's folder tree),
+                        <code>@("{Subscription.Name}")</code>,
+                        <code>@("{EpisodeCode}")</code> (Jellyfin-style SxxExx), and
+                        <code>@("{Video.Name}")</code>. Other <code>@("{Video.*}")</code> /
+                        <code>@("{Subscription.*}")</code> properties and <code>@("{Env[VAR]}")</code> also
+                        work. Leave blank to inherit. An unknown token makes the download fail, so check the
+                        example below.
+                    </small>
+                    <div class="pattern-preview">Example: <code>@PatternPreview</code></div>
+                </div>
+            </div>
+
             <details class="advanced">
                 <summary>Advanced</summary>
 

@@ -73,11 +73,22 @@
 
     <RgInputText Id="subscription_downloadPath"
                  @bind-Value="Request.DownloadPath"
+                 BindOn="BindEvent.OnInput"
                  Label="Download path:"
                  Required="false"
                  ValidationFor="() => Request.DownloadPath"
                  autocapitalize="none"
-                 autofocus />
+                 autofocus>
+        <HelpText>
+            Path and filename template for downloads (yt-dlp <code>-o</code>). Tokens:
+            <code>@("{DownloadDirectory}")</code>, <code>@("{FolderPath}")</code>,
+            <code>@("{Subscription.Name}")</code>, <code>@("{EpisodeCode}")</code> (SxxExx),
+            <code>@("{Video.Name}")</code>; other <code>@("{Video.*}")</code> /
+            <code>@("{Subscription.*}")</code> properties and <code>@("{Env[VAR]}")</code> also work.
+            Leave blank to inherit. An unknown token makes the download fail.
+            <div class="pattern-preview">Example: <code>@PatternPreview</code></div>
+        </HelpText>
+    </RgInputText>
 
     <RgFieldWrapper Id="subscription_writeSubtitles" Label="Download subtitles:" Required="false">
         <Field>

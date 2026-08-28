@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Regard.Common.API.Settings;
+using Regard.Frontend.Shared;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
@@ -49,6 +50,11 @@ namespace Regard.Frontend.Pages
         protected string SubFormatStr { get; set; } = string.Empty;
 
         protected bool ShowSubtitleOptions => SubtitlesStr == "on";
+
+        // "" = inherit the default template; otherwise a yt-dlp -o path/filename template.
+        protected string DownloadPath { get; set; } = string.Empty;
+
+        protected string PatternPreview => PatternPreviewHelper.Render(DownloadPath);
 
         protected bool IsTranscodeTarget =>
             TranscodeVideoStr != string.Empty && TranscodeVideoStr != "off";
@@ -125,6 +131,8 @@ namespace Regard.Frontend.Pages
             SubLangMode = (s.AllSubs == true) ? "all" : "specific";
             SubLangStr = s.SubLang ?? "en";
             SubFormatStr = s.SubFormat ?? string.Empty;
+
+            DownloadPath = s.DownloadPath ?? string.Empty;
         }
 
         private void ToggleCodec(HashSet<string> set, string token, ChangeEventArgs e)
@@ -162,6 +170,7 @@ namespace Regard.Frontend.Pages
                 SubLang = (SubtitlesStr == "on" && SubLangMode == "specific" && !string.IsNullOrWhiteSpace(SubLangStr))
                     ? SubLangStr : null,
                 SubFormat = (SubtitlesStr == "on" && !string.IsNullOrEmpty(SubFormatStr)) ? SubFormatStr : null,
+                DownloadPath = string.IsNullOrWhiteSpace(DownloadPath) ? null : DownloadPath,
             };
 
             var (resp, httpResp) = await Backend.SaveSettings(request);

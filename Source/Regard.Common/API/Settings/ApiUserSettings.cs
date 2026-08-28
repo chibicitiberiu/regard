@@ -57,5 +57,12 @@ namespace Regard.Common.API.Settings
 
         /// <summary>Subtitle language list, comma-separated (e.g. "en,en-US,es"). null = inherit.</summary>
         public string SubLang { get; set; }
+
+        /// <summary>
+        /// Download path/filename template (yt-dlp -o), combining directory and filename. Supports
+        /// tokens like {DownloadDirectory}, {FolderPath}, {Subscription.Name}, {EpisodeCode},
+        /// {Video.Name}. This is the per-user default; a subscription can override it. null = inherit.
+        /// </summary>
+        public string DownloadPath { get; set; }
     }
 }

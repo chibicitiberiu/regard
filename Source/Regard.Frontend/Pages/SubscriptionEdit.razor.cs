@@ -77,6 +77,8 @@ namespace Regard.Frontend.Pages
             set => Request.AllSubs = TriToBool(value);
         }
 
+        protected string PatternPreview => Shared.PatternPreviewHelper.Render(Request.DownloadPath);
+
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();

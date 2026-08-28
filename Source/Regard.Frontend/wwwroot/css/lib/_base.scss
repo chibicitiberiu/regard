@@ -68,6 +68,17 @@ em, strong {
     opacity: .75;
 }
 
+.pattern-preview {
+    margin-top: .35em;
+    font-size: .85em;
+    opacity: .8;
+
+    code {
+        font-family: monospace;
+        word-break: break-all;
+    }
+}
+
 .center-screen {
     position: fixed;
     left: 50%;
