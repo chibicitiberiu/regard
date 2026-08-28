@@ -184,11 +184,15 @@ namespace Regard.Backend.Jobs
             var subProvider = providerManager.Get<ISubscriptionProvider>(sub.SubscriptionProviderId);
             subProvider.VerifyNotNull($"Could not find subscription provider {sub.SubscriptionProviderId}");
 
-            var videos = subProvider
-                .FetchVideos(sub)
-                .OrderBy(video => video.Published);
+            // FetchVideos now returns a fast flat listing (newest-first). Preserve that order — do NOT
+            // sort by Published, which is only a placeholder until a video is enriched. Enrich the
+            // newest few videos in full now; list the rest flat and enrich them lazily (on open/download).
+            int eagerBudget = Math.Max(
+                optionManager.GetGlobal(Options.Sync_EagerEnrichCount),
+                optionManager.GetForSubscription(Options.Subscriptions_MaxCount, sub.Id));
 
-            await foreach (var video in videos)
+            int newCount = 0;
+            await foreach (var video in subProvider.FetchVideos(sub))
             {
                 Video existingVideo = FindMatchingVideo(sub, video);
 
@@ -200,21 +204,16 @@ namespace Regard.Backend.Jobs
 
                 FillVideoDetails(sub, video);
 
-                // Find a video provider to give us more details
-                if (video.VideoProviderId == null)
+                if (newCount < eagerBudget && await TryEnrich(video))
                 {
-                    var videoProvider = await providerManager.FindForVideo(video).FirstOrDefaultAsync();
-
-                    try
-                    {
-                        videoProvider.VerifyNotNull($"Could not find a video provider for video {video}");
-                        await videoProvider.UpdateMetadata(new[] { video }, true, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        log.LogError(ex, "Could not retrieve any information about video {0}", video);
-                        continue;
-                    }
+                    video.EnrichedAt = DateTimeOffset.UtcNow;
+                }
+                else
+                {
+                    // Deferred (or enrichment failed): mark un-enriched and sort it below the enriched
+                    // newest videos (MinValue) so "latest N" auto-download never picks a flat placeholder.
+                    video.EnrichedAt = null;
+                    video.Published = DateTimeOffset.MinValue;
                 }
 
                 // Store video
@@ -222,6 +221,27 @@ namespace Regard.Backend.Jobs
                 log.LogInformation("New video {0}", video);
                 JobLog($"New video: {video.Name}");
                 await dataContext.SaveChangesAsync();
+                newCount++;
+            }
+        }
+
+        /// <summary>
+        /// Fetches full metadata for a single video via its provider. Returns false (and logs) on
+        /// failure so the caller can list it flat instead of dropping it.
+        /// </summary>
+        private async Task<bool> TryEnrich(Video video)
+        {
+            try
+            {
+                var videoProvider = await providerManager.FindForVideo(video).FirstOrDefaultAsync();
+                videoProvider.VerifyNotNull($"Could not find a video provider for video {video}");
+                await videoProvider.UpdateMetadata(new[] { video }, true, true);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Could not retrieve metadata for video {0}", video);
+                return false;
             }
         }
 
@@ -230,6 +250,7 @@ namespace Regard.Backend.Jobs
             // TODO: allow providers to set playlist indices
 
             var nextIndex = dataContext.Videos.AsQueryable()
+                                .Where(x => x.SubscriptionId == sub.Id)
                                 .Select(x => (int?)x.PlaylistIndex)
                                 .Max();
 

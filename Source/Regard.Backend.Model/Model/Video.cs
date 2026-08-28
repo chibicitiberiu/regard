@@ -60,6 +60,13 @@ namespace Regard.Backend.Model
 
         public DateTimeOffset Published { get; set; }
 
+        /// <summary>
+        /// When full metadata (duration, description, real published date, rating) was fetched, or null
+        /// if this video is still a flat listing entry awaiting enrichment. Set the first time the video
+        /// is enriched (during sync for the newest videos, lazily on watch/download for the rest).
+        /// </summary>
+        public DateTimeOffset? EnrichedAt { get; set; }
+
         public DateTimeOffset LastUpdated { get; set; }
 
         public DateTimeOffset Discovered { get; set; }

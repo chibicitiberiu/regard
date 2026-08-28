@@ -79,7 +79,10 @@
                             <span>@video.Views.Value.ToMetric(decimals: 1) views</span>
                             <span class="dot">&#x2022;</span>
                         }
-                        <span>@video.Published.ToLocalTime().Humanize()</span>
+                        @if (video.IsEnriched)
+                        {
+                            <span>@video.Published.ToLocalTime().Humanize()</span>
+                        }
                         @if (video.Duration.HasValue)
                         {
                             <span class="dot">&#x2022;</span>

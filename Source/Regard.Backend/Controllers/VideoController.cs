@@ -96,6 +96,13 @@ namespace Regard.Backend.Controllers
                 .Skip(request.Offset ?? 0)
                 .Take(request.Limit ?? 50)
                 .ToArray();
+
+            // Lazy enrichment: when the watch page opens a single video that was listed flat during
+            // sync, fetch its full metadata now. Gated to a single-Id request so the multi-video list
+            // (and the 50-item Up-next queries) never trigger a burst of yt-dlp extractions.
+            if (request.Ids?.Length == 1 && videos.Length == 1)
+                await videoManager.EnsureEnriched(videos[0]);
+
             var apiVideos = new List<ApiVideo>();
 
             // Embedding is a per-user privacy choice (default off); only expose an embed URL when the

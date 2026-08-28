@@ -1,4 +1,5 @@
 ﻿using MoreLinq;
+using Microsoft.Extensions.Logging;
 using Regard.Backend.Common.Utils;
 using Regard.Backend.Configuration;
 using Regard.Backend.DB;
@@ -36,18 +37,21 @@ namespace Regard.Backend.Services
         private readonly RegardScheduler scheduler;
         private readonly IProviderManager providerManager;
         private readonly IOptionManager optionManager;
+        private readonly ILogger<VideoManager> log;
 
         public event EventHandler<VideoUpdatedEventArgs> VideoUpdated;
 
         public VideoManager(DataContext dataContext,
                             RegardScheduler scheduler,
                             IProviderManager providerManager,
-                            IOptionManager optionManager)
+                            IOptionManager optionManager,
+                            ILogger<VideoManager> log)
         {
             this.dataContext = dataContext;
             this.scheduler = scheduler;
             this.providerManager = providerManager;
             this.optionManager = optionManager;
+            this.log = log;
         }
 
         public Video Get(int id)
@@ -119,8 +123,39 @@ namespace Regard.Backend.Services
             if (anyUnskipped)
                 await dataContext.SaveChangesAsync();
 
+            // Videos listed flat during sync still need full metadata before download so the filename,
+            // season and NFO are correct. (Auto-download only targets already-enriched videos, so this
+            // fires only for a manual download of an older, deferred video.)
+            foreach (var video in videosToDownload)
+                await EnsureEnriched(video);
+
             foreach (var video in videosToDownload)
                 await DownloadVideoJob.Schedule(scheduler, video);
+        }
+
+        /// <summary>
+        /// Fetches full metadata for a video that was listed flat during sync (EnrichedAt == null) and
+        /// persists it. No-op for already-enriched videos. Best-effort: logs and leaves it flat on error.
+        /// </summary>
+        public async Task EnsureEnriched(Video video)
+        {
+            if (video.EnrichedAt != null)
+                return;
+
+            var provider = await providerManager.FindForVideo(video).FirstOrDefaultAsync();
+            if (provider == null)
+                return;
+
+            try
+            {
+                await provider.UpdateMetadata(new[] { video }, true, true);
+                video.EnrichedAt = DateTimeOffset.UtcNow;
+                await dataContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Could not enrich metadata for video {0}", video);
+            }
         }
 
         public async Task DeleteFiles(UserAccount user, int[] videoIds)

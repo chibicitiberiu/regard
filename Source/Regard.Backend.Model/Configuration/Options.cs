@@ -201,6 +201,20 @@ namespace Regard.Backend.Configuration
         );
 
         /// <summary>
+        /// How many of a subscription's newest videos to enrich with full metadata during sync (the
+        /// rest are listed flat and enriched lazily when opened or downloaded). Also bounded below by a
+        /// subscription's auto-download count so the download window is always fully enriched.
+        /// Global/server option.
+        /// </summary>
+        public static readonly OptionDefinition<int> Sync_EagerEnrichCount = new OptionDefinition<int>(
+            20,
+            "sync.eager_enrich_count",
+            "Sync:EagerEnrichCount",
+            "REGARD_SYNC_EAGER_ENRICH_COUNT",
+            0
+        );
+
+        /// <summary>
         /// Minutes with no output from a running download before it's treated as stalled and killed
         /// (the job then retries). Guards against a frozen .part that keeps the pipe open. 0 disables.
         /// Global/server option.

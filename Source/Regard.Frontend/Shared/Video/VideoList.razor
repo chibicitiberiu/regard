@@ -87,7 +87,10 @@
                                 <span>@item.ApiVideo.Views.Value.ToMetric(decimals: 1) views</span>
                                 <span>&nbsp;&#x2022;&nbsp;</span>
                             }
-                            <span>@item.ApiVideo.Published.ToLocalTime().Humanize()</span>
+                            @if (item.ApiVideo.IsEnriched)
+                            {
+                                <span>@item.ApiVideo.Published.ToLocalTime().Humanize()</span>
+                            }
                         </small>
                     </NavLink>
                 </div>

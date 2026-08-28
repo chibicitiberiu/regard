@@ -512,6 +512,9 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<int?>("Duration")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTimeOffset?>("EnrichedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsWatched")
                         .HasColumnType("INTEGER");
 

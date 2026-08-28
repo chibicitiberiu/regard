@@ -28,6 +28,12 @@ namespace Regard.Common.API.Model
 
         public DateTimeOffset Published { get; set; }
 
+        /// <summary>
+        /// False while the video is a flat listing entry awaiting full metadata. The UI hides the
+        /// published date (a placeholder until enrichment) and can show a "pending" hint.
+        /// </summary>
+        public bool IsEnriched { get; set; }
+
         public DateTimeOffset LastUpdated { get; set; }
 
         public Uri ThumbnailUrl { get; set; }

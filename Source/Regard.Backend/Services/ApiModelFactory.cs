@@ -50,6 +50,7 @@ namespace Regard.Backend.Services
                 SubscriptionId = video.SubscriptionId,
                 PlaylistIndex = video.PlaylistIndex,
                 Published = video.Published,
+                IsEnriched = video.EnrichedAt != null,
                 LastUpdated = video.LastUpdated,
                 ThumbnailUrl = thumbnailService.GetThumbnail(video),
                 UploaderName = video.UploaderName,

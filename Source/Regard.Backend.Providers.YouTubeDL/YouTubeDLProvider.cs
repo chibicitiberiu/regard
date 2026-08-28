@@ -135,10 +135,12 @@ namespace Regard.Backend.Providers.YouTubeDL
 
         public async IAsyncEnumerable<Video> FetchVideos(Subscription subscription)
         {
-            // Background work — a longer timeout with a few retries (ExtractInformation throws rather
-            // than returning null, so the retry lives inside it now).
+            // Flat listing (fetchVideos: false adds --flat-playlist): returns the channel's entries
+            // quickly, newest-first, without a full per-video extraction. Full metadata (duration,
+            // description, published date, rating) is filled in later by the sync job — eagerly for the
+            // newest few, lazily for the rest. Background timeout + retries.
             UrlInformation info = await ytdlService.UsingYoutubeDL(async ytdl =>
-                await ytdl.ExtractInformation(subscription.OriginalUrl, true, BackgroundTimeoutMs, retries: BackgroundRetries));
+                await ytdl.ExtractInformation(subscription.OriginalUrl, false, BackgroundTimeoutMs, retries: BackgroundRetries));
 
             if (info == null)
                 throw new Exception("Failed to fetch videos (timed out)!");
@@ -159,7 +161,11 @@ namespace Regard.Backend.Providers.YouTubeDL
                             entry.Entries.Where(e => e != null).ForEach(queue.Enqueue);
                         break;
 
+                    // Flat-playlist entries come back as "url"/"url_transparent" (a reference to be
+                    // resolved later), not "video" — handle all three the same way.
                     case UrlType.Video:
+                    case UrlType.Url:
+                    case UrlType.UrlTransparent:
                         yield return new Video()
                         {
                             SubscriptionProviderId = entry.Id,
@@ -171,9 +177,11 @@ namespace Regard.Backend.Providers.YouTubeDL
                             PlaylistIndex = index++,
                             Published = (entry.Timestamp != DateTime.MinValue) ? entry.Timestamp : DateTimeOffset.Now,
                             LastUpdated = DateTimeOffset.Now,
-                            ThumbnailPath = entry.Thumbnail?.ToString(),
+                            // Flat entries populate Thumbnails[] rather than the single Thumbnail.
+                            ThumbnailPath = (entry.Thumbnail ?? entry.Thumbnails?.LastOrDefault()?.Url)?.ToString(),
                             UploaderName = entry.Uploader,
-                            OriginalUrl = entry.WebpageUrl?.ToString(),
+                            // Flat mode gives "url" (the watch URL); non-flat gives "webpage_url".
+                            OriginalUrl = (entry.WebpageUrl ?? entry.Url)?.ToString(),
                             Views = entry.ViewCount,
                             Duration = entry.Duration.HasValue ? (int?)Math.Round(entry.Duration.Value) : null,
                             Rating = ProviderHelpers.CalculateRating(entry.LikeCount, entry.DislikeCount)
