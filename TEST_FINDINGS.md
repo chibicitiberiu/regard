@@ -61,12 +61,18 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 
 - None — all ytsm-parity gaps are closed. Remaining items are the UX/perf recommendations below.
 
-## Bugs / UX not yet fixed (recommend)
+## Reliability & UX batch (2026-08-28, committed)
 
-- **[UX/PERF] Default download quality is uncapped `bestvideo[vcodec!*=av01]+bestaudio`** (`Options.cs`). In testing it selected 4K VP9 (format 315) — a ~800MB file for one 5-minute video. Now *capable* via the Settings max-resolution option, but the shipped **default** is still uncapped; consider defaulting to `…[height<=1080]`.
-- **[BUG/PERF] A 4K download stalled** — yt-dlp alive but the `.part` froze at 797MB with no progress for 15+ min (likely YouTube throttling the high itag). Live progress is now shown in the bell, but there is still **no cancel button**; `--concurrent-fragments` would also help.
-- **[UX] Auto-download is ON by default** (`Subscriptions_AutoDownload = true`), bounded to the latest 3 (`MaxCount = 3`). So adding a sub silently pulls 3× videos. Should be surfaced in the add flow.
-- **[PERF] Subscription sync is slow** — `FetchVideos` does a full (non-flat) yt-dlp extraction of every video, so a large channel takes minutes and no videos show until it fully completes. (Confirmed again: a CGP Grey global sync took ~4.5 min.) Consider flat listing + lazy detail.
-- **[UX] After finishing the setup wizard the app briefly showed the Login screen** (token was set; a reload showed the authed app). The final auth-state change doesn't re-render into the authed view. (Observed once.)
-- **[UX] Subscription/channel avatar thumbnail is broken on first paint** — loaded directly from `yt3.googleusercontent.com` and blocked by the browser (`ERR_BLOCKED_BY_ORB`) until `FetchThumbnailsJob` caches it locally. Video thumbnails (i.ytimg.com) are fine. (Distinct from the now-fixed Watch-page icon.)
+| Item (was) | Fix | Commit |
+|---|---|---|
+| **[PERF] Subscription sync slow** — `FetchVideos` did a full non-flat extraction of every video; nothing showed for minutes (~4.5 min for CGP Grey). | Flat listing (newest-first) + lazy enrichment: sync enriches only the newest N in full (bounded below by the auto-download count), lists the rest flat, and enriches them on open/download. New nullable `Video.EnrichedAt`; `ApiVideo.IsEnriched` (the UI hides the placeholder date until enriched). `Sync_EagerEnrichCount` option (default 20). | `ade34c9` |
+| **[BUG/PERF] A 4K download stalled** — yt-dlp alive but the `.part` frozen with no progress for 15+ min; **no cancel button**. | Idle-output watchdog kills a stalled process after `Ytdl_IdleTimeout` min (default 10) and the job retries. Plus a retry policy and tiered timeouts (interactive Add fails fast at 45s; background sync waits longer). | `ce134e5` |
+| (cancel) **no cancel button** for a running download. | Cancel button in the notification bell → skips the video (won't auto-download; next-newest slides in) and can still be downloaded manually. New `Video.DownloadSkipped`, `JobState.Cancelled`, `POST api/jobs/{id}/cancel`. | `2194a04` |
+| **[UX] Auto-download ON by default** — adding a sub silently pulls its latest 3. | "Automatically download new videos" checkbox in the Add dialog (writes a per-sub override when off). | `fcadddb` |
+| **[UX] Login screen flashed** after the setup wizard. | `FinishSetup` forces a full reload (`forceLoad: true`), matching the proven login/logout paths. | `d2f2c5d` |
+| **[UX] Channel avatar broken on first paint** (`ERR_BLOCKED_BY_ORB`). | `GetThumbnail` serves the local placeholder while a thumbnail is still remote, and `FetchThumbnailsJob` is kicked off right after create/import so the real avatar appears in seconds. | `24b354e` |
+| (bug) `RgSimpleInputSelect<bool?>` tri-state selects mis-rendered their persisted value. | Option value and bound value now share `FormatValueAsString` with an explicit `__null` token; the redundant placeholder is suppressed for nullable selects. | `67b4d08` |
+| (feature) Anonymous users got a bare non-closeable login modal. | A branded welcome landing page (Log in / Register; Register hidden when registrations closed). Standalone `/auth/login` + `/auth/register` given `AuthLayout` so they render for logged-out users. | `0ce0dd1` |
+
+Verified via build + 31 tests + a 12-check Playwright pass (welcome page, register-shown/hidden, `AuthLayout` login/register, login flow, `IsEnriched` date-hiding, tri-state round-trip, add-modal checkbox) with zero console errors, plus API checks (cancel endpoint, avatar placeholder). The e2e also caught and fixed a stale `RegisterForm` callback name (`47e5556`). yt-dlp YouTube extraction was too slow in the sandbox to add a live subscription, so cancel-on-live-download and a real large-channel sync were verified at the code/endpoint level rather than end-to-end.
 </content>

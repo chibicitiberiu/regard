@@ -17,6 +17,12 @@ fallback) all shipped (2026-08-27 – 08-28). **Every ranked ytsm-parity gap is 
 
 Status key: ✅ done · ◻ still open.
 
+> **Post-parity (2026-08-28):** a reliability & UX batch landed on top of full parity — faster sync
+> (flat listing + lazy enrichment), a yt-dlp retry policy + hung-download watchdog, download
+> cancellation, an auto-download toggle in the Add dialog, a welcome landing page, and fixes for the
+> setup login-flash, the channel-avatar ORB block, and the `bool?` tri-state selects. See
+> `TEST_FINDINGS.md` for the details and commits.
+
 ---
 
 ## Features ytsm has that Regard is missing (ranked; status updated 2026-08-27)
