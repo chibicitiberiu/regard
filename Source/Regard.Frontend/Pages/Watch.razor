@@ -108,12 +108,26 @@
 
                 @if (video.Rating.HasValue)
                 {
-                    <div class="watch-rating" title="@($"{video.Rating.Value.ToString("0.0")} / 5")">
+                    // Rating is stored as a 0..1 ratio; the stars are a 0..5 scale (this was previously
+                    // rendered unscaled, so every rated video showed 0-1 stars).
+                    var stars = video.Rating.Value * 5;
+                    <div class="watch-rating" title="@($"{stars.ToString("0.0")} / 5")">
                         @for (int i = 1; i <= 5; i++)
                         {
-                            <span class="star @(i <= System.Math.Round(video.Rating.Value) ? "star-full" : "star-empty")">&#x2605;</span>
+                            <span class="star @(i <= System.Math.Round(stars) ? "star-full" : "star-empty")">&#x2605;</span>
                         }
-                        <span class="watch-rating-value text-muted">@video.Rating.Value.ToString("0.0")/5</span>
+                        <span class="watch-rating-value text-muted">@stars.ToString("0.0")/5</span>
+                    </div>
+                }
+
+                @if (video.Likes.HasValue && video.Dislikes.HasValue)
+                {
+                    <div class="watch-votes">
+                        <span class="watch-vote" title="Likes">&#x1F44D; @(((double)video.Likes.Value).ToMetric(decimals: 1))</span>
+                        <span class="watch-vote" title="Dislikes (estimated)">&#x1F44E; @(((double)video.Dislikes.Value).ToMetric(decimals: 1))</span>
+                        <span class="watch-votes-credit text-muted">
+                            via <a href="https://returnyoutubedislike.com" target="_blank" rel="noopener noreferrer">Return YouTube Dislike</a>
+                        </span>
                     </div>
                 }
 

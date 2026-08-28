@@ -155,6 +155,13 @@ namespace Regard.Backend
                 c.DefaultRequestHeaders.UserAgent.ParseAdd("Regard/1.0 (+https://github.com/chibicitiberiu/regard)");
             });
 
+            services.AddHttpClient<ReturnYouTubeDislikeClient>(c =>
+            {
+                c.BaseAddress = new Uri("https://returnyoutubedislikeapi.com");
+                c.Timeout = TimeSpan.FromSeconds(10);
+                c.DefaultRequestHeaders.UserAgent.ParseAdd("Regard/1.0 (+https://github.com/chibicitiberiu/regard)");
+            });
+
             // Bridges job/message events to SignalR clients (live progress + toasts).
             services.AddHostedService<JobNotificationBroadcaster>();
 

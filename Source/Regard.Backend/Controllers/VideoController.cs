@@ -28,6 +28,7 @@ namespace Regard.Backend.Controllers
         private readonly IVideoStorageService videoStorage;
         private readonly IOptionManager optionManager;
         private readonly SponsorBlockClient sponsorBlockClient;
+        private readonly ReturnYouTubeDislikeClient rydClient;
 
         public VideoController(UserManager<UserAccount> userManager,
                                VideoManager videoManager,
@@ -36,7 +37,8 @@ namespace Regard.Backend.Controllers
                                ApiModelFactory modelFactory,
                                IVideoStorageService videoStorage,
                                IOptionManager optionManager,
-                               SponsorBlockClient sponsorBlockClient)
+                               SponsorBlockClient sponsorBlockClient,
+                               ReturnYouTubeDislikeClient rydClient)
         {
             this.userManager = userManager;
             this.videoManager = videoManager;
@@ -46,6 +48,7 @@ namespace Regard.Backend.Controllers
             this.videoStorage = videoStorage;
             this.optionManager = optionManager;
             this.sponsorBlockClient = sponsorBlockClient;
+            this.rydClient = rydClient;
         }
 
         [HttpPost]
@@ -133,6 +136,19 @@ namespace Regard.Backend.Controllers
                     SbAction.Skip);
                 if (skipCats.Count > 0)
                     apiVideos[0].SponsorSegments = await sponsorBlockClient.GetSkipSegments(videos[0].VideoId, skipCats);
+            }
+
+            // ReturnYouTubeDislike: real dislike counts for the single-video watch fetch of a YouTube video,
+            // when the server has the feature enabled. Best-effort; leaves the counts null on any failure.
+            if (request.Ids?.Length == 1 && apiVideos.Count == 1 && VideoEmbedHelper.IsYouTube(videos[0])
+                && optionManager.GetGlobal(Options.ReturnYouTubeDislike_Enabled))
+            {
+                var votes = await rydClient.GetVotes(videos[0].VideoId);
+                if (votes != null)
+                {
+                    apiVideos[0].Likes = votes.Likes;
+                    apiVideos[0].Dislikes = votes.Dislikes;
+                }
             }
 
             return Ok(responseFactory.Success(new VideoListResponse

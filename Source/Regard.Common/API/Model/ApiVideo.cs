@@ -68,5 +68,14 @@ namespace Regard.Common.API.Model
         /// file wasn't cut. Null/empty otherwise.
         /// </summary>
         public System.Collections.Generic.List<ApiSponsorSegment> SponsorSegments { get; set; }
+
+        /// <summary>
+        /// Real like/dislike estimates from ReturnYouTubeDislike, set only for the single-video watch fetch
+        /// of a YouTube video when the feature is enabled. Null when disabled/unavailable. YouTube stopped
+        /// exposing public dislikes in 2021, so these come from RYD, not yt-dlp.
+        /// </summary>
+        public long? Likes { get; set; }
+
+        public long? Dislikes { get; set; }
     }
 }
