@@ -25,6 +25,7 @@ namespace Regard.Frontend.Shared.Controls
         private ElementReference videoElement;
         private DotNetObjectReference<Video> selfRef;
         private bool watchProgressRegistered;
+        private bool skipSegmentsRegistered;
 
         [Inject] protected IJSRuntime JS { get; set; }
 
@@ -54,6 +55,9 @@ namespace Regard.Frontend.Shared.Controls
 
         [Parameter] public EventCallback WatchedThresholdReached { get; set; }
 
+        /// <summary>SponsorBlock segments to skip during playback (original-timeline seconds). Null = none.</summary>
+        [Parameter] public IReadOnlyList<Regard.Common.API.Model.ApiSponsorSegment> SkipSegments { get; set; }
+
         [Parameter] public RenderFragment ChildContent { get; set; }
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -63,6 +67,13 @@ namespace Regard.Frontend.Shared.Controls
                 selfRef = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("RegardHelpers.addWatchProgressHandler", videoElement, selfRef, WatchedThreshold);
                 watchProgressRegistered = true;
+            }
+
+            if (firstRender && SkipSegments != null && SkipSegments.Count > 0)
+            {
+                var segs = SkipSegments.Select(s => new { start = s.Start, end = s.End }).ToArray();
+                await JS.InvokeVoidAsync("RegardHelpers.addSkipSegmentsHandler", videoElement, segs);
+                skipSegmentsRegistered = true;
             }
         }
 
@@ -91,6 +102,11 @@ namespace Regard.Frontend.Shared.Controls
             if (watchProgressRegistered)
             {
                 try { await JS.InvokeVoidAsync("RegardHelpers.removeWatchProgressHandler", videoElement); }
+                catch (Exception) { /* circuit/JS already gone during teardown */ }
+            }
+            if (skipSegmentsRegistered)
+            {
+                try { await JS.InvokeVoidAsync("RegardHelpers.removeSkipSegmentsHandler", videoElement); }
                 catch (Exception) { /* circuit/JS already gone during teardown */ }
             }
             selfRef?.Dispose();

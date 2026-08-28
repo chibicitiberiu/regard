@@ -19,10 +19,19 @@
                            WatchedThreshold="0.9"
                            WatchedThresholdReached="OnMarkWatchedFromPlayback"
                            Ended="OnMarkWatchedFromPlayback"
+                           SkipSegments="video.SponsorSegments"
                            Error="e => OnStreamError()">
                         <source src="@videoStreamUri" type="@video.StreamMimeType"
                                 @onerror="e => OnStreamError()" />
                     </Video>
+                    @if (video.SponsorSegments != null && video.SponsorSegments.Count > 0)
+                    {
+                        <p class="watch-sponsorblock text-muted">
+                            Skipping @video.SponsorSegments.Count SponsorBlock
+                            segment@(video.SponsorSegments.Count == 1 ? "" : "s") &middot;
+                            <a href="https://sponsor.ajay.app" target="_blank" rel="noopener noreferrer">SponsorBlock</a>
+                        </p>
+                    }
                 }
                 else if (video.EmbedUrl != null)
                 {

@@ -14,15 +14,23 @@
                     <option value="Keep" selected="@(GetAction(cat) == "Keep")">Keep</option>
                     <option value="Chapter" selected="@(GetAction(cat) == "Chapter")">Chapter</option>
                     <option value="Remove" selected="@(GetAction(cat) == "Remove")">Remove</option>
+                    <option value="Skip" selected="@(GetAction(cat) == "Skip")">Skip in player</option>
                 </select>
             </div>
         </div>
     }
     <p class="text-muted sb-help">
         <strong>Chapter</strong> marks the segment (non-destructive). <strong>Remove</strong> cuts it from
-        the downloaded file (subtitles are re-timed to match). YouTube only; changing this re-applies on the
-        next download.
+        the downloaded file (subtitles are re-timed to match). <strong>Skip in player</strong> jumps past it
+        during playback, leaving the file untouched. YouTube only.
     </p>
+    @if (SponsorBlockActions.HasRemoveSkipConflict(Value ?? ""))
+    {
+        <p class="fg-error sb-conflict">
+            Remove and Skip can't be combined: Remove cuts the file, which would shift the timestamps the
+            in-player Skip relies on. Use one or the other (Chapter is fine with either).
+        </p>
+    }
 </div>
 
 @code {

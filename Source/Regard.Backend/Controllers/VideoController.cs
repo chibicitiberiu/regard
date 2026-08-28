@@ -8,6 +8,7 @@ using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
+using Regard.Common.SponsorBlock;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,7 @@ namespace Regard.Backend.Controllers
         private readonly ApiModelFactory modelFactory;
         private readonly IVideoStorageService videoStorage;
         private readonly IOptionManager optionManager;
+        private readonly SponsorBlockClient sponsorBlockClient;
 
         public VideoController(UserManager<UserAccount> userManager,
                                VideoManager videoManager,
@@ -33,7 +35,8 @@ namespace Regard.Backend.Controllers
                                ApiResponseFactory responseFactory,
                                ApiModelFactory modelFactory,
                                IVideoStorageService videoStorage,
-                               IOptionManager optionManager)
+                               IOptionManager optionManager,
+                               SponsorBlockClient sponsorBlockClient)
         {
             this.userManager = userManager;
             this.videoManager = videoManager;
@@ -42,6 +45,7 @@ namespace Regard.Backend.Controllers
             this.modelFactory = modelFactory;
             this.videoStorage = videoStorage;
             this.optionManager = optionManager;
+            this.sponsorBlockClient = sponsorBlockClient;
         }
 
         [HttpPost]
@@ -116,6 +120,19 @@ namespace Regard.Backend.Controllers
                 apiVideo.StreamMimeType = await videoStorage.GetMimeType(video);
                 apiVideo.EmbedUrl = embedAllowed ? VideoEmbedHelper.GetEmbedUrl(video) : null;
                 apiVideos.Add(apiVideo);
+            }
+
+            // SponsorBlock in-player skip: only for the single-video watch fetch, only for a YouTube video
+            // whose subscription has a "skip" category and whose file wasn't cut at download time (else the
+            // original-timeline segments wouldn't align). Fetched live so it reflects the current config.
+            if (request.Ids?.Length == 1 && apiVideos.Count == 1 && !apiVideos[0].SponsorsRemoved
+                && VideoEmbedHelper.IsYouTube(videos[0]))
+            {
+                var skipCats = SponsorBlockActions.CategoriesWith(
+                    optionManager.GetForSubscription(Options.Sponsorblock_Actions, videos[0].SubscriptionId),
+                    SbAction.Skip);
+                if (skipCats.Count > 0)
+                    apiVideos[0].SponsorSegments = await sponsorBlockClient.GetSkipSegments(videos[0].VideoId, skipCats);
             }
 
             return Ok(responseFactory.Success(new VideoListResponse

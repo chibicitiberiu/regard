@@ -55,5 +55,18 @@ namespace Regard.Common.API.Model
         /// watch-on-site placeholder instead of an embedded player.
         /// </summary>
         public string EmbedUrl { get; set; }
+
+        /// <summary>
+        /// True when this video's downloaded file had SponsorBlock segments cut out (its timeline no longer
+        /// matches the original), so the player must not apply the original-timeline SponsorSegments below.
+        /// </summary>
+        public bool SponsorsRemoved { get; set; }
+
+        /// <summary>
+        /// SponsorBlock segments to skip during playback (original-timeline seconds). Set only for the
+        /// single-video watch fetch of a YouTube video whose subscription has a "skip" category and whose
+        /// file wasn't cut. Null/empty otherwise.
+        /// </summary>
+        public System.Collections.Generic.List<ApiSponsorSegment> SponsorSegments { get; set; }
     }
 }

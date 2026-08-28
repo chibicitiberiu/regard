@@ -57,8 +57,10 @@ namespace Regard.Backend.Services
                 Views = video.Views,
                 Duration = video.Duration,
                 Rating = video.Rating,
-                OriginalUrl = video.OriginalUrl
-                // EmbedUrl is set by VideoController.List (it depends on the per-user embedding setting).
+                OriginalUrl = video.OriginalUrl,
+                SponsorsRemoved = video.SponsorsRemoved
+                // EmbedUrl + SponsorSegments are set by VideoController.List (they depend on per-user
+                // settings / an external lookup, only for the single-video watch fetch).
             };
         }
     }

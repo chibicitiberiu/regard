@@ -309,6 +309,11 @@ namespace Regard.Backend.Controllers
                 }
             }
 
+            if (Regard.Common.SponsorBlock.SponsorBlockActions.HasRemoveSkipConflict(request.SponsorblockActions))
+                return BadRequest(responseFactory.Error(
+                    "SponsorBlock: Remove and Skip can't be combined (Remove cuts the file, which shifts the "
+                    + "timestamps the in-player Skip relies on)."));
+
             try
             {
                 subscriptionManager.Update(user, request.Id, request.Name, request.Description, request.ParentFolderId);

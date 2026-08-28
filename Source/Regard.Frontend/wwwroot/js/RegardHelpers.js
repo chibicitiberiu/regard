@@ -104,6 +104,47 @@
                 this.watchProgressHandlers.splice(i, 1);
             }
         }
+    },
+
+    // --- SponsorBlock in-player skip ---------------------------------------------------------
+    // Jumps the playhead past any SponsorBlock segment it enters (segments are [{start,end}] seconds
+    // on the original timeline). Only wired for files that were NOT cut at download time.
+
+    skipSegmentHandlers: [],
+
+    addSkipSegmentsHandler: function (videoElement, segments) {
+        this.removeSkipSegmentsHandler(videoElement);
+        if (!segments || !segments.length)
+            return;
+
+        var handler = { element: videoElement, segments: segments, listener: null };
+        handler.listener = function () {
+            var t = videoElement.currentTime;
+            for (var i = 0; i < segments.length; i++) {
+                var s = segments[i];
+                // epsilon so we don't re-trigger right at the end / fight a manual seek to the start
+                if (t >= s.start && t < s.end - 0.3) {
+                    videoElement.currentTime = s.end;
+                    break;
+                }
+            }
+        };
+        videoElement.addEventListener("timeupdate", handler.listener);
+        this.skipSegmentHandlers.push(handler);
+    },
+
+    removeSkipSegmentsHandler: function (videoElement) {
+        if (!(videoElement instanceof Node))
+            return;
+
+        for (var i = this.skipSegmentHandlers.length - 1; i >= 0; i--) {
+            var h = this.skipSegmentHandlers[i];
+            if (h.element.isSameNode(videoElement)) {
+                if (h.listener)
+                    h.element.removeEventListener("timeupdate", h.listener);
+                this.skipSegmentHandlers.splice(i, 1);
+            }
+        }
     }
 }
 
