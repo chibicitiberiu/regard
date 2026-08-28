@@ -527,6 +527,17 @@ namespace Regard.Backend.Downloader
             // Normalize path
             path = path.Replace('\\', Path.DirectorySeparatorChar);
             path = path.Replace('/', Path.DirectorySeparatorChar);
+
+            // Collapse repeated separators left by an empty template segment — a root-level
+            // subscription has a blank {FolderPath}, so the default template yields "videos//CGP Grey".
+            // Harmless to the OS, but it keeps the stored DownloadedPath clean. Preserve a single
+            // leading separator so an absolute DownloadDirectory stays absolute.
+            var sep = Path.DirectorySeparatorChar;
+            bool rooted = path.StartsWith(sep);
+            path = string.Join(sep, path.Split(sep, StringSplitOptions.RemoveEmptyEntries));
+            if (rooted)
+                path = sep + path;
+
             path = MakeValidPath(path);
             return path;
         }
