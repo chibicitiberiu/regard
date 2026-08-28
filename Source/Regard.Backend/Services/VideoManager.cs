@@ -123,12 +123,8 @@ namespace Regard.Backend.Services
             if (anyUnskipped)
                 await dataContext.SaveChangesAsync();
 
-            // Videos listed flat during sync still need full metadata before download so the filename,
-            // season and NFO are correct. (Auto-download only targets already-enriched videos, so this
-            // fires only for a manual download of an older, deferred video.)
-            foreach (var video in videosToDownload)
-                await EnsureEnriched(video);
-
+            // Un-enriched (flat) videos are enriched in DownloadVideoJob before the download, so every
+            // path (manual + auto) is covered there — no need to enrich here.
             foreach (var video in videosToDownload)
                 await DownloadVideoJob.Schedule(scheduler, video);
         }

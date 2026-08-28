@@ -5,38 +5,25 @@ Durable list of feature ideas and known issues, so they survive across sessions.
 
 ## Feature ideas
 
-### Keyword include/exclude filtering per subscription
-Follow a specific *series* from a channel instead of every upload. Per-subscription
-include/exclude filters (keyword list or regex) matched against the video title
-(optionally description), so only matching videos enter the download window.
-
-- **Motivating example:** `LastWeekTonight` posts both full main-segment episodes and
-  shorter web/main-section cuts; the user only wants the full episodes. A title
-  include-pattern (or exclude-pattern for the cuts) would express that.
-- **Design questions (decide later):**
-  - Filter at *discovery* (don't even create Video rows for non-matches) vs at
-    *download* (track them but exclude from the window). Download-time filtering in
-    `ProcessDownloadRules`'s candidate query is the least invasive and keeps history;
-    discovery-time keeps the DB clean. Leaning download-time.
-  - Regex vs simple keyword list (include-any / exclude-any). Regex is more powerful
-    but a footgun in a UI; maybe both (keywords by default, regex opt-in).
-  - New per-subscription options (Title include / Title exclude), scoped like the
-    other `Subscriptions_*` options.
-- **Where:** `VideoDownloaderService.ProcessDownloadRules` candidate filter (+ new
-  options in `Options.csv`/`Options.cs`, + frontend fields). Check whether ytsm had
-  anything similar to borrow from.
+### ~~Keyword include/exclude filtering per subscription~~ — DONE (`89d27fd`)
+Shipped as per-subscription Include/Exclude **regex** title filters with a preview UI,
+filtered at download time in `VideoDownloaderService.ProcessDownloadRules`'s candidate
+query (`SubscriptionFilterExtensions.PassesTitleFilters`) so history is kept. Covers the
+`LastWeekTonight` full-vs-cuts case. (ytsm had no title filtering to borrow from.)
 
 ## Known issues / gotchas
 
-### Playlist ordering can be reversed (verify during Plan 3)
-Recollection: playlists were tricky because their order came out reversed. This
-matters directly for the disk-bounded window's `DownloadOrder = Oldest`:
-- A channel's "uploads" playlist comes back **newest-first** (playlist_index 1 =
-  newest), so ordering by `PlaylistIndex` ascending is effectively newest-first, not
-  oldest — the opposite of what `Playlist`/`ReversePlaylist` names imply.
-- yt-dlp's `playlist_index`/entry order may also differ from the old youtube-dl
-  behavior the `PlaylistIndex` logic was written against.
-- **Action:** when implementing/verifying the oldest-first window (Plan 3), confirm
-  what `Published` and `PlaylistIndex` actually contain for a channel vs a curated
-  playlist, and that `Oldest` really yields oldest-first. Fix the `Playlist` /
-  `ReversePlaylist` semantics if they're inverted.
+### Playlist ordering — checked during the flat-sync rework (`ade34c9`), mostly resolved
+Confirmed: a channel's "uploads" playlist comes back **newest-first**. The flat-sync
+rework preserves that provider order (no `OrderBy(Published)` during ingest) and assigns
+a **per-subscription** `PlaylistIndex`. Default `DownloadOrder = Newest` orders by
+`Published`, which the eager-enriched newest videos have; deferred/flat videos get
+`Published = MinValue` and sort last.
+- **`DownloadOrder = Oldest` + flat sync:** un-enriched (flat) videos have
+  `Published = MinValue`, so they sort *first* under Oldest and are picked first — which
+  is correct (they genuinely are the older, back-catalog videos). Any un-enriched video is
+  enriched with full metadata in `DownloadVideoJob` before the download, so the
+  filename/season/NFO are right regardless of order.
+- **Still worth a real-data check:** verify on the NAS that `Oldest` truly yields
+  oldest-first for both a channel and a curated playlist, and that the `Playlist` /
+  `ReversePlaylist` order options match their names against yt-dlp's `playlist_index`.

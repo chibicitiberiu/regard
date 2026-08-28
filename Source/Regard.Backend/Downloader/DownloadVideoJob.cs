@@ -34,6 +34,7 @@ namespace Regard.Backend.Downloader
         protected readonly MetadataService metadataService;
         protected readonly UserQuotaService userQuotaService;
         protected readonly DownloadCancellationRegistry cancellationRegistry;
+        protected readonly VideoManager videoManager;
 
         private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of ~?([\d\.]+)([KMG]i?B)");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
@@ -63,7 +64,8 @@ namespace Regard.Backend.Downloader
                                 IVideoStorageService videoStorage,
                                 MetadataService metadataService,
                                 UserQuotaService userQuotaService,
-                                DownloadCancellationRegistry cancellationRegistry) : base(logger, dataContext, jobTrackerService)
+                                DownloadCancellationRegistry cancellationRegistry,
+                                VideoManager videoManager) : base(logger, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
             this.optionManager = optionManager;
@@ -73,6 +75,7 @@ namespace Regard.Backend.Downloader
             this.metadataService = metadataService;
             this.userQuotaService = userQuotaService;
             this.cancellationRegistry = cancellationRegistry;
+            this.videoManager = videoManager;
         }
 
         public static Task Schedule(RegardScheduler scheduler, Video video)
@@ -132,6 +135,11 @@ namespace Regard.Backend.Downloader
                     throw new Exception(msg);
                 }
             }
+
+            // Videos listed flat during sync (EnrichedAt == null) need full metadata before we build the
+            // output path / NFO. This covers every download path — including auto-download with
+            // DownloadOrder=Oldest, which targets the older, still-flat videos. No-op once enriched.
+            await videoManager.EnsureEnriched(video);
 
             var opts = ResolveDownloadOptions(video).ToArray();
 

@@ -59,7 +59,8 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 
 ## Incomplete / missing functionality (still open)
 
-- None — all ytsm-parity gaps are closed. Remaining items are the UX/perf recommendations below.
+- **None.** All ytsm-parity gaps are closed, and the UX/perf items previously listed here as
+  recommendations are all fixed in the reliability & UX batch below.
 
 ## Reliability & UX batch (2026-08-28, committed)
 
