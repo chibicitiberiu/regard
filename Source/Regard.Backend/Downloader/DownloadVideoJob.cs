@@ -413,30 +413,42 @@ namespace Regard.Backend.Downloader
 
             #region Subtitle Options
 
-            if (optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId))
+            bool writeSubs = optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId);
+            bool writeAutoSubs = optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId);
+
+            if (writeSubs)
                 yield return "--write-subs";
 
-            if (optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId))
+            if (writeAutoSubs)
                 yield return "--write-auto-subs";
 
-            if (optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId))
+            // Language + format only make sense when we're actually writing subtitles. Emitting them
+            // unconditionally (the options have non-null defaults) sent yt-dlp noise on every download,
+            // and "all languages" was silently overridden by the default --sub-langs en that followed
+            // it. Gate on enabled, and keep "all" mutually exclusive with a specific language list.
+            if (writeSubs || writeAutoSubs)
             {
-                yield return "--sub-langs";
-                yield return "all";
-            }
+                if (optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId))
+                {
+                    yield return "--sub-langs";
+                    yield return "all";
+                }
+                else
+                {
+                    string subLang = optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId);
+                    if (!string.IsNullOrWhiteSpace(subLang))
+                    {
+                        yield return "--sub-langs";
+                        yield return subLang;
+                    }
+                }
 
-            string subFormat = optionManager.GetForSubscription(Options.Ytdl_SubFormat, video.SubscriptionId);
-            if (subFormat != null)
-            {
-                yield return "--sub-format";
-                yield return subFormat;
-            }
-
-            string subLang = optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId);
-            if (subLang != null)
-            {
-                yield return "--sub-langs";
-                yield return subLang;
+                string subFormat = optionManager.GetForSubscription(Options.Ytdl_SubFormat, video.SubscriptionId);
+                if (!string.IsNullOrWhiteSpace(subFormat))
+                {
+                    yield return "--sub-format";
+                    yield return subFormat;
+                }
             }
 
             #endregion

@@ -39,6 +39,17 @@ namespace Regard.Frontend.Pages
         // "" = inherit default (off); "on" = allow embedding; "off" = never embed.
         protected string AllowEmbeddingStr { get; set; } = string.Empty;
 
+        // Subtitles. "" = inherit default (off); "on" = download; "off" = never.
+        protected string SubtitlesStr { get; set; } = string.Empty;
+        protected bool IncludeAutoSub { get; set; }
+        // "specific" = use the language list; "all" = every available language.
+        protected string SubLangMode { get; set; } = "specific";
+        protected string SubLangStr { get; set; } = "en";
+        // "" = inherit default (best); otherwise a subtitle format token.
+        protected string SubFormatStr { get; set; } = string.Empty;
+
+        protected bool ShowSubtitleOptions => SubtitlesStr == "on";
+
         protected bool IsTranscodeTarget =>
             TranscodeVideoStr != string.Empty && TranscodeVideoStr != "off";
 
@@ -108,6 +119,12 @@ namespace Regard.Frontend.Pages
             MergeOutputFormat = s.MergeOutputFormat ?? string.Empty;
 
             AllowEmbeddingStr = s.AllowEmbedding.HasValue ? (s.AllowEmbedding.Value ? "on" : "off") : string.Empty;
+
+            SubtitlesStr = s.WriteSubtitles.HasValue ? (s.WriteSubtitles.Value ? "on" : "off") : string.Empty;
+            IncludeAutoSub = s.WriteAutoSub ?? false;
+            SubLangMode = (s.AllSubs == true) ? "all" : "specific";
+            SubLangStr = s.SubLang ?? "en";
+            SubFormatStr = s.SubFormat ?? string.Empty;
         }
 
         private void ToggleCodec(HashSet<string> set, string token, ChangeEventArgs e)
@@ -138,6 +155,13 @@ namespace Regard.Frontend.Pages
                 MergeOutputFormat = string.IsNullOrEmpty(MergeOutputFormat) ? null : MergeOutputFormat,
                 // "" -> inherit (null); "on" -> true; "off" -> false.
                 AllowEmbedding = AllowEmbeddingStr == string.Empty ? (bool?)null : AllowEmbeddingStr == "on",
+                // Subtitles: only pin the sub-options when subtitles are explicitly enabled.
+                WriteSubtitles = SubtitlesStr == string.Empty ? (bool?)null : SubtitlesStr == "on",
+                WriteAutoSub = SubtitlesStr == "on" ? IncludeAutoSub : (bool?)null,
+                AllSubs = SubtitlesStr == "on" ? (SubLangMode == "all") : (bool?)null,
+                SubLang = (SubtitlesStr == "on" && SubLangMode == "specific" && !string.IsNullOrWhiteSpace(SubLangStr))
+                    ? SubLangStr : null,
+                SubFormat = (SubtitlesStr == "on" && !string.IsNullOrEmpty(SubFormatStr)) ? SubFormatStr : null,
             };
 
             var (resp, httpResp) = await Backend.SaveSettings(request);

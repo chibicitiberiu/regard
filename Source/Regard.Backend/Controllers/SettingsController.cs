@@ -49,6 +49,11 @@ namespace Regard.Backend.Controllers
                 RawFormatOverride = GetOrNull(Options.Ytdl_Format, user.Id),
                 MergeOutputFormat = GetOrNull(Options.Ytdl_MergeOutputFormat, user.Id),
                 AllowEmbedding = GetOrNull(Options.Ui_AllowEmbedding, user.Id),
+                WriteSubtitles = GetOrNull(Options.Ytdl_WriteSubtitles, user.Id),
+                WriteAutoSub = GetOrNull(Options.Ytdl_WriteAutoSub, user.Id),
+                AllSubs = GetOrNull(Options.Ytdl_AllSubs, user.Id),
+                SubFormat = GetOrNull(Options.Ytdl_SubFormat, user.Id),
+                SubLang = GetOrNull(Options.Ytdl_SubLang, user.Id),
             };
             return Ok(responseFactory.Success(settings));
         }
@@ -71,6 +76,11 @@ namespace Regard.Backend.Controllers
             SetOrUnset(Options.Ytdl_Format, user.Id, request.RawFormatOverride);
             SetOrUnset(Options.Ytdl_MergeOutputFormat, user.Id, request.MergeOutputFormat);
             SetOrUnset(Options.Ui_AllowEmbedding, user.Id, request.AllowEmbedding);
+            SetOrUnset(Options.Ytdl_WriteSubtitles, user.Id, request.WriteSubtitles);
+            SetOrUnset(Options.Ytdl_WriteAutoSub, user.Id, request.WriteAutoSub);
+            SetOrUnset(Options.Ytdl_AllSubs, user.Id, request.AllSubs);
+            SetOrUnset(Options.Ytdl_SubFormat, user.Id, request.SubFormat);
+            SetOrUnset(Options.Ytdl_SubLang, user.Id, request.SubLang);
 
             return Ok(responseFactory.Success());
         }

@@ -53,6 +53,30 @@ namespace Regard.Frontend.Pages
             }
         }
 
+        // Tri-state string binds for the subtitle bools. The shared RgSimpleInputSelect bool? control
+        // renders its "True" option with an empty value attribute (a Blazor boolean-attribute quirk),
+        // so selecting it round-trips to null — hence plain "" / "on" / "off" selects here instead.
+        private static string BoolToTri(bool? v) => v == null ? "" : (v.Value ? "on" : "off");
+        private static bool? TriToBool(string s) => string.IsNullOrEmpty(s) ? (bool?)null : s == "on";
+
+        public string WriteSubtitlesStr
+        {
+            get => BoolToTri(Request.WriteSubtitles);
+            set => Request.WriteSubtitles = TriToBool(value);
+        }
+
+        public string WriteAutoSubStr
+        {
+            get => BoolToTri(Request.WriteAutoSub);
+            set => Request.WriteAutoSub = TriToBool(value);
+        }
+
+        public string AllSubsStr
+        {
+            get => BoolToTri(Request.AllSubs);
+            set => Request.AllSubs = TriToBool(value);
+        }
+
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
@@ -79,6 +103,11 @@ namespace Regard.Frontend.Pages
                     Request.DeleteWatched = Subscription.Config.DeleteWatched;
                     Request.MarkDeletedAsWatched = Subscription.Config.MarkDeletedAsWatched;
                     Request.DownloadPath = Subscription.Config.DownloadPath;
+                    Request.WriteSubtitles = Subscription.Config.WriteSubtitles;
+                    Request.WriteAutoSub = Subscription.Config.WriteAutoSub;
+                    Request.AllSubs = Subscription.Config.AllSubs;
+                    Request.SubFormat = Subscription.Config.SubFormat;
+                    Request.SubLang = Subscription.Config.SubLang;
                     Request.Filters = Subscription.Config.Filters?.ToList() ?? new();
                     SubmitEnabled = true;
                     ValidationMessage = string.Empty;

@@ -218,6 +218,21 @@ namespace Regard.Backend.Controllers
                 if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_DownloadPath, sub.Id, out var path))
                     sub.Config.DownloadPath = path;
 
+                if (optionManager.GetForSubscriptionNoResolve(Options.Ytdl_WriteSubtitles, sub.Id, out var writeSubs))
+                    sub.Config.WriteSubtitles = writeSubs;
+
+                if (optionManager.GetForSubscriptionNoResolve(Options.Ytdl_WriteAutoSub, sub.Id, out var writeAutoSub))
+                    sub.Config.WriteAutoSub = writeAutoSub;
+
+                if (optionManager.GetForSubscriptionNoResolve(Options.Ytdl_AllSubs, sub.Id, out var allSubs))
+                    sub.Config.AllSubs = allSubs;
+
+                if (optionManager.GetForSubscriptionNoResolve(Options.Ytdl_SubFormat, sub.Id, out var subFormat))
+                    sub.Config.SubFormat = subFormat;
+
+                if (optionManager.GetForSubscriptionNoResolve(Options.Ytdl_SubLang, sub.Id, out var subLang))
+                    sub.Config.SubLang = subLang;
+
                 sub.Config.Filters = dataContext.SubscriptionFilters
                     .Where(f => f.SubscriptionId == sub.Id)
                     .ToList()
@@ -324,6 +339,26 @@ namespace Regard.Backend.Controllers
             if (!string.IsNullOrEmpty(request.DownloadPath))
                 optionManager.SetForSubscription(Options.Subscriptions_DownloadPath, request.Id, request.DownloadPath);
             else optionManager.UnsetForSubscription(Options.Subscriptions_DownloadPath, request.Id);
+
+            if (request.WriteSubtitles.HasValue)
+                optionManager.SetForSubscription(Options.Ytdl_WriteSubtitles, request.Id, request.WriteSubtitles.Value);
+            else optionManager.UnsetForSubscription(Options.Ytdl_WriteSubtitles, request.Id);
+
+            if (request.WriteAutoSub.HasValue)
+                optionManager.SetForSubscription(Options.Ytdl_WriteAutoSub, request.Id, request.WriteAutoSub.Value);
+            else optionManager.UnsetForSubscription(Options.Ytdl_WriteAutoSub, request.Id);
+
+            if (request.AllSubs.HasValue)
+                optionManager.SetForSubscription(Options.Ytdl_AllSubs, request.Id, request.AllSubs.Value);
+            else optionManager.UnsetForSubscription(Options.Ytdl_AllSubs, request.Id);
+
+            if (!string.IsNullOrEmpty(request.SubFormat))
+                optionManager.SetForSubscription(Options.Ytdl_SubFormat, request.Id, request.SubFormat);
+            else optionManager.UnsetForSubscription(Options.Ytdl_SubFormat, request.Id);
+
+            if (!string.IsNullOrEmpty(request.SubLang))
+                optionManager.SetForSubscription(Options.Ytdl_SubLang, request.Id, request.SubLang);
+            else optionManager.UnsetForSubscription(Options.Ytdl_SubLang, request.Id);
 
             // Replace the subscription's title filters (dedicated table, not the option store)
             if (request.Filters != null)

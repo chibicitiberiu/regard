@@ -79,6 +79,52 @@
                  autocapitalize="none"
                  autofocus />
 
+    <RgFieldWrapper Id="subscription_writeSubtitles" Label="Download subtitles:" Required="false">
+        <Field>
+            <select id="subscription_writeSubtitles" class="form-control" @bind="WriteSubtitlesStr">
+                <option value="">(inherit)</option>
+                <option value="on">On</option>
+                <option value="off">Off</option>
+            </select>
+        </Field>
+    </RgFieldWrapper>
+
+    <RgFieldWrapper Id="subscription_writeAutoSub" Label="Include auto-generated captions:" Required="false">
+        <Field>
+            <select id="subscription_writeAutoSub" class="form-control" @bind="WriteAutoSubStr">
+                <option value="">(inherit)</option>
+                <option value="on">On</option>
+                <option value="off">Off</option>
+            </select>
+        </Field>
+    </RgFieldWrapper>
+
+    <RgFieldWrapper Id="subscription_allSubs" Label="Download all subtitle languages:" Required="false">
+        <Field>
+            <select id="subscription_allSubs" class="form-control" @bind="AllSubsStr">
+                <option value="">(inherit)</option>
+                <option value="on">On</option>
+                <option value="off">Off</option>
+            </select>
+        </Field>
+    </RgFieldWrapper>
+
+    <RgInputText Id="subscription_subLang"
+                 @bind-Value="Request.SubLang"
+                 Label="Subtitle languages:"
+                 Required="false"
+                 ValidationFor="() => Request.SubLang"
+                 placeholder="en,en-US,es"
+                 autocapitalize="none" />
+
+    <RgInputText Id="subscription_subFormat"
+                 @bind-Value="Request.SubFormat"
+                 Label="Subtitle format:"
+                 Required="false"
+                 ValidationFor="() => Request.SubFormat"
+                 placeholder="best / srt / vtt / ass"
+                 autocapitalize="none" />
+
     <div class="form-group row">
         <div class="col-xs-3">
             <label class="col-form-label">Filters:</label>

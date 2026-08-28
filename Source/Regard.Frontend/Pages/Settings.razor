@@ -150,6 +150,54 @@
                 </div>
             </div>
 
+            <div class="form-group row">
+                <label class="col-xs-4 col-form-label">Download subtitles:</label>
+                <div class="col-xs-8">
+                    <select class="form-control" @bind="SubtitlesStr">
+                        <option value="">Default (off)</option>
+                        <option value="on">On</option>
+                        <option value="off">Off</option>
+                    </select>
+                    @if (ShowSubtitleOptions)
+                    {
+                        <div class="subtitle-suboptions">
+                            <label class="inline-check">
+                                <input type="checkbox" @bind="IncludeAutoSub" /> Include auto-generated captions
+                            </label>
+
+                            <div class="form-group row">
+                                <label class="col-xs-4 col-form-label">Languages:</label>
+                                <div class="col-xs-8">
+                                    <select class="form-control" @bind="SubLangMode">
+                                        <option value="specific">Specific languages</option>
+                                        <option value="all">All available</option>
+                                    </select>
+                                    @if (SubLangMode == "specific")
+                                    {
+                                        <input class="form-control" @bind="SubLangStr"
+                                               placeholder="en,en-US,es" autocapitalize="none" />
+                                        <small class="text-muted">Comma-separated yt-dlp language codes.</small>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label class="col-xs-4 col-form-label">Format:</label>
+                                <div class="col-xs-8">
+                                    <select class="form-control" @bind="SubFormatStr">
+                                        <option value="">Default (best)</option>
+                                        <option value="best">Best</option>
+                                        <option value="srt">SRT</option>
+                                        <option value="vtt">VTT</option>
+                                        <option value="ass">ASS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
             <details class="advanced">
                 <summary>Advanced</summary>
 

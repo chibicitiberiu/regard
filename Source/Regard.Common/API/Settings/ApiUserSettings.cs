@@ -42,5 +42,20 @@ namespace Regard.Common.API.Settings
         /// non-downloaded videos. null = inherit the default (off).
         /// </summary>
         public bool? AllowEmbedding { get; set; }
+
+        /// <summary>Download subtitles alongside videos. null = inherit.</summary>
+        public bool? WriteSubtitles { get; set; }
+
+        /// <summary>Also download auto-generated (machine) captions. null = inherit.</summary>
+        public bool? WriteAutoSub { get; set; }
+
+        /// <summary>Download every available subtitle language. null = inherit.</summary>
+        public bool? AllSubs { get; set; }
+
+        /// <summary>Subtitle file format (e.g. best/srt/vtt/ass). null = inherit.</summary>
+        public string SubFormat { get; set; }
+
+        /// <summary>Subtitle language list, comma-separated (e.g. "en,en-US,es"). null = inherit.</summary>
+        public string SubLang { get; set; }
     }
 }

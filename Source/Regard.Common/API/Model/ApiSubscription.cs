@@ -43,6 +43,16 @@ namespace Regard.Common.API.Model
 
         public string DownloadPath { get; set; }
 
+        public bool? WriteSubtitles { get; set; }
+
+        public bool? WriteAutoSub { get; set; }
+
+        public bool? AllSubs { get; set; }
+
+        public string SubFormat { get; set; }
+
+        public string SubLang { get; set; }
+
         public List<ApiSubscriptionFilter> Filters { get; set; } = new();
     }
 

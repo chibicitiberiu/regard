@@ -27,6 +27,16 @@ namespace Regard.Common.API.Subscriptions
 
         public string DownloadPath { get; set; }
 
+        public bool? WriteSubtitles { get; set; }
+
+        public bool? WriteAutoSub { get; set; }
+
+        public bool? AllSubs { get; set; }
+
+        public string SubFormat { get; set; }
+
+        public string SubLang { get; set; }
+
         public List<Regard.Common.API.Model.ApiSubscriptionFilter> Filters { get; set; } = new();
     }
 }
