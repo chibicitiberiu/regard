@@ -13,6 +13,7 @@
 
     <FolderSelect Id="folder_parent"
                   @bind-Value="Request.ParentFolderId"
+                  ExcludeSubtreeRootId="FolderId"
                   Label="Parent folder:"
                   Required="false" />
 

@@ -36,6 +36,13 @@ namespace Regard.Frontend.Shared.Forms
 
         [Inject] protected AppState AppState { get; set; }
 
+        /// <summary>
+        /// When set, this folder and its whole subtree are hidden from the options. Used by the folder
+        /// edit page so a folder can't be offered itself or one of its descendants as a parent (which
+        /// the backend rejects anyway — this just keeps the invalid choices out of the list).
+        /// </summary>
+        [Parameter] public int? ExcludeSubtreeRootId { get; set; }
+
         protected override async Task OnInitializedAsync()
         {
             KeyFunc = folder => folder.Id;
@@ -59,6 +66,23 @@ namespace Regard.Frontend.Shared.Forms
         private static FolderSelectViewModel NoneOption() =>
             new FolderSelectViewModel() { Id = null, Name = "<none>", QualifiedName = "<none>" };
 
+        /// <summary>True if the folder is the excluded subtree root or a descendant of it.</summary>
+        private bool IsExcluded(int id)
+        {
+            if (!ExcludeSubtreeRootId.HasValue)
+                return false;
+
+            int? current = id;
+            int guard = 0;
+            while (current.HasValue && guard++ < 4096)   // guard: never loop on a malformed graph
+            {
+                if (current.Value == ExcludeSubtreeRootId.Value)
+                    return true;
+                current = AppState.Folders.TryGetValue(current.Value, out var f) ? (int?)f.ParentId : null;
+            }
+            return false;
+        }
+
         private void RepopulateFolders()
         {
             folders.Clear();
@@ -72,7 +96,7 @@ namespace Regard.Frontend.Shared.Forms
                 .Where(x => x.Id.HasValue)
                 .Select(x => KeyValuePair.Create(x.Id.Value, x.QualifiedName)));
 
-            var queue = new Queue<ApiSubscriptionFolder>(newFolders);
+            var queue = new Queue<ApiSubscriptionFolder>(newFolders.Where(x => !IsExcluded(x.Id)));
 
             while (queue.Count > 0)
             {
