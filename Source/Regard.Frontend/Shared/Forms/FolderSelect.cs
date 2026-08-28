@@ -56,10 +56,13 @@ namespace Regard.Frontend.Shared.Forms
             base.Dispose(disposing);
         }
 
+        private static FolderSelectViewModel NoneOption() =>
+            new FolderSelectViewModel() { Id = null, Name = "<none>", QualifiedName = "<none>" };
+
         private void RepopulateFolders()
         {
             folders.Clear();
-            folders.Add(new FolderSelectViewModel() { Id = null, Name = "<none>", QualifiedName = "<none>" });
+            folders.Add(NoneOption());
             InsertFolders(AppState.Folders.Values);
         }
 
@@ -100,7 +103,14 @@ namespace Regard.Frontend.Shared.Forms
         private void Folders_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscriptionFolder> e)
         {
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            {
+                // Clear() drops every entry, including the "<none>" (root) sentinel. Re-add it, or a
+                // folder-list refresh (Clear + re-Add) would leave the dropdown without a root option:
+                // a subscription with no parent would then show the first real folder as selected, and
+                // there'd be no way to move a subscription back to the root.
                 folders.Clear();
+                folders.Add(NoneOption());
+            }
 
             foreach (var oldItem in e.OldItems)
             {
