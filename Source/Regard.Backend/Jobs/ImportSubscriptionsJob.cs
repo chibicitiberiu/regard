@@ -99,6 +99,10 @@ namespace Regard.Backend.Jobs
 
             await ImportChildren(user, root, parentFolderId, allowDuplicate, autoDownload);
 
+            // One thumbnail-cache pass for the whole batch (creates skipped their own).
+            if (added > 0)
+                await subscriptionManager.ScheduleThumbnailFetch();
+
             JobLog($"Import finished: {added} added, {skipped} skipped (duplicates), {failed} failed.");
         }
 
@@ -151,7 +155,7 @@ namespace Regard.Backend.Jobs
 
             try
             {
-                var sub = await subscriptionManager.Create(user, uri, parentFolderId, allowDuplicate);
+                var sub = await subscriptionManager.Create(user, uri, parentFolderId, allowDuplicate, scheduleThumbnailFetch: false);
                 optionManager.SetForSubscription(Options.Subscriptions_AutoDownload, sub.Id, autoDownload);
                 added++;
                 JobLog($"Added: {sub.Name}");

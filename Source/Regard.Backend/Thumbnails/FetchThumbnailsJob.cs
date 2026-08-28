@@ -31,6 +31,16 @@ namespace Regard.Backend.Thumbnails
                 retryCount: 0);
         }
 
+        /// <summary>
+        /// Runs a one-off pass now to cache any pending (still-remote) thumbnails. Used right after a
+        /// subscription is created or imported so its avatar is locally served within seconds instead of
+        /// waiting for the periodic run (and being blocked as a cross-origin image until then).
+        /// </summary>
+        public static Task ScheduleNow(RegardScheduler scheduler)
+        {
+            return scheduler.Schedule<FetchThumbnailsJob>(name: "Fetch thumbnails", retryCount: 0);
+        }
+
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
             int countSubs = 0, countVids = 0;

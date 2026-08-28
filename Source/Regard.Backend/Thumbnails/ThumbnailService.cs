@@ -57,11 +57,11 @@ namespace Regard.Backend.Thumbnails
 
         public Uri GetThumbnail(Subscription subscription)
         {
-            if (subscription.ThumbnailPath == null)
+            // While the thumbnail is still a remote URL (not yet cached by FetchThumbnailsJob), serve the
+            // local placeholder rather than the raw yt3.googleusercontent.com URL — the browser blocks
+            // that cross-origin <img> (ERR_BLOCKED_BY_ORB) on first paint.
+            if (subscription.ThumbnailPath == null || subscription.ThumbnailPath.StartsWith("http"))
                 return SubscriptionDefault;
-
-            if (subscription.ThumbnailPath.StartsWith("http"))
-                return new Uri(subscription.ThumbnailPath);
 
             if (File.Exists(GetThumbnailPath(subscription)))
                 return storageManager.ThumbnailsBaseUrl.Join(subscription.ThumbnailPath);
@@ -71,11 +71,8 @@ namespace Regard.Backend.Thumbnails
 
         public Uri GetThumbnail(Video video)
         {
-            if (video.ThumbnailPath == null)
+            if (video.ThumbnailPath == null || video.ThumbnailPath.StartsWith("http"))
                 return VideoDefault;
-
-            if (video.ThumbnailPath.StartsWith("http"))
-                return new Uri(video.ThumbnailPath);
 
             if (File.Exists(GetThumbnailPath(video)))
                 return storageManager.ThumbnailsBaseUrl.Join(video.ThumbnailPath);

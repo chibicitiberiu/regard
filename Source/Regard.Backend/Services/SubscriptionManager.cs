@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Regard.Backend.Configuration;
 using Regard.Backend.Jobs;
+using Regard.Backend.Thumbnails;
 
 namespace Regard.Backend.Services
 {
@@ -153,7 +154,8 @@ namespace Regard.Backend.Services
                                                Uri uri,
                                                int? parentFolderId,
                                                bool allowDuplicate = false,
-                                               bool autoDownload = true)
+                                               bool autoDownload = true,
+                                               bool scheduleThumbnailFetch = true)
         {
             // Verify parent folder ID exists
             SubscriptionFolder parent = null;
@@ -196,6 +198,11 @@ namespace Regard.Backend.Services
                 optionManager.SetForSubscription(Options.Subscriptions_AutoDownload, sub.Id, false);
 
             SubscriptionCreated?.Invoke(this, new SubscriptionCreatedEventArgs() { User = userAccount, Subscription = sub });
+
+            // Cache the channel avatar now so it's served locally within seconds (bulk imports do this
+            // once at the end instead of per-subscription).
+            if (scheduleThumbnailFetch)
+                await ScheduleThumbnailFetch();
 
             // Start a sync job
             await SynchronizeSubscription(sub);
@@ -490,6 +497,12 @@ namespace Regard.Backend.Services
         {
             return dataContext.SubscriptionFolders.AsQueryable()
                 .Where(x => x.UserId == userAccount.Id);
+        }
+
+        /// <summary>Kicks off a one-off pass to cache any pending (still-remote) thumbnails now.</summary>
+        public Task ScheduleThumbnailFetch()
+        {
+            return FetchThumbnailsJob.ScheduleNow(scheduler);
         }
 
         public Task SynchronizeSubscription(Subscription subscription)
