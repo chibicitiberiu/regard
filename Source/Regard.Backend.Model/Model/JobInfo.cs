@@ -15,7 +15,9 @@ namespace Regard.Backend.Common.Model
         Scheduled,
         Running,
         Completed,
-        Failed
+        Failed,
+        // Appended (persisted as int) — never reorder the values above.
+        Cancelled
     }
 
     public class JobInfo

@@ -23,16 +23,19 @@ namespace Regard.Backend.Services
         private readonly IHubContext<MessagingHub, IMessagingClient> hub;
         private readonly JobTrackerService jobTracker;
         private readonly UserLogger userLogger;
+        private readonly DownloadCancellationRegistry cancellationRegistry;
         private readonly ILogger<JobNotificationBroadcaster> log;
 
         public JobNotificationBroadcaster(IHubContext<MessagingHub, IMessagingClient> hub,
                                           JobTrackerService jobTracker,
                                           UserLogger userLogger,
+                                          DownloadCancellationRegistry cancellationRegistry,
                                           ILogger<JobNotificationBroadcaster> log)
         {
             this.hub = hub;
             this.jobTracker = jobTracker;
             this.userLogger = userLogger;
+            this.cancellationRegistry = cancellationRegistry;
             this.log = log;
         }
 
@@ -43,6 +46,7 @@ namespace Regard.Backend.Services
             jobTracker.JobProgress += OnJobProgress;
             jobTracker.JobCompleted += OnJobCompleted;
             jobTracker.JobFailed += OnJobFailed;
+            jobTracker.JobCancelled += OnJobCancelled;
             userLogger.MessageCreated += OnMessageCreated;
             return Task.CompletedTask;
         }
@@ -54,6 +58,7 @@ namespace Regard.Backend.Services
             jobTracker.JobProgress -= OnJobProgress;
             jobTracker.JobCompleted -= OnJobCompleted;
             jobTracker.JobFailed -= OnJobFailed;
+            jobTracker.JobCancelled -= OnJobCancelled;
             userLogger.MessageCreated -= OnMessageCreated;
             return Task.CompletedTask;
         }
@@ -63,6 +68,7 @@ namespace Regard.Backend.Services
         private void OnJobProgress(object sender, JobProgressEventArgs e) => PushJob(e.Job);
         private void OnJobCompleted(object sender, JobCompletedEventArgs e) => PushJob(e.Job);
         private void OnJobFailed(object sender, JobFailedEventArgs e) => PushJob(e.Job);
+        private void OnJobCancelled(object sender, JobCancelledEventArgs e) => PushJob(e.Job);
 
         private void PushJob(JobInfo job)
         {
@@ -81,6 +87,7 @@ namespace Regard.Backend.Services
                 Created = job.Created,
                 Started = job.Started,
                 Completed = job.Completed,
+                Cancellable = cancellationRegistry.IsCancellable(job.Id),
             };
             string userId = job.UserId;
 

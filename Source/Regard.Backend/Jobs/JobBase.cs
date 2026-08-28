@@ -49,6 +49,12 @@ namespace Regard.Backend.Jobs
                 await ExecuteJob(context);
                 jobTrackerService.OnJobCompleted(Job);
             }
+            catch (JobCancelledException)
+            {
+                // User-requested cancellation: terminal, not a failure, and never retried.
+                JobLog("Job cancelled.", MessageSeverity.Warning);
+                jobTrackerService.OnJobCancelled(Job);
+            }
             catch (Exception ex)
             {
                 log.LogError(ex, "{0} failed with exception!", GetType().Name);

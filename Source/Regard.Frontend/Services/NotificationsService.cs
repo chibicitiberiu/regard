@@ -44,7 +44,7 @@ namespace Regard.Frontend.Services
             int idx = IndexOfJob(job.Id);
 
             // A finished job leaves the active list (its failure, if any, already arrives as a message).
-            if (job.State == ApiJobState.Completed || job.State == ApiJobState.Failed)
+            if (job.State == ApiJobState.Completed || job.State == ApiJobState.Failed || job.State == ApiJobState.Cancelled)
             {
                 if (idx >= 0)
                     ActiveJobs.RemoveAt(idx);

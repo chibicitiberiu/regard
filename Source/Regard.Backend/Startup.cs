@@ -145,6 +145,7 @@ namespace Regard.Backend
             });
             services.AddScoped<RegardScheduler>();
             services.AddSingleton<JobTrackerService>();
+            services.AddSingleton<DownloadCancellationRegistry>();
             services.AddSingleton<UserLogger>();
 
             // Bridges job/message events to SignalR clients (live progress + toasts).

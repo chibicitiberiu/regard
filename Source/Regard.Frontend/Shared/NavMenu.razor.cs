@@ -24,6 +24,8 @@ namespace Regard.Frontend.Shared
 
         [Inject] protected NotificationsService Notifications { get; set; }
 
+        [Inject] protected BackendService Backend { get; set; }
+
         private string username;
 
         [Parameter] public EventCallback LogoClicked { get; set; }
@@ -53,6 +55,12 @@ namespace Regard.Frontend.Shared
             => job.Progress.HasValue
                 ? $"width:{(int)(Math.Clamp(job.Progress.Value, 0f, 1f) * 100)}%"
                 : string.Empty;
+
+        private async Task CancelJob(ApiJobInfo job)
+        {
+            // Optimistic: the SignalR Cancelled push will remove it from the list shortly.
+            await Backend.JobCancel(job.Id);
+        }
 
         public void Dispose()
         {

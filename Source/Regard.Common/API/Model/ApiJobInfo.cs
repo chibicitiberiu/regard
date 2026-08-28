@@ -11,7 +11,9 @@ namespace Regard.Common.API.Model
         Scheduled,
         Running,
         Completed,
-        Failed
+        Failed,
+        // Appended to stay aligned with the backend JobState int cast — never reorder.
+        Cancelled
     }
 
     public class ApiJobInfo
@@ -46,6 +48,12 @@ namespace Regard.Common.API.Model
         public DateTimeOffset? Started { get; set; }
 
         public DateTimeOffset? Completed { get; set; }
+
+        /// <summary>
+        /// True while this job can be cancelled by the user (a live download). Drives the bell's
+        /// Cancel button. Set from the cancellation registry on each live push.
+        /// </summary>
+        public bool Cancellable { get; set; }
 
         /// <summary>
         /// Full captured output. Populated only by the job-detail endpoint, not by list/live pushes.

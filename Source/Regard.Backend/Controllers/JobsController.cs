@@ -20,14 +20,17 @@ namespace Regard.Backend.Controllers
         private readonly UserManager<UserAccount> userManager;
         private readonly ApiResponseFactory responseFactory;
         private readonly DataContext dataContext;
+        private readonly DownloadCancellationRegistry cancellationRegistry;
 
         public JobsController(UserManager<UserAccount> userManager,
                               ApiResponseFactory responseFactory,
-                              DataContext dataContext)
+                              DataContext dataContext,
+                              DownloadCancellationRegistry cancellationRegistry)
         {
             this.userManager = userManager;
             this.responseFactory = responseFactory;
             this.dataContext = dataContext;
+            this.cancellationRegistry = cancellationRegistry;
         }
 
         [HttpGet]
@@ -74,6 +77,26 @@ namespace Regard.Backend.Controllers
             var dto = ToApi(job);
             dto.Log = job.Log;    // detail view includes the full captured log
             return Ok(responseFactory.Success(dto));
+        }
+
+        [HttpPost("{id}/cancel")]
+        [Authorize]
+        public async Task<IActionResult> Cancel(long id)
+        {
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(responseFactory.Error("Not authenticated."));
+
+            var query = await VisibleJobs(user);
+            var job = query.FirstOrDefault(j => j.Id == id);
+            if (job == null)
+                return NotFound(responseFactory.Error("Job not found."));
+
+            // Only live, cancellable jobs (running downloads) can be cancelled.
+            if (!cancellationRegistry.Cancel(id))
+                return BadRequest(responseFactory.Error("This job can't be cancelled (it isn't a running download)."));
+
+            return Ok(responseFactory.Success(message: "Cancelling…"));
         }
 
         /// <summary>

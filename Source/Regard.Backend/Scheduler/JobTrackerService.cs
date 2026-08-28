@@ -46,6 +46,11 @@ namespace Regard.Backend.Services
         public string Details { get; set; }
     }
 
+    public class JobCancelledEventArgs
+    {
+        public JobInfo Job { get; set; }
+    }
+
     #endregion
 
     public class JobTrackerService
@@ -59,6 +64,7 @@ namespace Regard.Backend.Services
         public event EventHandler<JobProgressEventArgs> JobProgress;
         public event EventHandler<JobCompletedEventArgs> JobCompleted;
         public event EventHandler<JobFailedEventArgs> JobFailed;
+        public event EventHandler<JobCancelledEventArgs> JobCancelled;
 
         public JobTrackerService(IServiceScopeFactory scopeFactory, UserLogger userLogger)
         {
@@ -155,6 +161,19 @@ namespace Regard.Backend.Services
 
             userLogger.LogInfo("Job completed", userId: job.UserId, jobId: job.Id);
             JobCompleted?.Invoke(this, new JobCompletedEventArgs() { Job = job });
+        }
+
+        public void OnJobCancelled(JobInfo job)
+        {
+            using var scope = scopeFactory.CreateScope();
+            using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+
+            job.State = JobState.Cancelled;
+            job.Completed = DateTimeOffset.UtcNow;
+            dataContext.SaveChanges();
+
+            userLogger.LogInfo($"{job.Name}: cancelled", userId: job.UserId, jobId: job.Id);
+            JobCancelled?.Invoke(this, new JobCancelledEventArgs() { Job = job });
         }
 
         public void OnJobFailed(JobInfo job, string reason, string details = null, bool notifyUser = false)

@@ -52,7 +52,17 @@
     .list-view-item { padding: 0.4rem 0.75rem; border-top: 1px solid var(--color-bg-secondary); }
 }
 
+.np-job-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .np-job-name { font-weight: 500; }
+.np-job-cancel {
+    flex: 0 0 auto;
+    padding: 0;
+    line-height: 1;
+    color: var(--color-fg-secondary);
+    cursor: pointer;
+
+    &:hover { color: var(--color-fg-error); }
+}
 .np-job-detail { font-size: 0.85rem; color: var(--color-fg-secondary); }
 .np-msg { font-size: 0.9rem; }
 .np-msg-warning { color: var(--color-fg-warning); }

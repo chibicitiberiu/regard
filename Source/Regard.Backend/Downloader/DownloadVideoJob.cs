@@ -33,6 +33,7 @@ namespace Regard.Backend.Downloader
         protected readonly IVideoStorageService videoStorage;
         protected readonly MetadataService metadataService;
         protected readonly UserQuotaService userQuotaService;
+        protected readonly DownloadCancellationRegistry cancellationRegistry;
 
         private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of ~?([\d\.]+)([KMG]i?B)");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
@@ -45,6 +46,7 @@ namespace Regard.Backend.Downloader
         private Video video = null;
         private AsyncLock videoMutex = new AsyncLock();
         private CancellationTokenSource cancellationTokenSrc = new CancellationTokenSource();
+        private DownloadCancellationRegistry.CancelContext cancelContext;
         private bool limitsChecked = false;
         private int lastReportedPercent = -1;
 
@@ -60,7 +62,8 @@ namespace Regard.Backend.Downloader
                                 IVideoDownloaderService videoDownloader,
                                 IVideoStorageService videoStorage,
                                 MetadataService metadataService,
-                                UserQuotaService userQuotaService) : base(logger, dataContext, jobTrackerService)
+                                UserQuotaService userQuotaService,
+                                DownloadCancellationRegistry cancellationRegistry) : base(logger, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
             this.optionManager = optionManager;
@@ -69,6 +72,7 @@ namespace Regard.Backend.Downloader
             this.videoStorage = videoStorage;
             this.metadataService = metadataService;
             this.userQuotaService = userQuotaService;
+            this.cancellationRegistry = cancellationRegistry;
         }
 
         public static Task Schedule(RegardScheduler scheduler, Video video)
@@ -135,6 +139,12 @@ namespace Regard.Backend.Downloader
 
             int idleTimeoutMs = optionManager.GetGlobal(Options.Ytdl_IdleTimeout) * 60 * 1000;
 
+            // Register a cancellation context so the API can cancel this specific download. It shares
+            // its token source with the size-quota abort below, and its UserCancelled flag tells the two
+            // apart in the catch.
+            cancelContext = cancellationRegistry.Register(Job.Id);
+            cancellationTokenSrc = cancelContext.Cts;
+
             try
             {
                 await ytdlService.UsingYoutubeDL(ytdl =>
@@ -155,11 +165,27 @@ namespace Regard.Backend.Downloader
             catch (OperationCanceledException)
             {
                 Job.RetryCount = 0;
-                log.LogInformation("Video download was canceled!");
+
+                if (cancelContext.UserCancelled)
+                {
+                    // User cancel: flag the video so auto-download skips it and the next-newest takes
+                    // its slot; it stays visible and can be downloaded manually later.
+                    log.LogInformation("videoId={0}: download cancelled by user; marking as skipped.", VideoId);
+                    using (await videoMutex.LockAsync())
+                    {
+                        video.DownloadSkipped = true;
+                        await dataContext.SaveChangesAsync();
+                    }
+                    JobLog("Download cancelled; video skipped (won't auto-download). Download it manually to retry.", Regard.Backend.Common.Model.MessageSeverity.Warning);
+                    throw new JobCancelledException();
+                }
+
+                log.LogInformation("videoId={0}: download stopped (quota/limit).", VideoId);
                 throw;
             }
             finally
             {
+                cancellationRegistry.Unregister(Job.Id);
                 videoDownloader.OnDownloadFinished(VideoId);
             }
 

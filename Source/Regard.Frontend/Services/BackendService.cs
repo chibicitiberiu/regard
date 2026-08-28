@@ -252,6 +252,9 @@ namespace Regard.Services
         public Task<ApiResponse<Regard.Common.API.Model.ApiJobInfo>> GetJobLog(long id)
             => Get<Regard.Common.API.Model.ApiJobInfo>($"api/jobs/{id}");
 
+        public Task<(ApiResponse, HttpResponseMessage)> JobCancel(long id)
+            => Post($"api/jobs/{id}/cancel", (object)null);
+
         #endregion
 
         #region Subscription folders

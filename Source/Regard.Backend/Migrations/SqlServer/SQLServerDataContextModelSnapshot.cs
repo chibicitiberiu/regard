@@ -522,6 +522,9 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.Property<DateTimeOffset>("Discovered")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("DownloadSkipped")
+                        .HasColumnType("bit");
+
                     b.Property<string>("DownloadedPath")
                         .HasMaxLength(260)
                         .HasColumnType("nvarchar(260)");

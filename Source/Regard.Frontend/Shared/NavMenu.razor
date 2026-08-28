@@ -29,7 +29,16 @@
                                 <ListView Model="ApiJobInfo" ItemsSource="Notifications.ActiveJobs" Class="np-list">
                                     <ItemTemplate Context="job">
                                         <div class="np-job">
-                                            <div class="np-job-name">@job.Name</div>
+                                            <div class="np-job-header">
+                                                <div class="np-job-name">@job.Name</div>
+                                                @if (job.Cancellable && job.State == ApiJobState.Running)
+                                                {
+                                                    <button class="button-undecorated np-job-cancel" title="Cancel download"
+                                                            @onclick="() => CancelJob(job)">
+                                                        <Icon Glyph="Icons.Close" />
+                                                    </button>
+                                                }
+                                            </div>
                                             @if (!string.IsNullOrEmpty(job.Detail))
                                             {
                                                 <div class="np-job-detail">@job.Detail</div>

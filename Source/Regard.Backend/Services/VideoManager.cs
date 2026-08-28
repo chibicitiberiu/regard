@@ -107,6 +107,18 @@ namespace Regard.Backend.Services
                 .Where(v => videoIds.Contains(v.Id))
                 .Where(v => v.Subscription.UserId == user.Id)
                 .ToList();
+
+            // A manual download clears a prior cancel/skip so the video is no longer excluded.
+            bool anyUnskipped = false;
+            foreach (var video in videosToDownload)
+                if (video.DownloadSkipped)
+                {
+                    video.DownloadSkipped = false;
+                    anyUnskipped = true;
+                }
+            if (anyUnskipped)
+                await dataContext.SaveChangesAsync();
+
             foreach (var video in videosToDownload)
                 await DownloadVideoJob.Schedule(scheduler, video);
         }

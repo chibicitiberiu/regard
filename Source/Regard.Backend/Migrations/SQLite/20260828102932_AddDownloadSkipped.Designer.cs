@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Regard.Backend.DB;
 
@@ -10,9 +11,11 @@ using Regard.Backend.DB;
 namespace Regard.Backend.Migrations.SQLite
 {
     [DbContext(typeof(SQLiteDataContext))]
-    partial class SQLiteDataContextModelSnapshot : ModelSnapshot
+    [Migration("20260828102932_AddDownloadSkipped")]
+    partial class AddDownloadSkipped
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");

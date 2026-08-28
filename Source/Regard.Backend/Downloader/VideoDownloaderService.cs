@@ -194,6 +194,7 @@ namespace Regard.Backend.Downloader
                 .Where(x => x.SubscriptionId == sub.Id)
                 .Where(x => x.DownloadedPath == null)
                 .Where(x => !x.IsWatched)
+                .Where(x => !x.DownloadSkipped)
                 .AsEnumerable()
                 .OrderBy(order)
                 .Where(v => SubscriptionFilterExtensions.PassesTitleFilters(v.Name, filters));

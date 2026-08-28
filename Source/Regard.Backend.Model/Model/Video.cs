@@ -38,6 +38,13 @@ namespace Regard.Backend.Model
 
         public bool IsWatched { get; set; } = false;
 
+        /// <summary>
+        /// Set when the user cancels an in-progress download: the video is excluded from
+        /// auto-download (so the next-newest takes its slot) but stays visible and can still be
+        /// downloaded manually. Cleared when a manual download is requested.
+        /// </summary>
+        public bool DownloadSkipped { get; set; } = false;
+
         [MaxLength(260)]
         public string DownloadedPath { get; set; }
 
