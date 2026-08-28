@@ -77,5 +77,12 @@ namespace Regard.Common.API.Model
         public long? Likes { get; set; }
 
         public long? Dislikes { get; set; }
+
+        /// <summary>
+        /// The video's chapters (original-timeline seconds), set only for the single-video watch fetch.
+        /// Null/empty otherwise. Not applied for seeking on a downloaded file that had SponsorBlock
+        /// segments cut (<see cref="SponsorsRemoved"/> true) — the timeline no longer matches.
+        /// </summary>
+        public System.Collections.Generic.List<ApiChapter> Chapters { get; set; }
     }
 }

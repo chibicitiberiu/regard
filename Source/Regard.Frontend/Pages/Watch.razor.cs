@@ -24,6 +24,16 @@ namespace Regard.Frontend.Pages
         private bool downloadQueued;
         private bool streamFailed;        // the downloaded file wouldn't load (missing/unreadable) -> show the fallback
         private List<ApiVideo> upNext;
+        private Regard.Frontend.Shared.Controls.Video playerRef;   // set when the downloaded <video> is shown
+        private double currentPlaybackSeconds;                     // driven by playback, for chapter highlight
+
+        // Chapters exist to show at all.
+        private bool HasChapters => video?.Chapters != null && video.Chapters.Count > 0;
+
+        // The downloaded <video> player is active (so we can drive currentTime) and its timeline still
+        // matches the chapters' original timeline (SponsorBlock didn't cut it). Only then is click-to-seek
+        // meaningful; the YouTube embed and trimmed files show the list read-only.
+        private bool ChaptersSeekable => HasChapters && video.IsDownloaded && !streamFailed && !video.SponsorsRemoved;
 
         [Inject] protected BackendService Backend { get; set; }
 
@@ -180,6 +190,39 @@ namespace Regard.Frontend.Pages
         {
             streamFailed = true;
             StateHasChanged();
+        }
+
+        // Click a chapter row: seek the downloaded player to its start (no-op when not seekable).
+        private async Task OnChapterClicked(ApiChapter chapter)
+        {
+            if (ChaptersSeekable && playerRef != null)
+            {
+                await playerRef.SeekTo(chapter.Start);
+                currentPlaybackSeconds = chapter.Start;
+            }
+        }
+
+        // Index of the chapter covering the current playhead, or -1. Used to highlight the active row.
+        private int ActiveChapterIndex
+        {
+            get
+            {
+                if (!HasChapters) return -1;
+                var t = currentPlaybackSeconds;
+                for (int i = video.Chapters.Count - 1; i >= 0; i--)
+                {
+                    if (t >= video.Chapters[i].Start) return i;
+                }
+                return -1;
+            }
+        }
+
+        private static string FormatTimestamp(double seconds)
+        {
+            var ts = TimeSpan.FromSeconds(seconds < 0 ? 0 : seconds);
+            return ts.TotalHours >= 1
+                ? $"{(int)ts.TotalHours}:{ts.Minutes:00}:{ts.Seconds:00}"
+                : $"{ts.Minutes}:{ts.Seconds:00}";
         }
 
         private string ThumbUrl(ApiVideo v)

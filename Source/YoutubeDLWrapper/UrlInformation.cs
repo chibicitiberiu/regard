@@ -16,6 +16,19 @@ namespace YoutubeDLWrapper
         [Description("url_transparent")] UrlTransparent
     }
 
+    /// <summary>A single yt-dlp chapter: a titled time range within the video.</summary>
+    public class Chapter
+    {
+        [JsonProperty("start_time")]
+        public double StartTime { get; set; }
+
+        [JsonProperty("end_time")]
+        public double EndTime { get; set; }
+
+        [JsonProperty("title")]
+        public string Title { get; set; }
+    }
+
     public class UrlInformation
     {
         [JsonProperty("_type")]
@@ -264,10 +277,12 @@ namespace YoutubeDLWrapper
         [JsonProperty("end_time")]
         public int? EndTime { get; set; }
 
-        // TODO: chapters:       A list of dictionaries, with the following entries:
-        //                    * "start_time" - The start time of the chapter in seconds
-        //                    * "end_time" - The end time of the chapter in seconds
-        //                    * "title" (optional, string)
+        /// <summary>
+        /// The video's chapters, each with a start/end time (seconds) and optional title.
+        /// yt-dlp derives these from the description timestamps or native chapter markers.
+        /// </summary>
+        [JsonProperty("chapters")]
+        public Chapter[] Chapters { get; set; }
 
         //The following fields should only be used when the video belongs to some logical
         //chapter or section:

@@ -94,6 +94,14 @@ namespace Regard.Backend.Model
 
         public string ProviderData { get; set; }
 
+        /// <summary>
+        /// The video's chapters as a JSON array of {Start, End, Title} (original-timeline seconds),
+        /// captured from yt-dlp during metadata enrichment. Null when the source has no chapters.
+        /// Like SponsorSegments these are on the ORIGINAL timeline, so the watch page must not seek by
+        /// them on a downloaded file that had segments cut (see <see cref="SponsorsRemoved"/>).
+        /// </summary>
+        public string Chapters { get; set; }
+
         public override string ToString()
         {
             return $"({SubscriptionId}:{Id}:{Name ?? OriginalUrl})";

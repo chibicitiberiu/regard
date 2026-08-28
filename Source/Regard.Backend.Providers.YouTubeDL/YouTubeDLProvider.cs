@@ -212,6 +212,14 @@ namespace Regard.Backend.Providers.YouTubeDL
                     video.ThumbnailPath = info.Thumbnail?.ToString();
                     video.UploaderName = info.Uploader;
                     video.Duration = info.Duration.HasValue ? (int?)Math.Round(info.Duration.Value) : null;
+
+                    // Capture chapters (original-timeline). Serialize with the same field names the API
+                    // side reads back (Start/End/Title) using System.Text.Json — the wrapper POCO uses
+                    // Newtonsoft snake_case names, so we project rather than serialize it directly.
+                    video.Chapters = (info.Chapters != null && info.Chapters.Length > 0)
+                        ? System.Text.Json.JsonSerializer.Serialize(
+                            info.Chapters.Select(c => new { Start = c.StartTime, End = c.EndTime, c.Title }))
+                        : null;
                 }
 
                 if (updateStatistics)

@@ -83,6 +83,13 @@ namespace Regard.Frontend.Shared.Controls
             await WatchedThresholdReached.InvokeAsync(null);
         }
 
+        /// <summary>Seek the underlying player to an absolute time (seconds). Used by chapter clicks.</summary>
+        public async Task SeekTo(double seconds)
+        {
+            try { await JS.InvokeVoidAsync("RegardHelpers.seekTo", videoElement, seconds); }
+            catch (Exception) { /* player/JS not ready */ }
+        }
+
         protected async Task OnEnded(EventArgs _)
         {
             await Ended.InvokeAsync(null);

@@ -138,6 +138,18 @@ namespace Regard.Backend.Controllers
                     apiVideos[0].SponsorSegments = await sponsorBlockClient.GetSkipSegments(videos[0].VideoId, skipCats);
             }
 
+            // Chapters: original-timeline chapters for the single-video watch fetch, deserialized from the
+            // stored JSON. Only the watch page renders them, so this stays off the multi-item list path.
+            if (request.Ids?.Length == 1 && apiVideos.Count == 1 && !string.IsNullOrEmpty(videos[0].Chapters))
+            {
+                try
+                {
+                    apiVideos[0].Chapters = System.Text.Json.JsonSerializer
+                        .Deserialize<List<ApiChapter>>(videos[0].Chapters);
+                }
+                catch { /* malformed blob — leave chapters null */ }
+            }
+
             // ReturnYouTubeDislike: real dislike counts for the single-video watch fetch of a YouTube video,
             // when the server has the feature enabled. Best-effort; leaves the counts null on any failure.
             if (request.Ids?.Length == 1 && apiVideos.Count == 1 && VideoEmbedHelper.IsYouTube(videos[0])

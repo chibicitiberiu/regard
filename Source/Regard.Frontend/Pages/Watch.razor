@@ -14,7 +14,8 @@
             <div class="watch-player">
                 @if (video.IsDownloaded && !streamFailed)
                 {
-                    <Video ShowControls="true"
+                    <Video @ref="playerRef"
+                           ShowControls="true"
                            AutoPlay="true"
                            WatchedThreshold="0.9"
                            WatchedThresholdReached="OnMarkWatchedFromPlayback"
@@ -159,6 +160,37 @@
         </div>
 
         <aside class="watch-upnext">
+            @if (HasChapters)
+            {
+                <div class="watch-chapters">
+                    <details open>
+                        <summary>Chapters <span class="text-muted">(@video.Chapters.Count)</span></summary>
+                        @if (!ChaptersSeekable)
+                        {
+                            <p class="watch-chapters-note text-muted">
+                                @(video.SponsorsRemoved
+                                    ? "Seeking is off for this file — SponsorBlock trimmed its timeline."
+                                    : "Chapters are shown by the player here.")
+                            </p>
+                        }
+                        <ol class="watch-chapter-list">
+                            @for (int i = 0; i < video.Chapters.Count; i++)
+                            {
+                                var idx = i;
+                                var ch = video.Chapters[idx];
+                                <li class="watch-chapter @(idx == ActiveChapterIndex ? "active" : "")">
+                                    <button type="button" class="watch-chapter-btn"
+                                            disabled="@(!ChaptersSeekable)"
+                                            @onclick="() => OnChapterClicked(ch)">
+                                        <span class="watch-chapter-time">@FormatTimestamp(ch.Start)</span>
+                                        <span class="watch-chapter-title">@ch.Title</span>
+                                    </button>
+                                </li>
+                            }
+                        </ol>
+                    </details>
+                </div>
+            }
             <h3>Up next</h3>
             @if (upNext == null)
             {

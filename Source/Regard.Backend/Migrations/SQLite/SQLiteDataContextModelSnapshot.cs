@@ -492,6 +492,9 @@ namespace Regard.Backend.Migrations.SQLite
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Chapters")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Description")
                         .HasMaxLength(4096)
                         .HasColumnType("TEXT");

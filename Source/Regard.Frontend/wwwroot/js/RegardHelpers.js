@@ -145,6 +145,15 @@
                 this.skipSegmentHandlers.splice(i, 1);
             }
         }
+    },
+
+    // --- Seeking ------------------------------------------------------------------------------
+    // Seek the player to an absolute time in seconds (chapters click-to-seek).
+
+    seekTo: function (videoElement, seconds) {
+        if (!(videoElement instanceof Node) || !isFinite(seconds))
+            return;
+        try { videoElement.currentTime = Math.max(0, seconds); } catch (e) { /* not ready yet */ }
     }
 }
 
