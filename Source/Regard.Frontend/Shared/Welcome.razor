@@ -1,0 +1,27 @@
+@inject AppState AppState
+
+<div class="welcome-wrap">
+    <div class="welcome-card">
+        <div class="logo welcome-logo">
+            <span class="logo-1">R</span><span class="logo-2">e</span><span class="logo-3">g</span><span class="logo-4">a</span><span class="logo-5">r</span><span class="logo-6">d</span>
+        </div>
+
+        <p class="welcome-tagline">Your self-hosted YouTube subscription manager.</p>
+
+        <ul class="welcome-features">
+            <li>Follow channels, playlists and hundreds of sites via yt-dlp</li>
+            <li>No API key and no quota to manage</li>
+            <li>Per-subscription title filters and download rules</li>
+            <li>Jellyfin metadata export and watched-sync</li>
+            <li>Live progress updates as videos sync and download</li>
+        </ul>
+
+        <div class="welcome-actions">
+            <a class="button primary" href="/auth/login">Log in</a>
+            @if (AppState?.ServerStatus?.AllowRegistrations == true)
+            {
+                <a class="button" href="/auth/register">Register</a>
+            }
+        </div>
+    </div>
+</div>

@@ -56,7 +56,8 @@ namespace Regard.Backend.Controllers
             {
                 Initialized = optionManager.GetGlobal(Options.Server_Initialized),
                 HaveUsers = users.Count > 0,
-                HaveAdmin = admins.Count > 0
+                HaveAdmin = admins.Count > 0,
+                AllowRegistrations = optionManager.GetGlobal(Options.Server_AllowRegistrations)
             }));
         }
 

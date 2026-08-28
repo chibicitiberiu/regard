@@ -20,5 +20,11 @@ namespace Regard.Common.API.Response
         /// If true, there is at least 1 admin user
         /// </summary>
         public bool HaveAdmin { get; set; }
+
+        /// <summary>
+        /// If true, self-registration is open (anonymous — lets the welcome/login UI show or hide the
+        /// Register option without needing an admin-only settings call).
+        /// </summary>
+        public bool AllowRegistrations { get; set; }
     }
 }

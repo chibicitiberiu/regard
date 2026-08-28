@@ -84,7 +84,7 @@
                 bool? state = AppState?.ServerStatus?.Initialized;
                 if (state.HasValue && state.Value)
                 {
-                    <LoginRegisterModal />
+                    <Welcome />
                 }
                 else if (state.HasValue && !state.Value)
                 {
