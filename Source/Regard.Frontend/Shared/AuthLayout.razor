@@ -1,0 +1,11 @@
+@* Minimal, auth-agnostic layout for the standalone account pages (forgot / reset password).
+   MainLayout wraps everything in an AuthorizeView and swaps the routed page body for the login
+   modal when unauthenticated, so a logged-out user could never reach these pages under it. This
+   renders @Body directly, inside the same centered card the setup wizard uses. Mirrors SetupLayout. *@
+@inherits LayoutComponentBase
+
+<div class="setup-wrap">
+    <div class="setup-card">
+        @Body
+    </div>
+</div>

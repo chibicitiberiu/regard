@@ -3,6 +3,7 @@
   <ItemGroup>
     <PackageReference Include="FormatWith" />
     <PackageReference Include="Humanizer.Core" />
+    <PackageReference Include="MailKit" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />

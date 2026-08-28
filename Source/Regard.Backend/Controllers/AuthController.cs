@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Regard.Backend.Configuration;
 using Regard.Backend.Model;
@@ -11,6 +12,8 @@ using Regard.Common.API.Auth;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,15 +29,20 @@ namespace Regard.Backend.Controllers
         private readonly JwtSecretProvider jwtSecret;
         private readonly IOptionManager optionManager;
         private readonly ApiResponseFactory responseFactory;
+        private readonly IEmailService emailService;
+        private readonly ILogger<AuthController> logger;
 
         public AuthController(UserManager<UserAccount> userManager, RoleManager<IdentityRole> roleManager,
-            JwtSecretProvider jwtSecret, IOptionManager optionManager, ApiResponseFactory responseFactory)
+            JwtSecretProvider jwtSecret, IOptionManager optionManager, ApiResponseFactory responseFactory,
+            IEmailService emailService, ILogger<AuthController> logger)
         {
             this.userManager = userManager;
             this.roleManager = roleManager;
             this.jwtSecret = jwtSecret;
             this.optionManager = optionManager;
             this.responseFactory = responseFactory;
+            this.emailService = emailService;
+            this.logger = logger;
         }
 
         private async Task<JwtSecurityToken> GenerateAuthToken(UserAccount user, bool rememberMe = false)
@@ -151,6 +159,87 @@ namespace Regard.Backend.Controllers
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 ValidTo = token.ValidTo
             }));
+        }
+
+        [HttpPost]
+        [Route("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            // Always return the same generic response so this endpoint can't be used to probe which
+            // usernames exist. The reset link only ever reaches the user's mailbox or the server log.
+            const string genericMessage =
+                "If an account with that username exists, password reset instructions have been sent.";
+
+            var user = await userManager.FindByNameAsync(request.Username);
+            if (user != null)
+            {
+                var token = await userManager.GeneratePasswordResetTokenAsync(user);
+                var link = BuildResetLink(user.UserName, token);
+
+                if (emailService.IsConfigured && !string.IsNullOrWhiteSpace(user.Email))
+                {
+                    try
+                    {
+                        await emailService.SendAsync(user.Email, "Regard password reset",
+                            "A password reset was requested for your Regard account.\n\n" +
+                            "Open this link to choose a new password:\n" + link + "\n\n" +
+                            "If you didn't request this, you can ignore this email — your password stays unchanged.");
+                    }
+                    catch (Exception ex)
+                    {
+                        // Delivery failed; fall back to the log so the reset isn't lost.
+                        logger.LogError(ex, "Failed to email password reset to {User}; reset link: {Link}",
+                            user.UserName, link);
+                    }
+                }
+                else
+                {
+                    // No SMTP configured (or no email on file): the admin reads the link from the log.
+                    logger.LogWarning("Password reset requested for {User}. No SMTP configured or no email on " +
+                        "file — reset link: {Link}", user.UserName, link);
+                }
+            }
+
+            return Ok(responseFactory.Success(message: genericMessage));
+        }
+
+        [HttpPost]
+        [Route("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var user = await userManager.FindByNameAsync(request.Username);
+            // Same generic error for "no such user" and "bad token" so neither leaks account existence.
+            if (user == null)
+                return BadRequest(responseFactory.Error("This reset link is invalid or has expired."));
+
+            var result = await userManager.ResetPasswordAsync(user, request.Token, request.Password1);
+            if (!result.Succeeded)
+            {
+                var message = result.Errors.FirstOrDefault()?.Description
+                    ?? "This reset link is invalid or has expired.";
+                return BadRequest(responseFactory.Error(message));
+            }
+
+            return Ok(responseFactory.Success(message: "Your password has been reset. You can now log in."));
+        }
+
+        // Builds the absolute /auth/reset-password link. Server_PublicBaseUrl is authoritative; when it's
+        // unset we derive scheme+host from the request (correct only same-origin/dev) and warn. The token
+        // is URL-encoded exactly once here and decoded exactly once by the frontend query parser.
+        private string BuildResetLink(string username, string token)
+        {
+            var baseUrl = optionManager.GetGlobal(Options.Server_PublicBaseUrl);
+            if (string.IsNullOrWhiteSpace(baseUrl))
+            {
+                baseUrl = $"{Request.Scheme}://{Request.Host}";
+                logger.LogWarning("Server_PublicBaseUrl is not set; deriving the reset-link base URL from the " +
+                    "request ({BaseUrl}). Set PublicBaseUrl / REGARD_PUBLIC_BASE_URL for correct links behind a proxy.",
+                    baseUrl);
+            }
+
+            baseUrl = baseUrl.TrimEnd('/');
+            return $"{baseUrl}/auth/reset-password?username={WebUtility.UrlEncode(username)}" +
+                   $"&token={WebUtility.UrlEncode(token)}";
         }
 
         [Authorize]

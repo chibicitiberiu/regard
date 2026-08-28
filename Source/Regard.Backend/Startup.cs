@@ -183,6 +183,9 @@ namespace Regard.Backend
             services.AddSingleton<IYoutubeDlService, YoutubeDLService>();
             services.AddSingleton<ApiResponseFactory>();
             services.AddSingleton<ApiModelFactory>();
+
+            // Email (password-reset delivery). Scoped to match the scoped IOptionManager it reads.
+            services.AddScoped<IEmailService, EmailService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

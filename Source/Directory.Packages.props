@@ -44,6 +44,7 @@
     <PackageVersion Include="FormatWith" Version="3.0.1" />
     <PackageVersion Include="Humanizer.Core" Version="2.14.1" />
     <PackageVersion Include="MimeMapping" Version="1.0.1.37" />
+    <PackageVersion Include="MailKit" Version="4.16.0" />
     <PackageVersion Include="ResourceLoader" Version="3.2.4" />
     <!-- Build-time SCSS->CSS compiler (bundles dart-sass); compiles wwwroot/css/style.scss on build. -->
     <PackageVersion Include="AspNetCore.SassCompiler" Version="1.103.0" />

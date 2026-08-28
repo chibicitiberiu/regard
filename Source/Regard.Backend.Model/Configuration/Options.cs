@@ -416,5 +416,88 @@ namespace Regard.Backend.Configuration
             OptionFlags.User
         );
 
+        /// <summary>
+        /// External base URL of this Regard instance (e.g. "https://regard.example.com"), used to build
+        /// absolute links in outgoing mail such as the password-reset link. This is authoritative: set it
+        /// in any real deployment. TLS is terminated by a reverse proxy and no forwarded-headers middleware
+        /// is configured, so when this is empty the backend falls back to deriving scheme+host from the
+        /// incoming request, which is only correct for same-origin/dev setups.
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_PublicBaseUrl = new OptionDefinition<string>(
+            null,
+            "server.public_base_url",
+            "PublicBaseUrl",
+            "REGARD_PUBLIC_BASE_URL",
+            0
+        );
+
+        /// <summary>
+        /// SMTP server host used to send mail (e.g. password-reset links). When empty, mail is considered
+        /// unconfigured and the reset link is written to the server log instead of emailed.
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_SmtpHost = new OptionDefinition<string>(
+            null,
+            "smtp.host",
+            "Smtp:Host",
+            "REGARD_SMTP_HOST",
+            0
+        );
+
+        /// <summary>
+        /// SMTP server port. 587 (STARTTLS) is the usual submission port; 465 is implicit TLS.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_SmtpPort = new OptionDefinition<int>(
+            587,
+            "smtp.port",
+            "Smtp:Port",
+            "REGARD_SMTP_PORT",
+            0
+        );
+
+        /// <summary>
+        /// SMTP username. When empty, the connection is made without authentication.
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_SmtpUser = new OptionDefinition<string>(
+            null,
+            "smtp.user",
+            "Smtp:User",
+            "REGARD_SMTP_USER",
+            0
+        );
+
+        /// <summary>
+        /// SMTP password (used with Server_SmtpUser).
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_SmtpPassword = new OptionDefinition<string>(
+            null,
+            "smtp.password",
+            "Smtp:Password",
+            "REGARD_SMTP_PASSWORD",
+            0
+        );
+
+        /// <summary>
+        /// From address for outgoing mail. Falls back to Server_SmtpUser when empty.
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_SmtpFrom = new OptionDefinition<string>(
+            null,
+            "smtp.from",
+            "Smtp:From",
+            "REGARD_SMTP_FROM",
+            0
+        );
+
+        /// <summary>
+        /// Use a secure connection (TLS/STARTTLS chosen automatically from the port). Set false only for a
+        /// local relay that speaks plaintext.
+        /// </summary>
+        public static readonly OptionDefinition<bool> Server_SmtpUseSsl = new OptionDefinition<bool>(
+            true,
+            "smtp.use_ssl",
+            "Smtp:UseSsl",
+            "REGARD_SMTP_USESSL",
+            0
+        );
+
     }
 }

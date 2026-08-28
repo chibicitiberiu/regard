@@ -164,6 +164,12 @@ namespace Regard.Services
         public Task<ApiResponse<MeResponse>> AuthMe()
             => Get<MeResponse>("api/auth/me");
 
+        public Task<(ApiResponse, HttpResponseMessage)> AuthForgotPassword(ForgotPasswordRequest data)
+            => Post("api/auth/forgot-password", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> AuthResetPassword(ResetPasswordRequest data)
+            => Post("api/auth/reset-password", data);
+
         #endregion
 
         #region Subscriptions
