@@ -201,6 +201,19 @@ namespace Regard.Backend.Configuration
         );
 
         /// <summary>
+        /// Minutes with no output from a running download before it's treated as stalled and killed
+        /// (the job then retries). Guards against a frozen .part that keeps the pipe open. 0 disables.
+        /// Global/server option.
+        /// </summary>
+        public static readonly OptionDefinition<int> Ytdl_IdleTimeout = new OptionDefinition<int>(
+            10,
+            "ytdl.idle_timeout_minutes",
+            "Ytdl:IdleTimeoutMinutes",
+            "REGARD_YTDL_IDLE_TIMEOUT_MINUTES",
+            0
+        );
+
+        /// <summary>
         /// Write video description to a .description file.
         /// </summary>
         public static readonly OptionDefinition<bool> Ytdl_WriteDescription = new OptionDefinition<bool>(

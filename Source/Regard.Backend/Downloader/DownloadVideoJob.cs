@@ -133,6 +133,8 @@ namespace Regard.Backend.Downloader
 
             log.LogInformation("Running youtube-dl with arguments: {0}", string.Join(" ", opts));
 
+            int idleTimeoutMs = optionManager.GetGlobal(Options.Ytdl_IdleTimeout) * 60 * 1000;
+
             try
             {
                 await ytdlService.UsingYoutubeDL(ytdl =>
@@ -141,7 +143,8 @@ namespace Regard.Backend.Downloader
                         ProcessStdout,
                         ProcessStderr,
                         timeoutMs: 24 * 3600 * 1000,
-                        cancellationToken: cancellationTokenSrc.Token);
+                        cancellationToken: cancellationTokenSrc.Token,
+                        idleTimeoutMs: idleTimeoutMs);
 
                     if (resultCode != 0)
                         throw new Exception($"videoId={VideoId}: Download failed!\n");

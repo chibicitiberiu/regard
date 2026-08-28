@@ -17,6 +17,13 @@ namespace Regard.Backend.Providers.YouTubeDL
         private readonly ILogger logger;
         private readonly IYoutubeDlService ytdlService;
 
+        // Interactive extraction (the Add-subscription flow has a user waiting) fails fast; background
+        // extraction (sync) can afford to wait. Both retry a couple of times on transient failures.
+        private const int InteractiveTimeoutMs = 45 * 1000;
+        private const int InteractiveRetries = 1;
+        private const int BackgroundTimeoutMs = 5 * 60 * 1000;
+        private const int BackgroundRetries = 2;
+
         public string Id => "YtDL";
 
         public string Name => "YouTubeDL";
@@ -49,7 +56,7 @@ namespace Regard.Backend.Providers.YouTubeDL
                 uri = YouTubeUrlHelper.FixYouTubeChannelUri(uri);
 
                 var info = await ytdlService.UsingYoutubeDL(async ytdl =>
-                    await ytdl.ExtractInformation(uri.ToString(), false));
+                    await ytdl.ExtractInformation(uri.ToString(), false, InteractiveTimeoutMs, retries: InteractiveRetries));
 
                 return info.Type == YoutubeDLWrapper.UrlType.Playlist
                     || info.Type == YoutubeDLWrapper.UrlType.MultiVideo;
@@ -66,7 +73,7 @@ namespace Regard.Backend.Providers.YouTubeDL
             try
             {
                 var info = await ytdlService.UsingYoutubeDL(async ytdl =>
-                    await ytdl.ExtractInformation(video.OriginalUrl, false));
+                    await ytdl.ExtractInformation(video.OriginalUrl, false, InteractiveTimeoutMs, retries: InteractiveRetries));
 
                 return info.Type == YoutubeDLWrapper.UrlType.Video;
 
@@ -89,9 +96,9 @@ namespace Regard.Backend.Providers.YouTubeDL
             // Fixup youtube channel url's (get "uploads" playlist)
             uri = YouTubeUrlHelper.FixYouTubeChannelUri(uri);
 
-            // Running "ExtractInformation" here might be quite slow
-            var info = await ytdlService.UsingYoutubeDL(async ytdl => 
-                await ytdl.ExtractInformation(uri.ToString(), false));
+            // A user is waiting on the Add-subscription modal, so use the short interactive timeout.
+            var info = await ytdlService.UsingYoutubeDL(async ytdl =>
+                await ytdl.ExtractInformation(uri.ToString(), false, InteractiveTimeoutMs, retries: InteractiveRetries));
 
             if (info.Type != YoutubeDLWrapper.UrlType.Playlist && info.Type != YoutubeDLWrapper.UrlType.MultiVideo)
             {
@@ -128,14 +135,10 @@ namespace Regard.Backend.Providers.YouTubeDL
 
         public async IAsyncEnumerable<Video> FetchVideos(Subscription subscription)
         {
-            int tries = 3;
-            UrlInformation info;
-            do
-            {
-                info = await ytdlService.UsingYoutubeDL(async ytdl =>
-                    await ytdl.ExtractInformation(subscription.OriginalUrl, true));
-            }
-            while (info == null && tries-- > 0);
+            // Background work — a longer timeout with a few retries (ExtractInformation throws rather
+            // than returning null, so the retry lives inside it now).
+            UrlInformation info = await ytdlService.UsingYoutubeDL(async ytdl =>
+                await ytdl.ExtractInformation(subscription.OriginalUrl, true, BackgroundTimeoutMs, retries: BackgroundRetries));
 
             if (info == null)
                 throw new Exception("Failed to fetch videos (timed out)!");
@@ -189,8 +192,8 @@ namespace Regard.Backend.Providers.YouTubeDL
         {
             foreach (var video in videos)
             {
-                var info = await ytdlService.UsingYoutubeDL(async ytdl => 
-                    await ytdl.ExtractInformation(video.OriginalUrl, false));
+                var info = await ytdlService.UsingYoutubeDL(async ytdl =>
+                    await ytdl.ExtractInformation(video.OriginalUrl, false, BackgroundTimeoutMs, retries: BackgroundRetries));
 
                 if (updateMetadata)
                 {
