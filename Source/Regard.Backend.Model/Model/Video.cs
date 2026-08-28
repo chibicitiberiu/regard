@@ -45,6 +45,15 @@ namespace Regard.Backend.Model
         /// </summary>
         public bool DownloadSkipped { get; set; } = false;
 
+        /// <summary>
+        /// True when this video's downloaded file had SponsorBlock segments physically cut out
+        /// (yt-dlp --sponsorblock-remove) at download time, so its timeline no longer matches the
+        /// original. Recorded so the in-player Skip never applies original-timeline segments to a file
+        /// that was already cut (which would misalign) — even if the subscription's SponsorBlock settings
+        /// change after the download.
+        /// </summary>
+        public bool SponsorsRemoved { get; set; } = false;
+
         [MaxLength(260)]
         public string DownloadedPath { get; set; }
 

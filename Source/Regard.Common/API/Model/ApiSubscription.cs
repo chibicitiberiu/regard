@@ -53,6 +53,8 @@ namespace Regard.Common.API.Model
 
         public string SubLang { get; set; }
 
+        public string SponsorblockActions { get; set; }
+
         public List<ApiSubscriptionFilter> Filters { get; set; } = new();
     }
 

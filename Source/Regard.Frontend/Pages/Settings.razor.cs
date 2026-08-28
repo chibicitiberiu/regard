@@ -54,6 +54,9 @@ namespace Regard.Frontend.Pages
         // "" = inherit the default template; otherwise a yt-dlp -o path/filename template.
         protected string DownloadPath { get; set; } = string.Empty;
 
+        // Per-category SponsorBlock actions ("category:action" CSV); "" = none.
+        protected string SponsorblockActions { get; set; } = string.Empty;
+
         protected string PatternPreview => PatternPreviewHelper.Render(DownloadPath);
 
         protected bool IsTranscodeTarget =>
@@ -133,6 +136,7 @@ namespace Regard.Frontend.Pages
             SubFormatStr = s.SubFormat ?? string.Empty;
 
             DownloadPath = s.DownloadPath ?? string.Empty;
+            SponsorblockActions = s.SponsorblockActions ?? string.Empty;
         }
 
         private void ToggleCodec(HashSet<string> set, string token, ChangeEventArgs e)
@@ -171,6 +175,7 @@ namespace Regard.Frontend.Pages
                     ? SubLangStr : null,
                 SubFormat = (SubtitlesStr == "on" && !string.IsNullOrEmpty(SubFormatStr)) ? SubFormatStr : null,
                 DownloadPath = string.IsNullOrWhiteSpace(DownloadPath) ? null : DownloadPath,
+                SponsorblockActions = string.IsNullOrWhiteSpace(SponsorblockActions) ? null : SponsorblockActions,
             };
 
             var (resp, httpResp) = await Backend.SaveSettings(request);

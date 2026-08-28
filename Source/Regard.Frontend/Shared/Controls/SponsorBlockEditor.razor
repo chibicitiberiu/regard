@@ -1,0 +1,51 @@
+@using Regard.Common.SponsorBlock
+
+@* Per-category SponsorBlock action table. Two-way binds a "category:action" CSV string (the
+   Sponsorblock_Actions option). YouTube-only feature. Keep = ignore, Chapter = mark (non-destructive),
+   Remove = cut from the file (destructive; yt-dlp re-times subtitles). *@
+
+<div class="sponsorblock-editor">
+    @foreach (var cat in SponsorBlockActions.Categories)
+    {
+        <div class="form-group row sb-row" @key="cat">
+            <label class="col-xs-6 col-form-label">@SponsorBlockActions.Labels[cat]</label>
+            <div class="col-xs-6">
+                <select class="form-control" @onchange="e => SetAction(cat, e.Value?.ToString())">
+                    <option value="Keep" selected="@(GetAction(cat) == "Keep")">Keep</option>
+                    <option value="Chapter" selected="@(GetAction(cat) == "Chapter")">Chapter</option>
+                    <option value="Remove" selected="@(GetAction(cat) == "Remove")">Remove</option>
+                </select>
+            </div>
+        </div>
+    }
+    <p class="text-muted sb-help">
+        <strong>Chapter</strong> marks the segment (non-destructive). <strong>Remove</strong> cuts it from
+        the downloaded file (subtitles are re-timed to match). YouTube only; changing this re-applies on the
+        next download.
+    </p>
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private Dictionary<string, SbAction> map = new();
+
+    protected override void OnParametersSet()
+    {
+        map = SponsorBlockActions.Parse(Value ?? "");
+    }
+
+    private string GetAction(string cat) => map.TryGetValue(cat, out var a) ? a.ToString() : "Keep";
+
+    private async Task SetAction(string cat, string val)
+    {
+        if (Enum.TryParse<SbAction>(val, ignoreCase: true, out var a) && a != SbAction.Keep)
+            map[cat] = a;
+        else
+            map.Remove(cat);
+
+        Value = SponsorBlockActions.Serialize(map);
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

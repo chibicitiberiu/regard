@@ -136,6 +136,12 @@
                  placeholder="best / srt / vtt / ass"
                  autocapitalize="none" />
 
+    <RgFieldWrapper Id="subscription_sponsorblock" Label="SponsorBlock:" Required="false">
+        <Field>
+            <SponsorBlockEditor @bind-Value="Request.SponsorblockActions" />
+        </Field>
+    </RgFieldWrapper>
+
     <div class="form-group row">
         <div class="col-xs-3">
             <label class="col-form-label">Filters:</label>

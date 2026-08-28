@@ -37,6 +37,8 @@ namespace Regard.Common.API.Subscriptions
 
         public string SubLang { get; set; }
 
+        public string SponsorblockActions { get; set; }
+
         public List<Regard.Common.API.Model.ApiSubscriptionFilter> Filters { get; set; } = new();
     }
 }

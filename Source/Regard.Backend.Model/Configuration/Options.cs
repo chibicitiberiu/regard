@@ -430,6 +430,22 @@ namespace Regard.Backend.Configuration
         );
 
         /// <summary>
+        /// Per-SponsorBlock-category action, stored as a CSV of "category:action" pairs where action is
+        /// chapter | remove | skip (an absent category means keep). Example:
+        /// "sponsor:remove,selfpromo:remove,interaction:skip,intro:chapter". YouTube-only. "chapter" and
+        /// "remove" are applied by yt-dlp at download time; "skip" is applied non-destructively in the
+        /// player. Remove and Skip are mutually exclusive (Remove cuts the file, which would misalign the
+        /// player-side Skip timestamps). See Regard.Common.SponsorBlock.SponsorBlockActions.
+        /// </summary>
+        public static readonly OptionDefinition<string> Sponsorblock_Actions = new OptionDefinition<string>(
+            "",
+            "sponsorblock.actions",
+            "Sponsorblock:Actions",
+            null,
+            OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
+        );
+
+        /// <summary>
         /// Allow embedding the source site's player (e.g. YouTube) on the watch page for videos that
         /// aren't downloaded. Off by default for privacy: when off, a non-downloaded video shows a
         /// placeholder with "Download now" and "Watch on the original site" instead of loading a

@@ -11,6 +11,27 @@ namespace Regard.Backend.Common.Utils
     /// </summary>
     public static class VideoEmbedHelper
     {
+        /// <summary>
+        /// True when the video's source is YouTube (by OriginalUrl host). Used to gate YouTube-only
+        /// features (SponsorBlock, ReturnYouTubeDislike). Never throws.
+        /// </summary>
+        public static bool IsYouTube(Video video)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(video?.OriginalUrl))
+                    return false;
+                var host = new Uri(video.OriginalUrl).Host.ToLowerInvariant();
+                if (host.StartsWith("www.")) host = host.Substring(4);
+                if (host.StartsWith("m.")) host = host.Substring(2);
+                return host == "youtube.com" || host == "youtu.be" || host == "youtube-nocookie.com";
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static string GetEmbedUrl(Video video)
         {
             try

@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Regard.Backend.Common.Services;
+using Regard.Backend.Common.Utils;
+using Regard.Common.SponsorBlock;
 using Regard.Backend.DB;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
@@ -201,6 +203,12 @@ namespace Regard.Backend.Downloader
             {
                 video.DownloadedPath = outputPath;
                 video.DownloadedSize = await videoStorage.CalculateSize(video);
+                // Record whether SponsorBlock cut segments out of this file, so the in-player Skip never
+                // trusts original-timeline segments against a shortened file (see Video.SponsorsRemoved).
+                video.SponsorsRemoved = VideoEmbedHelper.IsYouTube(video)
+                    && SponsorBlockActions.CategoriesWith(
+                            optionManager.GetForSubscription(Options.Sponsorblock_Actions, video.SubscriptionId),
+                            SbAction.Remove).Count > 0;
                 await dataContext.SaveChangesAsync();
             }
 
@@ -485,6 +493,41 @@ namespace Regard.Backend.Downloader
                 {
                     yield return "--sub-format";
                     yield return subFormat;
+                }
+            }
+
+            #endregion
+
+            #region SponsorBlock (YouTube only)
+
+            // Chapter/Remove are applied here by yt-dlp; the Skip action is non-destructive and handled
+            // in the player (SponsorSegments enrichment + Watch page), so it's ignored at download time.
+            if (VideoEmbedHelper.IsYouTube(video))
+            {
+                string sbActions = optionManager.GetForSubscription(Options.Sponsorblock_Actions, video.SubscriptionId);
+                var chapterCats = SponsorBlockActions.CategoriesWith(sbActions, SbAction.Chapter);
+                var removeCats = SponsorBlockActions.CategoriesWith(sbActions, SbAction.Remove);
+
+                if (chapterCats.Count > 0)
+                {
+                    yield return "--sponsorblock-mark";
+                    yield return string.Join(",", chapterCats);
+                }
+
+                if (removeCats.Count > 0)
+                {
+                    yield return "--sponsorblock-remove";
+                    yield return string.Join(",", removeCats);
+
+                    // A cut file needs its sidecar subtitles re-timed to match. yt-dlp's ModifyChapters PP
+                    // only re-times formats it can parse (srt/vtt/ass); the default "best" can yield json3
+                    // for auto-subs. If subs are being written, force a convertible format so they stay synced.
+                    if (optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId)
+                        || optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId))
+                    {
+                        yield return "--convert-subs";
+                        yield return "srt";
+                    }
                 }
             }
 

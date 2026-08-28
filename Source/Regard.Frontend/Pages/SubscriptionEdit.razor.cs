@@ -110,6 +110,7 @@ namespace Regard.Frontend.Pages
                     Request.AllSubs = Subscription.Config.AllSubs;
                     Request.SubFormat = Subscription.Config.SubFormat;
                     Request.SubLang = Subscription.Config.SubLang;
+                    Request.SponsorblockActions = Subscription.Config.SponsorblockActions;
                     Request.Filters = Subscription.Config.Filters?.ToList() ?? new();
                     SubmitEnabled = true;
                     ValidationMessage = string.Empty;

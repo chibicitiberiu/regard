@@ -566,6 +566,9 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.Property<float?>("Rating")
                         .HasColumnType("real");
 
+                    b.Property<bool>("SponsorsRemoved")
+                        .HasColumnType("bit");
+
                     b.Property<int>("SubscriptionId")
                         .HasColumnType("int");
 

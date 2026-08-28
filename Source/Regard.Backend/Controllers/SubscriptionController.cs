@@ -233,6 +233,9 @@ namespace Regard.Backend.Controllers
                 if (optionManager.GetForSubscriptionNoResolve(Options.Ytdl_SubLang, sub.Id, out var subLang))
                     sub.Config.SubLang = subLang;
 
+                if (optionManager.GetForSubscriptionNoResolve(Options.Sponsorblock_Actions, sub.Id, out var sbActions))
+                    sub.Config.SponsorblockActions = sbActions;
+
                 sub.Config.Filters = dataContext.SubscriptionFilters
                     .Where(f => f.SubscriptionId == sub.Id)
                     .ToList()
@@ -359,6 +362,10 @@ namespace Regard.Backend.Controllers
             if (!string.IsNullOrEmpty(request.SubLang))
                 optionManager.SetForSubscription(Options.Ytdl_SubLang, request.Id, request.SubLang);
             else optionManager.UnsetForSubscription(Options.Ytdl_SubLang, request.Id);
+
+            if (!string.IsNullOrEmpty(request.SponsorblockActions))
+                optionManager.SetForSubscription(Options.Sponsorblock_Actions, request.Id, request.SponsorblockActions);
+            else optionManager.UnsetForSubscription(Options.Sponsorblock_Actions, request.Id);
 
             // Replace the subscription's title filters (dedicated table, not the option store)
             if (request.Filters != null)
