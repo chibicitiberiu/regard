@@ -40,6 +40,7 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 | **"Import (todo)" menu item did nothing** | Real importer: paste a URL list or upload an OPML export; OPML folder groups are mirrored as Regard folders, YouTube feed URLs are rewritten to channel URLs. Runs as a background job (progress in the bell, per-URL results in the Job Log); a dialog checkbox sets per-sub auto-download, duplicates skipped by default. | `fbb2472` |
 | **No Admin/server settings UI** | New role-gated `/admin` page: allow-registration toggle, global default per-user quotas (max videos + GB), job-history retention, and full user management (list with live usage, promote/demote, enable/disable, per-user quota override, delete via a background teardown job). Quotas made transparent — a Storage & quota panel on Settings, and clear "quota reached" messages in the Job Log when a download is blocked. `disable` now actually blocks login (added a lockout check to the manual login path). | `536c707` |
 | **Subtitle options backend-only** | Subtitle controls now in the UI: a Subtitles section on user Settings (on/off + auto-captions, language mode, format) and the same five as per-subscription overrides on the edit form. Also fixed the yt-dlp arg emission (language/format only when subtitles are on; "all languages" mutually exclusive with a specific list — it was previously overridden by the default `--sub-langs en`). | `db8f188` |
+| **Filename pattern backend-only** | The download path/filename template (`Subscriptions_DownloadPath`, the yt-dlp `-o` template) is now a per-user default on Settings — it was already editable per-subscription. Both surfaces document the tokens (`{DownloadDirectory}`, `{FolderPath}`, `{Subscription.Name}`, `{EpisodeCode}`, `{Video.Name}`, …) and show a live example filename that updates as you type. Verified the user default feeds the real download (`-o …/CUSTOMDIR/S2011E0 - …`). | `170fd3d` |
 
 ---
 
@@ -57,7 +58,6 @@ Legend: **[BUG]** defect · **[UX]** usability · **[MISSING]** unimplemented ·
 
 ## Incomplete / missing functionality (still open)
 
-- **[MISSING] Filename-pattern control** is backend-only (`download_file_pattern`, no UI).
 - **[MISSING] Password reset** (email flow) — logout exists, reset does not.
 
 ## Bugs / UX not yet fixed (recommend)

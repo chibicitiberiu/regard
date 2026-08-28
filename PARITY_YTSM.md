@@ -11,8 +11,9 @@ support). Most of the ytsm gaps have now been closed — **User Settings UI**, *
 **video duration**, **live job-progress notifications + a Job Log**, a **fully functional watch page**
 (embed / watch-on-site / up-next), **subscription import** (OPML + URL list), an **Admin settings +
 user-management surface** (registration toggle, global/per-user quotas, enable/disable, delete), and
-**subtitle options** (user + per-subscription) all shipped (2026-08-27 – 08-28). What remains: a
-**filename-pattern UI** and **password reset**.
+**subtitle options** (user + per-subscription), and a **download path/filename pattern** (user default +
+per-subscription, with token help and a live preview) all shipped (2026-08-27 – 08-28). What remains:
+**password reset**.
 
 Status key: ✅ done · ◻ still open.
 
@@ -55,10 +56,12 @@ Status key: ✅ done · ◻ still open.
    error toasts; a **Job Log** tab in Settings lists all jobs with full per-job logs. Generic across
    job types (download, sync, …), not just downloads — matching ytsm's job panel.
 
-7. **Download format/quality + filename pattern in-UI** — ✅ *format/quality done* / ◻ *filename
-   pattern open*. The Settings page exposes resolution cap, codec excludes, transcode, and a raw
-   override (commit `911731f`). The `download_file_pattern` equivalent is still backend-only. Note
-   the shipped default format is still uncapped (now user-capable via Settings).
+7. **Download format/quality + filename pattern in-UI** — ✅ *both done*. The Settings page exposes
+   resolution cap, codec excludes, transcode, and a raw override (commit `911731f`). The
+   `download_file_pattern` equivalent — Regard's `Subscriptions_DownloadPath`, a combined path+filename
+   template — is now a per-user default on Settings, alongside the existing per-subscription override,
+   both with token help and a live example preview (commit `170fd3d`). Note the shipped default format
+   is still uncapped (now user-capable via Settings).
 
 8. ✅ **Subtitle options in-UI.** Done (commit `db8f188`). Both the user Settings page (a Subtitles
    section: on/off with auto-captions, language mode, and format sub-options) and the per-subscription
@@ -98,6 +101,7 @@ so effectively both rely on an edit form to re-parent.
    quotas (with in-Settings usage transparency + clear download-block messages), and user management
    (promote/demote, enable/disable, delete). Sync-cron/concurrency intentionally excluded.
 7. ✅ ~~Subtitle UI~~ — done (`db8f188`): user Settings + per-subscription, plus the arg-emission fix.
-8. ◻ **Filename-pattern UI** (`download_file_pattern` is still backend-only) — **now the top remaining gap**.
-9. ◻ **Password reset** (email flow).
+8. ✅ ~~Filename-pattern UI~~ — done (`170fd3d`): user-level default on Settings + the existing per-sub
+   override, both with token help and a live example preview.
+9. ◻ **Password reset** (email flow) — **now the last remaining ytsm-parity gap**.
 </content>
