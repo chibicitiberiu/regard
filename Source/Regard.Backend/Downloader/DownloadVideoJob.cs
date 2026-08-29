@@ -117,12 +117,12 @@ namespace Regard.Backend.Downloader
             }
 
             // Deferred: surface a persistent per-video "Queued for download" notification (keyed by video,
-            // so it survives the reschedule cycle) with position / ETA, then reschedule.
+            // so it survives the reschedule cycle) with the queue position. No minute estimate — the wait
+            // is a scheduling artefact, not the download's duration, so "~1 min" only ever misled.
             int pos = hostThrottle.QueuePosition(host, VideoId);
-            int mins = Math.Max(1, (int)Math.Ceiling((retryAt - DateTimeOffset.UtcNow).TotalMinutes));
             string detail = pos > 1
-                ? $"{video.Name} — position {pos} in the {host} queue (~{mins} min)"
-                : $"{video.Name} — pacing {host}, next attempt ~{mins} min";
+                ? $"{video.Name} — position {pos} in the {host} download queue"
+                : $"{video.Name} — waiting for a {host} download slot";
             _ = notificationService.PostOrUpdate(
                 null, QueuedNotificationKey(VideoId),
                 "Queued for download", detail,
