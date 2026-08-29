@@ -34,6 +34,7 @@ namespace Regard.Frontend.Shared.Controls
         ShowWatched,
         HideWatched,
         Queued,
+        DownloadQueued,
         SignOut,
         Admin,
         Home,
@@ -41,6 +42,7 @@ namespace Regard.Frontend.Shared.Controls
         ThumbUp,
         ThumbDown,
         Error,
+        History,
     }
 
     public partial class Icon
@@ -73,6 +75,7 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.ShowWatched, "visibility" },
             { Icons.HideWatched, "visibility_off" },
             { Icons.Queued, "playlist_play" },
+            { Icons.DownloadQueued, "schedule" },
             { Icons.SignOut, "logout" },
             { Icons.Admin, "admin_panel_settings" },
             { Icons.Home, "home" },
@@ -80,6 +83,7 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.ThumbUp, "thumb_up" },
             { Icons.ThumbDown, "thumb_down" },
             { Icons.Error, "error_outline" },
+            { Icons.History, "history" },
         };
 
         [Parameter(CaptureUnmatchedValues = true)]

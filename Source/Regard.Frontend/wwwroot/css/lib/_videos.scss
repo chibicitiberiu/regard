@@ -92,22 +92,49 @@
     position: relative;
     display: block;
     width: 100%;
+
+    // Subtle top-corner scrim so the status icons stay legible over busy/light thumbnails.
+    // Sits above the image but below the badges (which carry z-index:1). Tune the alpha here.
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0) 35%);
+    }
 }
 
 .video-badges {
     position: absolute;
     top: .75em;
     right: .75em;
+    z-index: 1;
     display: flex;
     flex-direction: row;
+    align-items: flex-start;
 }
 
 .video-badges-bottom {
     position: absolute;
     bottom: .75em;
     right: .75em;
+    z-index: 1;
     display: flex;
     flex-direction: row;
+}
+
+// Downloading badge: pie on top, "downloaded" glyph tucked under it (a vertical stack that still
+// sits as one item in the top-right badge row).
+.video-badge-download {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .2em;
+}
+
+.video-badges .video-badge-under-pie {
+    font-size: .8em;
+    padding: .1em;
 }
 
 .video-badge {

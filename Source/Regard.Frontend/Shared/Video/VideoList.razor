@@ -84,10 +84,20 @@ else
                         @{
                             var dl = DownloadNotification(item.ApiVideo.Id);
                         }
-                        @if (dl != null)
+                        @if (dl != null && dl.Progress.HasValue)
                         {
-                            <span class="video-badge video-pie @(dl.Progress.HasValue ? "" : "video-pie-indeterminate")"
-                                  style="@PieStyle(dl.Progress)" title="@PieTitle(dl.Progress)"></span>
+                            // Actively downloading: live pie, with the "downloaded" glyph beneath it so it
+                            // reads as "on its way — watchable soon", not just an anonymous spinner.
+                            <span class="video-badge-download">
+                                <span class="video-badge video-pie"
+                                      style="@PieStyle(dl.Progress)" title="@PieTitle(dl.Progress)"></span>
+                                <Icon Glyph="Icons.Downloaded" Class="video-badge video-badge-under-pie" title="Downloading" />
+                            </span>
+                        }
+                        else if (dl != null)
+                        {
+                            // Queued (ongoing but no progress yet) — a distinct waiting icon, not the pie.
+                            <Icon Glyph="Icons.DownloadQueued" Class="video-badge" title="Queued for download" />
                         }
                         else if (item.ApiVideo.DeleteScheduledAt.HasValue)
                         {
