@@ -107,7 +107,14 @@ namespace Regard.Backend.Jobs
         {
             Job.Progress = fraction;
             Job.Detail = detail;
-            jobTrackerService.OnJobProgress(Job.Id, fraction, detail, GetOngoingNotification());
+            jobTrackerService.OnJobProgress(Job.Id, fraction, detail, GetOngoingNotification(), LogSnapshot());
+        }
+
+        /// <summary>Current captured output as a string (thread-safe), for live streaming to the Job Log.</summary>
+        private string LogSnapshot()
+        {
+            lock (logLock)
+                return logBuffer.Length > 0 ? logBuffer.ToString() : null;
         }
 
         #region User-facing notification hooks

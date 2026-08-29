@@ -50,6 +50,12 @@ namespace Regard.Common.API.Model
         public DateTimeOffset? Completed { get; set; }
 
         /// <summary>
+        /// When a Scheduled/deferred job is next due to run (throttle wait, retry backoff, cron).
+        /// Null for jobs that aren't waiting.
+        /// </summary>
+        public DateTimeOffset? NextRun { get; set; }
+
+        /// <summary>
         /// True while this job can be cancelled by the user (a live download). Drives the bell's
         /// Cancel button. Set from the cancellation registry on each live push.
         /// </summary>

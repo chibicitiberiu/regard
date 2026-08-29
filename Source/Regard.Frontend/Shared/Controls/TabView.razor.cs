@@ -29,6 +29,10 @@ namespace Regard.Frontend.Shared.Controls
         [Parameter]
         public EventCallback ActivePageChanged { get; set; }
 
+        /// <summary>Name of the tab to select initially (matches TabPage.Name); null selects the first tab.</summary>
+        [Parameter]
+        public string ActiveTab { get; set; }
+
         [Parameter]
         public RenderFragment ChildContent { get; set; }
 
@@ -46,10 +50,11 @@ namespace Regard.Frontend.Shared.Controls
         {
             tabs.Add(tab);
 
-            if (SelectedPage == null)
-            {
+            // An explicit ActiveTab match wins over the default (first tab), regardless of registration order.
+            if (ActiveTab != null && tab.Name == ActiveTab)
                 SelectedPage = tab;
-            }
+            else if (SelectedPage == null)
+                SelectedPage = tab;
 
             StateHasChanged();
         }

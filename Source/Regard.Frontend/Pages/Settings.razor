@@ -5,7 +5,7 @@
 <div class="settings-page">
     <h2>Settings</h2>
 
-    <TabView>
+    <TabView ActiveTab="@TabQuery">
         <TabPage>
             <Title>Downloads</Title>
             <Content>
@@ -283,7 +283,7 @@
                 }
             </Content>
         </TabPage>
-        <TabPage>
+        <TabPage Name="joblog">
             <Title>Job Log</Title>
             <Content>
                 <JobLog />

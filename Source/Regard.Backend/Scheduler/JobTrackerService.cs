@@ -3,6 +3,7 @@ using Regard.Backend.Common.Model;
 using Regard.Backend.DB;
 using Regard.Backend.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -59,6 +60,24 @@ namespace Regard.Backend.Services
         private readonly UserLogger userLogger;
         private readonly NotificationService notificationService;
         private readonly DownloadCancellationRegistry cancellationRegistry;
+
+        /// <summary>
+        /// Transient live progress/step/log for currently running jobs. JobInfo.Progress/Detail are
+        /// [NotMapped] and the Log column is only persisted at completion, so this in-memory store is
+        /// what lets the Job Log show live progress and streaming output for a running job. Keyed by
+        /// job id; entries are removed when the job finishes.
+        /// </summary>
+        public sealed class JobLiveState
+        {
+            public float? Progress { get; set; }
+            public string Detail { get; set; }
+            public string Log { get; set; }
+        }
+
+        private readonly ConcurrentDictionary<long, JobLiveState> liveJobs = new();
+
+        /// <summary>Live progress/step/log for a running job, or null if none is tracked.</summary>
+        public JobLiveState GetLive(long jobId) => liveJobs.TryGetValue(jobId, out var s) ? s : null;
 
         public event EventHandler<JobCreatedEventArgs> JobCreated;
         public event EventHandler<JobScheduledEventArgs> JobScheduled;
@@ -165,6 +184,9 @@ namespace Regard.Backend.Services
 
             job.State = JobState.Running;
             job.Started = DateTimeOffset.UtcNow;
+            // Update(): this fresh scope doesn't track `job`, so a plain SaveChanges would persist nothing
+            // and the Job Log would keep showing "Scheduled" for a job that's actually running.
+            dataContext.Jobs.Update(job);
             dataContext.SaveChanges();
 
             // Surface the job as a live "in progress" notification (important jobs only).
@@ -172,7 +194,7 @@ namespace Regard.Backend.Services
             JobStarted?.Invoke(this, new JobStartedEventArgs() { Job = job });
         }
 
-        public void OnJobProgress(long jobId, float progress, string detail = null, JobNotification ongoing = null)
+        public void OnJobProgress(long jobId, float progress, string detail = null, JobNotification ongoing = null, string liveLog = null)
         {
             using var scope = scopeFactory.CreateScope();
             using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
@@ -187,6 +209,14 @@ namespace Regard.Backend.Services
             job.Progress = progress;
             job.Detail = detail;
 
+            // Progress/Detail are [NotMapped] and the Log column only lands at completion, so stash the
+            // live values here for the Job Log to read (see JobLiveState). No DB write — nothing to persist.
+            var live = liveJobs.GetOrAdd(jobId, _ => new JobLiveState());
+            live.Progress = progress;
+            live.Detail = detail;
+            if (liveLog != null)
+                live.Log = liveLog;
+
             PostOngoing(job, ongoing);
             JobProgress?.Invoke(this, new JobProgressEventArgs() { Job = job, Progress = progress });
         }
@@ -199,6 +229,7 @@ namespace Regard.Backend.Services
             job.State = JobState.Completed;
             job.Completed = DateTimeOffset.UtcNow;
             dataContext.SaveChanges();
+            liveJobs.TryRemove(job.Id, out _);
 
             // A finished important job either shows an informative terminal notification (when the job
             // supplied one — e.g. "Download complete", click to open the video) or silently clears its
@@ -227,6 +258,7 @@ namespace Regard.Backend.Services
             job.State = JobState.Cancelled;
             job.Completed = DateTimeOffset.UtcNow;
             dataContext.SaveChanges();
+            liveJobs.TryRemove(job.Id, out _);
 
             userLogger.LogInfo($"{job.Name}: cancelled", userId: job.UserId, jobId: job.Id);
             if (job.Notify)
@@ -242,6 +274,7 @@ namespace Regard.Backend.Services
             job.State = JobState.Failed;
             job.Completed = DateTimeOffset.UtcNow;
             dataContext.SaveChanges();
+            liveJobs.TryRemove(job.Id, out _);
 
             // Keep a Message row for the (vestigial) Messages table; nothing displays it live anymore.
             userLogger.LogError($"{job.Name}: {reason}", details, userId: job.UserId, jobId: job.Id);

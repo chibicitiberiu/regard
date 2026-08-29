@@ -31,10 +31,16 @@
                             {
                                 <div class="np-header">
                                     <span class="np-section-title">Notifications</span>
-                                    @if (Notifications.Notifications.Any(n => !n.Ongoing))
-                                    {
-                                        <button class="button-undecorated np-clear" @onclick="OnClearAll">Clear all</button>
-                                    }
+                                    <div class="np-header-actions">
+                                        <a href="#" class="np-history" title="View job history"
+                                           @onclick="OnHistoryClick" @onclick:preventDefault="true">
+                                            <Icon Glyph="Icons.History" /> History
+                                        </a>
+                                        @if (Notifications.Notifications.Any(n => !n.Ongoing))
+                                        {
+                                            <button class="button-undecorated np-clear" @onclick="OnClearAll">Clear all</button>
+                                        }
+                                    </div>
                                 </div>
                                 <ListView Model="ApiNotification" ItemsSource="Notifications.Notifications" Class="np-list">
                                     <ItemTemplate Context="n">

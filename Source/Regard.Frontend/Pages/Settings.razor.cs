@@ -15,6 +15,10 @@ namespace Regard.Frontend.Pages
     {
         [Inject] protected BackendService Backend { get; set; }
 
+        // Which tab to open, from the URL (?tab=joblog). Null selects the first tab.
+        [Parameter, SupplyParameterFromQuery(Name = "tab")]
+        public string TabQuery { get; set; }
+
         protected ApiThrottleStatus throttle;
         protected bool loading = true;
         protected bool saving = false;

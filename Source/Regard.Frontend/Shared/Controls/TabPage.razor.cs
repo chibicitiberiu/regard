@@ -11,6 +11,10 @@ namespace Regard.Frontend.Shared.Controls
         [Parameter]
         public RenderFragment Title { get; set; }
 
+        /// <summary>Optional stable key so a tab can be selected via TabView.ActiveTab (e.g. a ?tab= link).</summary>
+        [Parameter]
+        public string Name { get; set; }
+
         [Parameter]
         public RenderFragment Content { get; set; }
 

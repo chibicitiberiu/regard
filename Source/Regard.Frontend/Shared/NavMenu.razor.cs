@@ -132,6 +132,12 @@ namespace Regard.Frontend.Shared
             await Backend.ClearNotifications();
         }
 
+        private void OnHistoryClick()
+        {
+            HideAllPanels();
+            NavigationManager.NavigateTo("/settings?tab=joblog");
+        }
+
         public void Dispose()
         {
             Notifications.Notifications.CollectionChanged -= OnNotificationsChanged;

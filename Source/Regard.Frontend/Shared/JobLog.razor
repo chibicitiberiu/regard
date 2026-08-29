@@ -1,4 +1,5 @@
 @using Regard.Common.API.Model
+@implements System.IDisposable
 @inject Regard.Services.BackendService Backend
 
 <div class="job-log">
@@ -33,6 +34,21 @@
                         </td>
                         <td>
                             <span class="job-state job-state-@job.State.ToString().ToLowerInvariant()">@job.State</span>
+                            @if (job.State == ApiJobState.Running)
+                            {
+                                @if (!string.IsNullOrEmpty(job.Detail))
+                                {
+                                    <div class="job-state-sub">@job.Detail</div>
+                                }
+                                <div class="progress-bar job-state-progress">
+                                    <div class="progress-bar-fill @(job.Progress.HasValue ? "" : "indeterminate")"
+                                         style="@ProgressWidth(job)"></div>
+                                </div>
+                            }
+                            else if (job.State == ApiJobState.Scheduled && FormatNextRun(job.NextRun) is string when)
+                            {
+                                <div class="job-state-sub">@when</div>
+                            }
                         </td>
                         <td>@FormatTime(job.Started)</td>
                         <td>@FormatDuration(job)</td>
@@ -51,40 +67,89 @@
 
 @code {
     private const int take = 20;
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(3);
 
     private ApiJobInfo[] jobs = System.Array.Empty<ApiJobInfo>();
     private readonly Dictionary<long, string> logs = new();
+    private readonly HashSet<long> expanded = new();
     private int skip = 0;
     private int total = 0;
     private bool loading = true;
+    private System.Threading.CancellationTokenSource cts;
 
     protected override async Task OnInitializedAsync()
     {
         await Load();
+        _ = PollLoop();
+    }
+
+    // Poll while the Job Log is open so running jobs show live progress/logs and scheduled jobs' ETA
+    // ticks down, without a full SignalR subscription. Stops when the component is disposed.
+    private async Task PollLoop()
+    {
+        cts = new System.Threading.CancellationTokenSource();
+        try
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                await Task.Delay(RefreshInterval, cts.Token);
+                await Refresh();
+            }
+        }
+        catch (TaskCanceledException) { /* disposed */ }
     }
 
     private async Task Load()
     {
         loading = true;
+        logs.Clear();
+        expanded.Clear();
+        await FetchPage();
+        loading = false;
+    }
+
+    // Silent reload of the current page (no loading flicker) + live log refresh for open running jobs.
+    private async Task Refresh()
+    {
+        await FetchPage();
+        foreach (var id in expanded)
+        {
+            var job = System.Array.Find(jobs, j => j.Id == id);
+            if (job != null && job.State == ApiJobState.Running)
+                await FetchLog(id);
+        }
+        StateHasChanged();
+    }
+
+    private async Task FetchPage()
+    {
         var resp = await Backend.GetJobs(skip, take);
         var data = resp?.Data;
         jobs = data?.Jobs ?? System.Array.Empty<ApiJobInfo>();
         total = data?.Total ?? 0;
-        logs.Clear();
-        loading = false;
     }
 
     private async Task OnToggle(ApiJobInfo job)
     {
-        if (logs.ContainsKey(job.Id))
-            return;
+        // <details> ontoggle fires on both open and close; flip our tracked open-set accordingly.
+        if (expanded.Remove(job.Id))
+            return;   // was open, now closed
 
-        var resp = await Backend.GetJobLog(job.Id);
-        logs[job.Id] = string.IsNullOrEmpty(resp?.Data?.Log) ? "(no output captured)" : resp.Data.Log;
+        expanded.Add(job.Id);
+        await FetchLog(job.Id);
         StateHasChanged();
     }
 
+    private async Task FetchLog(long id)
+    {
+        var resp = await Backend.GetJobLog(id);
+        logs[id] = string.IsNullOrEmpty(resp?.Data?.Log) ? "(no output captured)" : resp.Data.Log;
+    }
+
     private string LogFor(long id) => logs.TryGetValue(id, out var log) ? log : "Loading…";
+
+    private string ProgressWidth(ApiJobInfo job)
+        => job.Progress.HasValue ? $"width: {job.Progress.Value * 100:0.#}%" : string.Empty;
 
     private async Task Prev()
     {
@@ -103,6 +168,18 @@
     private static string FormatTime(System.DateTimeOffset? time)
         => time.HasValue ? time.Value.LocalDateTime.ToString("g") : "—";
 
+    // Relative "when it runs" for a scheduled/deferred job: "due now", "in 5m", "in 2h 10m".
+    private static string FormatNextRun(System.DateTimeOffset? next)
+    {
+        if (!next.HasValue)
+            return null;
+        var d = next.Value - System.DateTimeOffset.UtcNow;
+        if (d.TotalSeconds <= 0) return "due now";
+        if (d.TotalHours >= 1) return $"in {(int)d.TotalHours}h {d.Minutes}m";
+        if (d.TotalMinutes >= 1) return $"in {d.Minutes}m";
+        return $"in {d.Seconds}s";
+    }
+
     private static string FormatDuration(ApiJobInfo job)
     {
         if (!job.Started.HasValue)
@@ -113,5 +190,11 @@
         return d.TotalHours >= 1
             ? $"{(int)d.TotalHours}h {d.Minutes}m"
             : (d.TotalMinutes >= 1 ? $"{d.Minutes}m {d.Seconds}s" : $"{d.Seconds}s");
+    }
+
+    public void Dispose()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
     }
 }
