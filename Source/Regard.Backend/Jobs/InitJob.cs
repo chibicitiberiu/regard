@@ -86,6 +86,53 @@ namespace Regard.Backend.Jobs
 
             await ytdlService.Initialize();
 
+            // Reconcile jobs stranded by the restart. Quartz's trigger store is in-memory, so any job left
+            // non-terminal (Created/Scheduled/Running) has no trigger to fire it — it would sit "Scheduled"
+            // forever. Resume the types that opt in ([ResumeAfterRestart]: downloads, imports, deletions,
+            // account deletion) from their persisted row; abandon the rest (the recurring/maintenance jobs
+            // re-scheduled fresh just below cover them anyway). Runs BEFORE the recurring re-schedule so a
+            // previous run's stale recurring row is abandoned before its replacement is created.
+            try
+            {
+                var orphans = jobTracker.GetOrphanedJobs();
+                if (orphans.Count > 0)
+                {
+                    int resumed = 0, abandoned = 0;
+                    foreach (var job in orphans)
+                    {
+                        try
+                        {
+                            if (await scheduler.TryResume(job))
+                                resumed++;
+                            else
+                            {
+                                jobTracker.AbandonJob(job, "Interrupted by server restart; not resumed.");
+                                abandoned++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            log.LogError(ex, "Failed to resume job {0} ({1}); abandoning it.", job.Id, job.Name);
+                            try
+                            {
+                                jobTracker.AbandonJob(job, "Interrupted by server restart; resume failed.");
+                                abandoned++;
+                            }
+                            catch (Exception ex2)
+                            {
+                                log.LogError(ex2, "Failed to abandon job {0}.", job.Id);
+                            }
+                        }
+                    }
+                    log.LogInformation("Reconciled {0} orphaned job(s) after restart: {1} resumed, {2} abandoned.",
+                        orphans.Count, resumed, abandoned);
+                }
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Failed to reconcile orphaned jobs after restart.");
+            }
+
             // Create basic jobs
             await SynchronizeJob.ScheduleGlobal(scheduler, configuration["SynchronizationSchedule"]);
             await YoutubeDLUpdateJob.Schedule(scheduler, DateTimeOffset.Now.AddSeconds(10), TimeSpan.FromDays(1));

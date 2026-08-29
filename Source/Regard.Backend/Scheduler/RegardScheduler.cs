@@ -6,6 +6,8 @@ using Regard.Backend.Downloader;
 using Regard.Backend.Jobs;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Regard.Backend.Services
@@ -17,6 +19,16 @@ namespace Regard.Backend.Services
         private readonly JobTrackerService jobTrackerService;
 
         private IScheduler quartz;
+
+        // Job types that opt in to being re-enqueued after a restart, via [ResumeAfterRestart], discovered
+        // once. Keyed by type name — which is exactly what JobInfo.Key stores (see Schedule below) and the
+        // durable Quartz JobKey. Anything not here is abandoned by the startup reconciliation sweep.
+        private static readonly Dictionary<string, Type> resumableJobTypes =
+            typeof(JobBase).Assembly.GetTypes()
+                .Where(t => !t.IsAbstract
+                         && typeof(JobBase).IsAssignableFrom(t)
+                         && t.GetCustomAttribute<ResumeAfterRestartAttribute>(inherit: true) != null)
+                .ToDictionary(t => t.Name, t => t);
 
         // "Important" job types that surface live in the notification bell. Everything else is
         // tracked + logged but stays out of the bell. Flip a type in/out here to change the policy.
@@ -167,6 +179,41 @@ namespace Regard.Backend.Services
                                   jobData: jobData,
                                   retryCount: retryCount,
                                   retryIntervalSecs: retryIntervalSecs);
+        }
+
+        /// <summary>
+        /// Re-enqueues an orphaned job (left non-terminal by a restart, since Quartz uses an in-memory
+        /// store) from its persisted row — reusing the same JobInfo, so its history/RetryCount/JobData
+        /// carry over. Only types opted in via <see cref="ResumeAfterRestartAttribute"/> are resumed;
+        /// returns false for anything else (unmarked type, unknown/null Key) so the caller can abandon it.
+        /// </summary>
+        public async Task<bool> TryResume(JobInfo job)
+        {
+            if (job.Key == null || !resumableJobTypes.TryGetValue(job.Key, out var jobType))
+                return false;
+
+            await GetQuartz();
+
+            // Rebuild the durable job (the in-memory store dropped it on restart), then fire it now. The
+            // trigger carries only JobId; JobBase.Execute reloads the payload from JobInfo.JobData.
+            var jobKey = JobKey.Create(job.Key);
+            if (!await quartz.CheckExists(jobKey))
+            {
+                await quartz.AddJob(JobBuilder.Create(jobType)
+                    .WithIdentity(jobKey)
+                    .StoreDurably(true)
+                    .Build(), true);
+            }
+
+            var trigger = TriggerBuilder.Create()
+                .ForJob(jobKey)
+                .UsingJobData("JobId", job.Id)
+                .StartNow()
+                .Build();
+
+            var nextRun = await quartz.ScheduleJob(trigger);
+            jobTrackerService.OnJobScheduled(job, nextRun);
+            return true;
         }
 
     }

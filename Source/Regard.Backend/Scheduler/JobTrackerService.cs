@@ -314,6 +314,48 @@ namespace Regard.Backend.Services
             JobFailed?.Invoke(this, new JobFailedEventArgs() { Job = job, Reason = reason, Details = details });
         }
 
+        /// <summary>
+        /// Jobs left in a non-terminal state (Created/Scheduled/Running). After a restart these are
+        /// orphans — Quartz's in-memory store dropped their triggers, so nothing will ever fire them.
+        /// The startup reconciliation sweep (InitJob) resumes or abandons each one.
+        /// </summary>
+        public IReadOnlyList<JobInfo> GetOrphanedJobs()
+        {
+            using var scope = scopeFactory.CreateScope();
+            using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+
+            return dataContext.Jobs
+                .Where(j => j.State == JobState.Created
+                         || j.State == JobState.Scheduled
+                         || j.State == JobState.Running)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Marks an orphaned job terminal (Cancelled) with a note, for jobs that shouldn't be resumed
+        /// after a restart (a fresh periodic run covers them). Writes the row directly — it deliberately
+        /// does NOT raise JobFailed, so this never triggers a retry.
+        /// </summary>
+        public void AbandonJob(JobInfo job, string reason)
+        {
+            using var scope = scopeFactory.CreateScope();
+            using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+
+            job.State = JobState.Cancelled;
+            job.Completed = DateTimeOffset.UtcNow;
+            if (!string.IsNullOrEmpty(reason))
+                job.Log = string.IsNullOrEmpty(job.Log) ? reason : job.Log + "\n" + reason;
+
+            // Update(): this fresh scope doesn't track `job` (loaded in GetOrphanedJobs' disposed scope).
+            dataContext.Jobs.Update(job);
+            dataContext.SaveChanges();
+            liveJobs.TryRemove(job.Id, out _);
+
+            // Drop any leftover in-progress card (ClearStaleOngoing usually beat us to it; be safe).
+            if (job.Notify)
+                _ = notificationService.Remove(job.UserId, NotificationKey(job));
+        }
+
         private static int ReadInitialRetry(JobInfo job)
         {
             try

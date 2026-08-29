@@ -27,6 +27,9 @@ using Regard.Backend.Configuration;
 
 namespace Regard.Backend.Downloader
 {
+    // Resume after a restart: one-off, tied to a specific video, and idempotent (no-ops if the file is
+    // already present). A stranded download otherwise waits for the next global sync to re-queue it.
+    [ResumeAfterRestart]
     public class DownloadVideoJob : JobBase
     {
         protected readonly IConfiguration configuration;
@@ -194,8 +197,11 @@ namespace Regard.Backend.Downloader
 
             if (video.DownloadedPath != null)
             {
-                Job.RetryCount = 0;
-                throw new ArgumentException($"Download failed - video {VideoId} is already downloaded!");
+                // Already downloaded (a duplicate schedule, or it got fetched between queueing and running).
+                // Nothing to do — succeed quietly instead of failing the job.
+                JobLog($"Video {VideoId} is already downloaded — nothing to do.");
+                log.LogInformation("videoId={0}: already downloaded, skipping (no-op)", VideoId);
+                return;
             }
 
             // Proceeding (throttle slot reserved): clear any "Queued for download" card — the job's live

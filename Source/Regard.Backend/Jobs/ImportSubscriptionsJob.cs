@@ -19,6 +19,9 @@ namespace Regard.Backend.Jobs
     /// live progress in the bell and per-URL results in the Job Log. One slow (network-bound) add per
     /// feed; runs serially under the single Quartz worker.
     /// </summary>
+    // Resume after a restart: no periodic backstop re-runs an import, and a re-run skips feeds already
+    // added (DuplicateSubscriptionException), so finishing an interrupted import from its row is safe.
+    [ResumeAfterRestart]
     public class ImportSubscriptionsJob : JobBase
     {
         public static readonly string Data_Tree = "Tree";

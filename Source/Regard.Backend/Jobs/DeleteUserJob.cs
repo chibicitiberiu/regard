@@ -22,6 +22,9 @@ namespace Regard.Backend.Jobs
     /// remaining options/messages/job history). Doing it all in one job execution avoids any
     /// cross-job sequencing under the single Quartz worker.
     /// </summary>
+    // Resume after a restart: no periodic backstop, and the ordered teardown re-checks the account and
+    // each step is a plain delete, so re-running from the row finishes an interrupted account deletion.
+    [ResumeAfterRestart]
     public class DeleteUserJob : JobBase
     {
         public static readonly string Data_TargetUserId = "TargetUserId";

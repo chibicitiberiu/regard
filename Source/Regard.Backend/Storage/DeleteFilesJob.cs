@@ -13,6 +13,10 @@ using System.Threading.Tasks;
 
 namespace Regard.Backend.Jobs
 {
+    // Resume after a restart (inherited by the watched/subscription/folder subclasses): file deletions
+    // are idempotent — each run filters to videos that still have a DownloadedPath, so a re-run skips
+    // what a prior partial run already removed. The user asked for pending deletions to be processed.
+    [ResumeAfterRestart]
     public class DeleteFilesJob : JobBase
     {
         protected static readonly string Data_VideoIds = nameof(VideoIds);
