@@ -49,9 +49,26 @@
 
 .np-header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+}
+.np-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.np-history {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--color-fg-secondary);
+    text-decoration: none;
+    padding: 0.5rem 0.5rem 0.25rem;
+
+    .material-icons { font-size: 1rem; }
+    &:hover { color: var(--color-fg); }
 }
 .np-clear {
     font-size: 0.8rem;
@@ -192,3 +209,18 @@
 .job-state-failed { background-color: var(--color-bg-error); color: var(--color-fg-error); }
 .job-state-scheduled,
 .job-state-created { background-color: var(--color-bg-secondary); color: var(--color-fg-secondary); }
+
+// Live sub-line under a running/scheduled job's state chip (current step, or "in 5m").
+.job-state-sub {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--color-fg-secondary);
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.job-state-progress {
+    margin-top: 0.25rem;
+    max-width: 12rem;
+}
