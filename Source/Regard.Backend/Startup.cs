@@ -151,6 +151,7 @@ namespace Regard.Backend
             services.AddSingleton<NotificationService>();
             services.AddSingleton<DownloadCancellationRegistry>();
             services.AddSingleton<HostThrottle>();
+            services.AddHostedService<JobRetryService>();   // singleton: failed-job retries (see JobRetryService)
             services.AddSingleton<UserLogger>();
 
             services.AddHttpClient<SponsorBlockClient>(c =>

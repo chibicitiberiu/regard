@@ -19,14 +19,17 @@ namespace Regard.Backend.Services
         private readonly YoutubeDLManager ytdlManager;
         private readonly AsyncReaderWriterLock ytdlLock = new AsyncReaderWriterLock();
         private readonly IServiceScopeFactory scopeFactory;
+        private readonly HostThrottle hostThrottle;
         private YoutubeDL ytdl = null;
 
         public Version CurrentVersion { get; private set; }
 
-        public YoutubeDLService(ILoggerFactory logFactory, IConfiguration configuration, IServiceScopeFactory scopeFactory)
+        public YoutubeDLService(ILoggerFactory logFactory, IConfiguration configuration,
+                                IServiceScopeFactory scopeFactory, HostThrottle hostThrottle)
         {
             log = logFactory.CreateLogger<YoutubeDLService>();
             this.scopeFactory = scopeFactory;
+            this.hostThrottle = hostThrottle;
             ytdlManager = new YoutubeDLManager(logFactory)
             {
                 StorePath = configuration["DataDirectory"],
@@ -101,5 +104,7 @@ namespace Regard.Backend.Services
             var optionManager = scope.ServiceProvider.GetRequiredService<IOptionManager>();
             return YtdlAntibotArgs.Build(optionManager);
         }
+
+        public Task PaceExtractionAsync(string host) => hostThrottle.PaceExtractionAsync(host);
     }
 }

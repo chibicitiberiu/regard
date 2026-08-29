@@ -10,12 +10,11 @@ using System.Threading.Tasks;
 
 namespace Regard.Backend.Services
 {
-    public class RegardScheduler : IDisposable
+    public class RegardScheduler
     {
         private readonly ILogger log;
         private readonly ISchedulerFactory schedulerFactory;
         private readonly JobTrackerService jobTrackerService;
-        private readonly DataContext dataContext;
 
         private IScheduler quartz;
 
@@ -31,19 +30,13 @@ namespace Regard.Backend.Services
 
         public RegardScheduler(ILogger<RegardScheduler> log,
                                ISchedulerFactory schedulerFactory,
-                               JobTrackerService jobTrackerService,
-                               DataContext dataContext)
+                               JobTrackerService jobTrackerService)
         {
             this.log = log;
             this.schedulerFactory = schedulerFactory;
             this.jobTrackerService = jobTrackerService;
-            this.dataContext = dataContext;
-            jobTrackerService.JobFailed += JobTrackerService_JobFailed;
-        }
-
-        public void Dispose()
-        {
-            jobTrackerService.JobFailed -= JobTrackerService_JobFailed;
+            // Failed-job retries are handled by the singleton JobRetryService (this scheduler is scoped;
+            // subscribing here would multiply handlers once the job pool is > 1).
         }
 
         private async Task GetQuartz()
@@ -176,45 +169,5 @@ namespace Regard.Backend.Services
                                   retryIntervalSecs: retryIntervalSecs);
         }
 
-        private async void JobTrackerService_JobFailed(object sender, JobFailedEventArgs e)
-        {
-            // async void: an unhandled exception here would crash the process, so guard it.
-            try
-            {
-                if (e.Job.RetryCount > 0)
-                    await ScheduleJobRetry(e.Job);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"RegardScheduler: failed to schedule job retry: {ex.Message}");
-            }
-        }
-
-        private async Task ScheduleJobRetry(JobInfo job)
-        {
-            job.RetryCount--;
-            dataContext.SaveChanges();
-
-            try
-            {
-                await GetQuartz();
-
-                var jobKey = JobKey.Create(job.Key);
-
-                var trigger = TriggerBuilder.Create()
-                    .ForJob(jobKey)
-                    .UsingJobData("JobId", job.Id)
-                    .StartAt(DateTimeOffset.Now.AddSeconds(job.RetryInterval))
-                    .Build();
-
-                var nextRun = await quartz.ScheduleJob(trigger);
-                jobTrackerService.OnJobScheduled(job, nextRun);
-            }
-            catch (Exception ex)
-            {
-                log.LogError(ex, "Error creating job");
-                jobTrackerService.OnJobFailed(job, "Job creation failed", "Check logs for more information.");
-            }
-        }
     }
 }

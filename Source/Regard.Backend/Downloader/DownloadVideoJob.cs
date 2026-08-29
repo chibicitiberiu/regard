@@ -135,6 +135,9 @@ namespace Regard.Backend.Downloader
                 hostThrottle.ReleaseDownload(reservedHost);
                 reservedHost = null;
             }
+            // A download attempt ran to completion — clear the dedup flag so this video can be scheduled
+            // again later. (Deferred/rescheduled runs don't reach here, so they stay "known" while pending.)
+            hostThrottle.ClearKnown(VideoId);
         }
 
         public static Task Schedule(RegardScheduler scheduler, Video video)

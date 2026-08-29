@@ -23,6 +23,7 @@ namespace Regard.Backend.Downloader
         private readonly IOptionManager optionManager;
         private readonly RegardScheduler scheduler;
         private readonly UserQuotaService userQuotaService;
+        private readonly HostThrottle hostThrottle;
         private static readonly IDictionary<int, VideoState> videos = new Dictionary<int, VideoState>();
         private static event EventHandler<VideoDownloadStateChangedEventArgs> videoStateChanged;
 
@@ -38,12 +39,14 @@ namespace Regard.Backend.Downloader
         public VideoDownloaderService(DataContext dataContext,
                                       IOptionManager optionManager,
                                       RegardScheduler scheduler,
-                                      UserQuotaService userQuotaService)
+                                      UserQuotaService userQuotaService,
+                                      HostThrottle hostThrottle)
         {
             this.dataContext = dataContext;
             this.optionManager = optionManager;
             this.scheduler = scheduler;
             this.userQuotaService = userQuotaService;
+            this.hostThrottle = hostThrottle;
             //this.scheduler.ScheduledVideoDownload += OnVideoQueued;
         }
 
@@ -208,7 +211,14 @@ namespace Regard.Backend.Downloader
                 return;
 
             foreach (var video in downloadCandidates)
+            {
+                // Dedup: skip a video that already has a pending/in-flight download (e.g. a sync re-run
+                // while an earlier deferred download is still queued). Cleared when the attempt completes.
+                if (hostThrottle.IsKnown(video.Id))
+                    continue;
+                hostThrottle.MarkKnown(video.Id);
                 await DownloadVideoJob.Schedule(scheduler, video);
+            }
         }
     }
 }

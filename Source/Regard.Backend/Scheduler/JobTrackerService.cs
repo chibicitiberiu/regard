@@ -146,6 +146,10 @@ namespace Regard.Backend.Services
 
             job.State = JobState.Scheduled;
             job.NextRun = nextRun;
+            // Update(): this fresh scope doesn't track `job` (it was created in the caller's scope), so a
+            // plain SaveChanges would persist nothing — including job.Key, without which ScheduleJobRetry
+            // and any Quartz JobKey lookup throw "Name cannot be null".
+            dataContext.Jobs.Update(job);
             dataContext.SaveChanges();
 
             JobScheduled?.Invoke(this, new JobScheduledEventArgs() { Job = job, NextRun = nextRun });

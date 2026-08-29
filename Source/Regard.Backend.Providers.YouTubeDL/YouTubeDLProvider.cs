@@ -55,6 +55,7 @@ namespace Regard.Backend.Providers.YouTubeDL
             {
                 uri = YouTubeUrlHelper.FixYouTubeChannelUri(uri);
 
+                await ytdlService.PaceExtractionAsync(UrlHostKey.Of(uri.ToString()));
                 var info = await ytdlService.UsingYoutubeDL(async ytdl =>
                     await ytdl.ExtractInformation(uri.ToString(), false, InteractiveTimeoutMs, retries: InteractiveRetries, extraArgs: ytdlService.GetAntibotArgs()));
 
@@ -72,6 +73,7 @@ namespace Regard.Backend.Providers.YouTubeDL
         {
             try
             {
+                await ytdlService.PaceExtractionAsync(UrlHostKey.Of(video.OriginalUrl));
                 var info = await ytdlService.UsingYoutubeDL(async ytdl =>
                     await ytdl.ExtractInformation(video.OriginalUrl, false, InteractiveTimeoutMs, retries: InteractiveRetries, extraArgs: ytdlService.GetAntibotArgs()));
 
@@ -97,6 +99,7 @@ namespace Regard.Backend.Providers.YouTubeDL
             uri = YouTubeUrlHelper.FixYouTubeChannelUri(uri);
 
             // A user is waiting on the Add-subscription modal, so use the short interactive timeout.
+            await ytdlService.PaceExtractionAsync(UrlHostKey.Of(uri.ToString()));
             var info = await ytdlService.UsingYoutubeDL(async ytdl =>
                 await ytdl.ExtractInformation(uri.ToString(), false, InteractiveTimeoutMs, retries: InteractiveRetries, extraArgs: ytdlService.GetAntibotArgs()));
 
@@ -139,6 +142,7 @@ namespace Regard.Backend.Providers.YouTubeDL
             // quickly, newest-first, without a full per-video extraction. Full metadata (duration,
             // description, published date, rating) is filled in later by the sync job — eagerly for the
             // newest few, lazily for the rest. Background timeout + retries.
+            await ytdlService.PaceExtractionAsync(UrlHostKey.Of(subscription.OriginalUrl));
             UrlInformation info = await ytdlService.UsingYoutubeDL(async ytdl =>
                 await ytdl.ExtractInformation(subscription.OriginalUrl, false, BackgroundTimeoutMs, retries: BackgroundRetries, extraArgs: ytdlService.GetAntibotArgs()));
 
@@ -200,6 +204,7 @@ namespace Regard.Backend.Providers.YouTubeDL
         {
             foreach (var video in videos)
             {
+                await ytdlService.PaceExtractionAsync(UrlHostKey.Of(video.OriginalUrl));
                 var info = await ytdlService.UsingYoutubeDL(async ytdl =>
                     await ytdl.ExtractInformation(video.OriginalUrl, false, BackgroundTimeoutMs, retries: BackgroundRetries, extraArgs: ytdlService.GetAntibotArgs()));
 

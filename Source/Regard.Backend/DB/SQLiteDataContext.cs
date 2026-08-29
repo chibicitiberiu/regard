@@ -30,6 +30,35 @@ namespace Regard.Backend.DB
             optionsBuilder.UseSqlite(connectionString);
             optionsBuilder.AddInterceptors(SqlitePragmaInterceptor.Instance);
         }
+
+        // Retry SQLITE_BUSY/LOCKED as a backstop to the 30s busy_timeout pragma (which handles the common
+        // case): once the job pool is > 1, concurrent writers can, pathologically, exceed the timeout.
+        private static bool IsBusy(Exception ex)
+        {
+            for (var e = ex; e != null; e = e.InnerException)
+                if (e is Microsoft.Data.Sqlite.SqliteException se && (se.SqliteErrorCode == 5 || se.SqliteErrorCode == 6))
+                    return true;
+            return false;
+        }
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                try { return base.SaveChanges(acceptAllChangesOnSuccess); }
+                catch (Exception ex) when (IsBusy(ex) && attempt < 2) { System.Threading.Thread.Sleep(150 * (attempt + 1)); }
+            }
+        }
+
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess,
+            System.Threading.CancellationToken cancellationToken = default)
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                try { return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken); }
+                catch (Exception ex) when (IsBusy(ex) && attempt < 2) { await Task.Delay(150 * (attempt + 1), cancellationToken); }
+            }
+        }
     }
 
     public class SQLiteDataContextFactory : IDesignTimeDbContextFactory<SQLiteDataContext>

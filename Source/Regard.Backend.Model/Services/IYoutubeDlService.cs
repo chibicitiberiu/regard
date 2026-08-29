@@ -24,5 +24,8 @@ namespace Regard.Backend.Common.Services
         /// call — never shared instance state.
         /// </summary>
         IReadOnlyList<string> GetAntibotArgs();
+
+        /// <summary>Short per-host pace before a metadata extraction (download throttling). No-op when disabled.</summary>
+        Task PaceExtractionAsync(string host);
     }
 }
