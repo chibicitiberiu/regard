@@ -17,6 +17,16 @@
     }
 }
 
+// SubscriptionEdit/FolderEdit render an EditForm (a <form>). A legacy `.player-view form` rule
+// (style.scss) turns any form in the main pane into its own scroll box with a 30px margin — a nested
+// scrollbar inside the card. Inside a .settings-page we don't want that: let the form flow and scroll
+// with the main .player-view pane. Higher specificity (.player-view .settings-page form) so it wins.
+.player-view .settings-page form {
+    max-height: none;
+    overflow: visible;
+    margin: 0;
+}
+
 // Card. A soft panel so each group of settings reads as its own block on the dark background.
 .settings-section {
     background: var(--color-bg-window);
