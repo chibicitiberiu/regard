@@ -142,7 +142,7 @@ namespace Regard.Backend.Configuration
         /// mark the video as watched so it isn't re-downloaded.
         /// </summary>
         public static readonly OptionDefinition<bool> Subscriptions_MarkDeletedAsWatched = new OptionDefinition<bool>(
-            true,
+            false,
             "subscriptions.mark_deleted_as_watched",
             "Subscriptions:MarkDeletedAsWatched",
             null,
