@@ -64,7 +64,13 @@
     width: 0.55em;
     height: 0.55em;
     border-radius: 50%;
-    background-color: var(--color-bg-success);
+    // Coloured by NotificationsService.DotState (see NavMenu.razor): a freshly-finished job is green,
+    // work still in flight is cyan, an unseen error/warning is yellow. Default is the finished/green case.
+    background-color: $neon-green-glow;
     box-shadow: 0 0 0 2px var(--color-bg-window, rgba(0, 0, 0, 0.4));
     pointer-events: none;
+
+    &--pending { background-color: $neon-cyan-glow; }
+    &--attention { background-color: $neon-yellow-glow; }
+    &--success { background-color: $neon-green-glow; }
 }

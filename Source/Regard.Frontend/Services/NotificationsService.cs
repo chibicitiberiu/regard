@@ -34,6 +34,26 @@ namespace Regard.Frontend.Services
         /// <summary>The bell lights up while anything is in flight, or there are unseen notifications.</summary>
         public bool HasActivity => Notifications.Any(n => n.Ongoing) || Notifications.Any(n => n.Id > LastSeenId);
 
+        /// <summary>
+        /// What the bell dot should say, by priority: an unseen error/warning (Attention) outranks work
+        /// still in flight (Pending), which outranks a freshly-finished unseen job (Success). None ⇔
+        /// !HasActivity, so this only refines the colour — it never shows a dot the old gate wouldn't.
+        /// </summary>
+        public NotifDotState DotState
+        {
+            get
+            {
+                if (Notifications.Any(n => n.Id > LastSeenId
+                        && (n.Severity == ApiNotificationSeverity.Error || n.Severity == ApiNotificationSeverity.Warning)))
+                    return NotifDotState.Attention;
+                if (Notifications.Any(n => n.Ongoing))
+                    return NotifDotState.Pending;
+                if (Notifications.Any(n => n.Id > LastSeenId))
+                    return NotifDotState.Success;
+                return NotifDotState.None;
+            }
+        }
+
         public NotificationsService(MessagingService messaging)
         {
             messaging.NotificationReceived += OnNotificationReceived;
@@ -174,6 +194,9 @@ namespace Regard.Frontend.Services
             _ => ApiMessageSeverity.Info,
         };
     }
+
+    /// <summary>Severity of the unread bell dot, mapped to a colour in <c>_nav.scss</c>.</summary>
+    public enum NotifDotState { None, Success, Pending, Attention }
 
     public class ToastItem
     {

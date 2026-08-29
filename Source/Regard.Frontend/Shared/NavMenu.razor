@@ -15,7 +15,7 @@
                         <Icon Glyph="Icons.NotificationsFull" />
                         @if (HaveNotifications)
                         {
-                            <span class="notif-dot"></span>
+                            <span class="notif-dot notif-dot--@Notifications.DotState.ToString().ToLowerInvariant()"></span>
                         }
                     </a>
                     <DropDownPanel @bind-IsVisible="NotificationsPanelVisible"
