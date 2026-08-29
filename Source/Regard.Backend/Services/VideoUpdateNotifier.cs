@@ -47,5 +47,25 @@ namespace Regard.Backend.Services
                 log.LogWarning(ex, "Failed to broadcast video-updated for video {0}", video.Id);
             }
         }
+
+        /// <summary>
+        /// Tell the owning user's clients that a subscription's video set changed (added/imported), so an
+        /// open listing refetches. Coarse on purpose — a sync that adds many videos sends one of these.
+        /// </summary>
+        public async Task NotifyVideosChanged(int subscriptionId, string userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+                return;
+
+            try
+            {
+                await hub.Clients.User(userId).NotifyVideosChanged(subscriptionId);
+                log.LogInformation("Broadcast videos-changed: subscription {0} to user {1}", subscriptionId, userId);
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "Failed to broadcast videos-changed for subscription {0}", subscriptionId);
+            }
+        }
     }
 }

@@ -125,6 +125,7 @@ namespace Regard.Frontend.Shared.Video
         {
             await base.OnInitializedAsync();
             Messaging.VideoUpdated += Messaging_VideoUpdated;
+            Messaging.VideosChanged += Messaging_VideosChanged;
             Notifications.ActivityChanged += OnNotificationsActivityChanged;
 
             await LoadFilterState();
@@ -345,6 +346,29 @@ namespace Regard.Frontend.Shared.Video
             });
         }
 
+        private System.Timers.Timer refetchDebounce;
+
+        // A subscription's video set changed (sync discovered new videos, an import, a single add). Refetch
+        // the current view if it could contain that subscription — the server re-applies filters/order/paging,
+        // so we don't insert tiles by hand. Debounced so a sync burst collapses into one refetch.
+        private void Messaging_VideosChanged(object sender, int subscriptionId)
+        {
+            if (selectedSubscription.HasValue && selectedSubscription.Value != subscriptionId)
+                return;   // viewing a different single subscription — not affected
+
+            if (refetchDebounce == null)
+            {
+                refetchDebounce = new System.Timers.Timer(600) { AutoReset = false };
+                refetchDebounce.Elapsed += (_, __) => _ = InvokeAsync(async () =>
+                {
+                    await Populate();
+                    StateHasChanged();
+                });
+            }
+            refetchDebounce.Stop();
+            refetchDebounce.Start();
+        }
+
         void OnVideoShowContextMenu(VideoViewModel videoVM)
         {
             videoVM.IsContextMenuVisible = true;
@@ -422,7 +446,9 @@ namespace Regard.Frontend.Shared.Video
         public void Dispose()
         {
             Messaging.VideoUpdated -= Messaging_VideoUpdated;
+            Messaging.VideosChanged -= Messaging_VideosChanged;
             Notifications.ActivityChanged -= OnNotificationsActivityChanged;
+            refetchDebounce?.Dispose();
         }
     }
 }

@@ -37,6 +37,7 @@ namespace Regard.Backend.Services
         private readonly RegardScheduler scheduler;
         private readonly IProviderManager providerManager;
         private readonly IOptionManager optionManager;
+        private readonly VideoUpdateNotifier videoUpdateNotifier;
         private readonly ILogger<VideoManager> log;
 
         public event EventHandler<VideoUpdatedEventArgs> VideoUpdated;
@@ -45,12 +46,14 @@ namespace Regard.Backend.Services
                             RegardScheduler scheduler,
                             IProviderManager providerManager,
                             IOptionManager optionManager,
+                            VideoUpdateNotifier videoUpdateNotifier,
                             ILogger<VideoManager> log)
         {
             this.dataContext = dataContext;
             this.scheduler = scheduler;
             this.providerManager = providerManager;
             this.optionManager = optionManager;
+            this.videoUpdateNotifier = videoUpdateNotifier;
             this.log = log;
         }
 
@@ -69,16 +72,17 @@ namespace Regard.Backend.Services
         {
             var vids = dataContext.Videos.AsQueryable()
                 .Where(v => videoIds.Contains(v.Id))
-                .Where(v => v.Subscription.UserId == user.Id);
-                
+                .Where(v => v.Subscription.UserId == user.Id)
+                .ToList();
+
             vids.ForEach(updateMethod);
             dataContext.SaveChanges();
 
-            if (VideoUpdated != null)
-            {
-                foreach (var video in vids)
-                    VideoUpdated.Invoke(this, new VideoUpdatedEventArgs() { User = user, Video = video });
-            }
+            // Push the new state live so open listings update in place without a refetch (watched toggle,
+            // (un)mark-for-deletion, ...). Fire-and-forget: ToApi reads the entity synchronously before the
+            // send, and the hub send doesn't touch the scoped DataContext.
+            foreach (var video in vids)
+                _ = videoUpdateNotifier.NotifyVideoUpdated(video, user.Id);
         }
 
         /// <summary>
@@ -128,17 +132,17 @@ namespace Regard.Backend.Services
                 .ToList()
                 .Where(v => optionManager.GetForSubscription(Options.Subscriptions_DeleteWatched, v.SubscriptionId));
 
-            await ScheduleOrMarkForDeletion(candidates);
+            await ScheduleOrMarkForDeletion(candidates, user.Id);
         }
 
         /// <summary>
         /// For each video, either mark it for deletion after the subscription's grace period
         /// (DeleteScheduledAt = now + grace) or, when grace == 0, delete immediately (+ refill).
         /// </summary>
-        private async Task ScheduleOrMarkForDeletion(IEnumerable<Video> videos)
+        private async Task ScheduleOrMarkForDeletion(IEnumerable<Video> videos, string userId)
         {
             var deleteNow = new List<Video>();
-            bool marked = false;
+            var scheduled = new List<Video>();
             foreach (var v in videos)
             {
                 int grace = optionManager.GetForSubscription(Options.Subscriptions_DeleteGracePeriod, v.SubscriptionId);
@@ -149,25 +153,31 @@ namespace Regard.Backend.Services
                 else
                 {
                     v.DeleteScheduledAt = DateTimeOffset.Now.AddMinutes(grace);
-                    marked = true;
+                    scheduled.Add(v);
                 }
             }
 
             // Immediate-delete path (grace 0): apply the MarkDeletedAsWatched reverse rule to unwatched
             // videos first, so a freed slot doesn't immediately re-download them — matching what the sweep
             // and manual DeleteFiles do. (On-watch videos are already watched, so this is a no-op for them.)
+            bool changed = scheduled.Count > 0;
             foreach (var v in deleteNow)
             {
                 if (!v.IsWatched
                     && optionManager.GetForSubscription(Options.Subscriptions_MarkDeletedAsWatched, v.SubscriptionId))
                 {
                     v.IsWatched = true;
-                    marked = true;
+                    changed = true;
                 }
             }
 
-            if (marked)
+            if (changed)
                 dataContext.SaveChanges();
+
+            // Push the trash badge live for grace-scheduled videos. (Immediate deletes are pushed by the
+            // delete job once the files actually go.)
+            foreach (var v in scheduled)
+                _ = videoUpdateNotifier.NotifyVideoUpdated(v, userId);
 
             if (deleteNow.Count > 0)
                 await DeleteWatchedFilesJob.Schedule(scheduler, deleteNow.Select(v => v.Id).ToArray());
@@ -185,7 +195,7 @@ namespace Regard.Backend.Services
                 .Where(v => v.DownloadedPath != null)
                 .ToList();
 
-            await ScheduleOrMarkForDeletion(vids);
+            await ScheduleOrMarkForDeletion(vids, user.Id);
         }
 
         /// <summary>
@@ -240,6 +250,13 @@ namespace Regard.Backend.Services
                 await provider.UpdateMetadata(new[] { video }, true, true);
                 video.EnrichedAt = DateTimeOffset.UtcNow;
                 await dataContext.SaveChangesAsync();
+
+                // A flat placeholder just became a real tile (title, published date, ...) — push it live.
+                var ownerId = dataContext.Subscriptions.AsQueryable()
+                    .Where(s => s.Id == video.SubscriptionId)
+                    .Select(s => s.UserId)
+                    .FirstOrDefault();
+                await videoUpdateNotifier.NotifyVideoUpdated(video, ownerId);
             }
             catch (Exception ex)
             {
@@ -293,7 +310,9 @@ namespace Regard.Backend.Services
             await provider.UpdateMetadata(Enumerable.Repeat(video, 1), true, true);
             dataContext.Videos.Add(video);
             await dataContext.SaveChangesAsync();
-            // TODO: send notification
+
+            // A new tile appeared — tell the owner's clients to refetch the current view.
+            await videoUpdateNotifier.NotifyVideosChanged(subscriptionId, user.Id);
         }
 
         public async Task ValidateUrl(Uri url)

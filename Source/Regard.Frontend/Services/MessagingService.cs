@@ -33,6 +33,7 @@ namespace Regard.Frontend.Services
         public event EventHandler<ApiSubscriptionFolder> SubscriptionFolderUpdated;
         public event EventHandler<int[]> SubscriptionFoldersDeleted;
         public event EventHandler<ApiVideo> VideoUpdated;
+        public event EventHandler<int> VideosChanged;
         public event EventHandler<ApiNotification> NotificationReceived;
         public event EventHandler<string> NotificationRemoved;
 
@@ -142,6 +143,7 @@ namespace Regard.Frontend.Services
             connection.On<ApiSubscriptionFolder>("NotifySubscriptionFolderUpdated", NotifySubscriptionFolderUpdated);
             connection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
             connection.On<ApiVideo>("NotifyVideoUpdated", NotifyVideoUpdated);
+            connection.On<int>("NotifyVideosChanged", NotifyVideosChanged);
             connection.On<ApiNotification>("NotifyNotification", NotifyNotification);
             connection.On<string>("NotifyNotificationRemoved", NotifyNotificationRemoved);
 
@@ -201,6 +203,11 @@ namespace Regard.Frontend.Services
         private void NotifyVideoUpdated(ApiVideo video)
         {
             VideoUpdated?.Invoke(this, video);
+        }
+
+        private void NotifyVideosChanged(int subscriptionId)
+        {
+            VideosChanged?.Invoke(this, subscriptionId);
         }
 
         private void NotifyNotification(ApiNotification notification)
