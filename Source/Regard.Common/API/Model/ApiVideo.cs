@@ -90,5 +90,12 @@ namespace Regard.Common.API.Model
         /// list items too so thumbnails can draw a progress bar.
         /// </summary>
         public int? PlaybackPositionSeconds { get; set; }
+
+        /// <summary>
+        /// When non-null, this downloaded video is marked for deletion and its files will be removed at
+        /// this time (a grace period). The listing shows a trash badge with a countdown; "Unmark for
+        /// deletion" clears it. Null = not marked.
+        /// </summary>
+        public DateTimeOffset? DeleteScheduledAt { get; set; }
     }
 }

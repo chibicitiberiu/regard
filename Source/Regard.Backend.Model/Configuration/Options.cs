@@ -150,6 +150,20 @@ namespace Regard.Backend.Configuration
         );
 
         /// <summary>
+        /// Grace period in MINUTES between a downloaded video being marked for deletion (on watch, or
+        /// manually) and its files actually being removed by the periodic sweep. 0 = delete immediately
+        /// (legacy behavior). During the grace window the video shows a "marked for deletion" badge and
+        /// still counts toward the subscription quota; "Unmark for deletion" cancels it.
+        /// </summary>
+        public static readonly OptionDefinition<int> Subscriptions_DeleteGracePeriod = new OptionDefinition<int>(
+            1440,
+            "subscriptions.delete_grace_period_minutes",
+            "Subscriptions:DeleteGracePeriodMinutes",
+            null,
+            OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
+        );
+
+        /// <summary>
         /// Pattern indicating where files are downloaded automatically.
         /// </summary>
         public static readonly OptionDefinition<string> Subscriptions_DownloadPath = new OptionDefinition<string>(

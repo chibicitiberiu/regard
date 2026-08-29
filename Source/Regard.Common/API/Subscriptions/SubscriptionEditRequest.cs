@@ -25,6 +25,8 @@ namespace Regard.Common.API.Subscriptions
 
         public bool? DeleteWatched { get; set; }
 
+        public int? DeleteGracePeriod { get; set; }
+
         public string DownloadPath { get; set; }
 
         public bool? WriteSubtitles { get; set; }

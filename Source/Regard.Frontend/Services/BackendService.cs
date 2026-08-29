@@ -306,6 +306,12 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> VideoDeleteFiles(VideoDeleteFilesRequest data)
             => Post("api/video/delete_files", data);
 
+        public Task<(ApiResponse, HttpResponseMessage)> VideoMarkForDeletion(VideoMarkForDeletionRequest data)
+            => Post("api/video/mark_for_deletion", data);
+
+        public Task<(ApiResponse, HttpResponseMessage)> VideoUnmarkForDeletion(VideoUnmarkForDeletionRequest data)
+            => Post("api/video/unmark_for_deletion", data);
+
         public Task<(ApiResponse, HttpResponseMessage)> VideoMarkWatched(VideoMarkWatchedRequest data)
             => Post("api/video/mark_watched", data);
 

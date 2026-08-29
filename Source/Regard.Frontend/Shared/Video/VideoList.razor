@@ -81,7 +81,20 @@ else
                         {
                             <Icon Glyph="Icons.Watched" Class="video-badge" title="Watched" />
                         }
-                        @if (item.ApiVideo.IsDownloaded)
+                        @{
+                            var dl = DownloadNotification(item.ApiVideo.Id);
+                        }
+                        @if (dl != null)
+                        {
+                            <span class="video-badge video-pie @(dl.Progress.HasValue ? "" : "video-pie-indeterminate")"
+                                  style="@PieStyle(dl.Progress)" title="@PieTitle(dl.Progress)"></span>
+                        }
+                        else if (item.ApiVideo.DeleteScheduledAt.HasValue)
+                        {
+                            <Icon Glyph="Icons.PendingDelete" Class="video-badge video-badge-delete"
+                                  title="@DeletionTooltip(item.ApiVideo)" />
+                        }
+                        else if (item.ApiVideo.IsDownloaded)
                         {
                             <Icon Glyph="Icons.Downloaded" Class="video-badge" title="Downloaded" />
                         }
@@ -140,6 +153,14 @@ else
                         @if (item.ApiVideo.IsDownloaded)
                         {
                             <MenuItem Click="() => OnVideoDeleteFiles(item)">Delete downloaded files</MenuItem>
+                            @if (item.ApiVideo.DeleteScheduledAt.HasValue)
+                            {
+                                <MenuItem Click="() => OnVideoUnmarkForDeletion(item)">Unmark for deletion</MenuItem>
+                            }
+                            else
+                            {
+                                <MenuItem Click="() => OnVideoMarkForDeletion(item)">Mark for deletion</MenuItem>
+                            }
                         }
                         else
                         {

@@ -17,6 +17,10 @@ namespace Regard.Common.API.Subscriptions
 
     public class VideoMarkNotWatchedRequest : VideoSimpleRequest { }
 
+    public class VideoMarkForDeletionRequest : VideoSimpleRequest { }
+
+    public class VideoUnmarkForDeletionRequest : VideoSimpleRequest { }
+
     /// <summary>Report the current playback position (resume point) for a single video.</summary>
     public class VideoReportProgressRequest
     {

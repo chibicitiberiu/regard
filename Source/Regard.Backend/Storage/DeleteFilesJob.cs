@@ -114,6 +114,7 @@ namespace Regard.Backend.Jobs
 
             video.DownloadedPath = null;
             video.DownloadedSize = null;
+            video.DeleteScheduledAt = null;   // the file is gone; clear any pending "marked for deletion" state
         }
     }
 }

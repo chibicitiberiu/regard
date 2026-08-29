@@ -569,6 +569,9 @@ namespace Regard.Backend.Migrations.SqlServer
                     b.Property<string>("Chapters")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTimeOffset?>("DeleteScheduledAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Description")
                         .HasMaxLength(4096)
                         .HasColumnType("nvarchar(max)");

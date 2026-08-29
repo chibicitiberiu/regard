@@ -119,18 +119,82 @@ namespace Regard.Backend.Services
             // from 0, so clear any resume position at the same time.
             Update(user, videoIds, video => { video.IsWatched = true; video.PlaybackPositionSeconds = null; });
 
-            // Forward auto-delete: delete downloaded files (and refill) for subs that opt in.
-            var toDelete = dataContext.Videos.AsQueryable()
+            // Forward auto-delete for subs that opt in: either schedule a grace-period deletion (mark now,
+            // the sweep deletes later) or delete immediately when grace == 0 (legacy behavior).
+            var candidates = dataContext.Videos.AsQueryable()
                 .Where(v => videoIds.Contains(v.Id))
                 .Where(v => v.Subscription.UserId == user.Id)
                 .Where(v => v.DownloadedPath != null)
                 .ToList()
-                .Where(v => optionManager.GetForSubscription(Options.Subscriptions_DeleteWatched, v.SubscriptionId))
-                .Select(v => v.Id)
-                .ToArray();
+                .Where(v => optionManager.GetForSubscription(Options.Subscriptions_DeleteWatched, v.SubscriptionId));
 
-            if (toDelete.Length > 0)
-                await DeleteWatchedFilesJob.Schedule(scheduler, toDelete);
+            await ScheduleOrMarkForDeletion(candidates);
+        }
+
+        /// <summary>
+        /// For each video, either mark it for deletion after the subscription's grace period
+        /// (DeleteScheduledAt = now + grace) or, when grace == 0, delete immediately (+ refill).
+        /// </summary>
+        private async Task ScheduleOrMarkForDeletion(IEnumerable<Video> videos)
+        {
+            var deleteNow = new List<Video>();
+            bool marked = false;
+            foreach (var v in videos)
+            {
+                int grace = optionManager.GetForSubscription(Options.Subscriptions_DeleteGracePeriod, v.SubscriptionId);
+                if (grace <= 0)
+                {
+                    deleteNow.Add(v);
+                }
+                else
+                {
+                    v.DeleteScheduledAt = DateTimeOffset.Now.AddMinutes(grace);
+                    marked = true;
+                }
+            }
+
+            // Immediate-delete path (grace 0): apply the MarkDeletedAsWatched reverse rule to unwatched
+            // videos first, so a freed slot doesn't immediately re-download them — matching what the sweep
+            // and manual DeleteFiles do. (On-watch videos are already watched, so this is a no-op for them.)
+            foreach (var v in deleteNow)
+            {
+                if (!v.IsWatched
+                    && optionManager.GetForSubscription(Options.Subscriptions_MarkDeletedAsWatched, v.SubscriptionId))
+                {
+                    v.IsWatched = true;
+                    marked = true;
+                }
+            }
+
+            if (marked)
+                dataContext.SaveChanges();
+
+            if (deleteNow.Count > 0)
+                await DeleteWatchedFilesJob.Schedule(scheduler, deleteNow.Select(v => v.Id).ToArray());
+        }
+
+        /// <summary>
+        /// Manually schedule the user's downloaded videos for deletion after the grace period (or delete
+        /// immediately if grace == 0). Same mechanism as the on-watch path, but user-triggered.
+        /// </summary>
+        public async Task MarkForDeletion(UserAccount user, int[] videoIds)
+        {
+            var vids = dataContext.Videos.AsQueryable()
+                .Where(v => videoIds.Contains(v.Id))
+                .Where(v => v.Subscription.UserId == user.Id)
+                .Where(v => v.DownloadedPath != null)
+                .ToList();
+
+            await ScheduleOrMarkForDeletion(vids);
+        }
+
+        /// <summary>
+        /// Cancel a scheduled deletion ("Unmark for deletion"). The video is retained and keeps counting
+        /// toward the subscription quota (so the window won't refill to replace it).
+        /// </summary>
+        public void UnmarkForDeletion(UserAccount user, int[] videoIds)
+        {
+            Update(user, videoIds, v => v.DeleteScheduledAt = null);
         }
 
         public async Task Download(UserAccount user, int[] videoIds)

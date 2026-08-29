@@ -51,3 +51,20 @@
         margin-left: auto;
     }
 }
+
+.notif-bell {
+    position: relative;
+    display: inline-block;
+}
+
+.notif-dot {
+    position: absolute;
+    top: 0.15em;
+    right: 0.1em;
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    background-color: var(--color-bg-success);
+    box-shadow: 0 0 0 2px var(--color-bg-window, rgba(0, 0, 0, 0.4));
+    pointer-events: none;
+}

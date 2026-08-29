@@ -40,7 +40,7 @@ namespace Regard.Backend.Downloader
         protected readonly VideoManager videoManager;
         protected readonly VideoUpdateNotifier videoUpdateNotifier;
 
-        private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of ~?([\d\.]+)([KMG]i?B)");
+        private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of\s+~?\s*([\d\.]+)([KMG]i?B)");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
         private readonly Regex AlreadyDownloadedRegex = new Regex(@"\[download\] (.*) has already been downloaded");
         private readonly Regex DestinationRegex = new Regex(@"Destination: (.*)");
@@ -99,7 +99,7 @@ namespace Regard.Backend.Downloader
         // Live "in progress" notification. video is only loaded once ExecuteJob runs, so the very first
         // (pre-load) tick just says "Downloading"; every progress tick after that carries the title.
         protected override JobNotification GetOngoingNotification()
-            => new JobNotification { Title = "Downloading", Text = video?.Name };
+            => new JobNotification { Title = "Downloading", Text = video?.Name, VideoDbId = VideoId };
 
         // "Download complete" — click opens the (now downloaded) video.
         protected override JobNotification GetSuccessNotification()

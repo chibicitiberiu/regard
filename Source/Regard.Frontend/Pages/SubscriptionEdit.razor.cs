@@ -53,6 +53,28 @@ namespace Regard.Frontend.Pages
             }
         }
 
+        private string DeleteGracePeriodStr
+        {
+            get => Request.DeleteGracePeriod?.ToString() ?? string.Empty;
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    Request.DeleteGracePeriod = null;
+                    ValidationMessage = string.Empty;
+                }
+                else if (int.TryParse(value, out int valueInt) && valueInt >= 0)
+                {
+                    Request.DeleteGracePeriod = valueInt;
+                    ValidationMessage = string.Empty;
+                }
+                else
+                {
+                    ValidationMessage = "Delete grace period must be a non-negative number of minutes!";
+                }
+            }
+        }
+
         // Tri-state string binds for the subtitle bools. The shared RgSimpleInputSelect bool? control
         // renders its "True" option with an empty value attribute (a Blazor boolean-attribute quirk),
         // so selecting it round-trips to null — hence plain "" / "on" / "off" selects here instead.
@@ -103,6 +125,7 @@ namespace Regard.Frontend.Pages
                     Request.DownloadMaxCount = Subscription.Config.DownloadMaxCount;
                     Request.DownloadOrder = Subscription.Config.DownloadOrder;
                     Request.DeleteWatched = Subscription.Config.DeleteWatched;
+                    Request.DeleteGracePeriod = Subscription.Config.DeleteGracePeriod;
                     Request.MarkDeletedAsWatched = Subscription.Config.MarkDeletedAsWatched;
                     Request.DownloadPath = Subscription.Config.DownloadPath;
                     Request.WriteSubtitles = Subscription.Config.WriteSubtitles;

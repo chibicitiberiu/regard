@@ -59,7 +59,8 @@ namespace Regard.Backend.Services
                 Rating = video.Rating,
                 OriginalUrl = video.OriginalUrl,
                 SponsorsRemoved = video.SponsorsRemoved,
-                PlaybackPositionSeconds = video.PlaybackPositionSeconds
+                PlaybackPositionSeconds = video.PlaybackPositionSeconds,
+                DeleteScheduledAt = video.DeleteScheduledAt
                 // EmbedUrl + SponsorSegments are set by VideoController.List (they depend on per-user
                 // settings / an external lookup, only for the single-video watch fetch).
             };

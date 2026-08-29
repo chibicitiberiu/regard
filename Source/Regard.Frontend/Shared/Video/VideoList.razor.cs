@@ -107,6 +107,8 @@ namespace Regard.Frontend.Shared.Video
 
         [Inject] protected Microsoft.JSInterop.IJSRuntime JS { get; set; }
 
+        [Inject] protected NotificationsService Notifications { get; set; }
+
         [Parameter] public int? SelectedSubscription
         {
             get => selectedSubscription;
@@ -123,6 +125,7 @@ namespace Regard.Frontend.Shared.Video
         {
             await base.OnInitializedAsync();
             Messaging.VideoUpdated += Messaging_VideoUpdated;
+            Notifications.ActivityChanged += OnNotificationsActivityChanged;
 
             await LoadFilterState();
             await Populate();
@@ -374,9 +377,52 @@ namespace Regard.Frontend.Shared.Video
             await Populate();   // reflect the removed download badge immediately
         }
 
+        async Task OnVideoMarkForDeletion(VideoViewModel videoVM)
+        {
+            await Backend.VideoMarkForDeletion(new VideoMarkForDeletionRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
+            await Populate();   // show the "marked for deletion" badge immediately
+        }
+
+        async Task OnVideoUnmarkForDeletion(VideoViewModel videoVM)
+        {
+            await Backend.VideoUnmarkForDeletion(new VideoUnmarkForDeletionRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
+            await Populate();
+        }
+
+        // Tooltip for the "marked for deletion" badge, e.g. "Files marked for deletion in 3 hours".
+        protected string DeletionTooltip(ApiVideo video)
+        {
+            if (!video.DeleteScheduledAt.HasValue)
+                return string.Empty;
+            var remaining = video.DeleteScheduledAt.Value - DateTimeOffset.Now;
+            return remaining > TimeSpan.Zero
+                ? $"Files marked for deletion in {remaining.Humanize()}"
+                : "Files marked for deletion (pending)";
+        }
+
+        // Repaint the list when download notifications change, so the per-card progress pie animates live.
+        private void OnNotificationsActivityChanged(object sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+        // The live "ongoing" download notification for a given video (if any). Its Progress (0..1, or null
+        // for indeterminate) drives the pie badge. Matches on VideoId set by DownloadVideoJob.GetOngoingNotification.
+        protected ApiNotification DownloadNotification(int videoId)
+            => Notifications.Notifications.FirstOrDefault(n => n.Ongoing && n.VideoId == videoId);
+
+        protected string PieStyle(float? progress)
+        {
+            if (!progress.HasValue)
+                return string.Empty;
+            int deg = (int)(Math.Clamp(progress.Value, 0f, 1f) * 360);
+            return $"background: conic-gradient(var(--color-bg-success) {deg}deg, rgba(0,0,0,0.45) {deg}deg);";
+        }
+
+        protected string PieTitle(float? progress)
+            => progress.HasValue ? $"Downloading… {(int)(progress.Value * 100)}%" : "Downloading…";
+
         public void Dispose()
         {
             Messaging.VideoUpdated -= Messaging_VideoUpdated;
+            Notifications.ActivityChanged -= OnNotificationsActivityChanged;
         }
     }
 }

@@ -41,6 +41,9 @@ namespace Regard.Common.API.Model
 
         public bool? DeleteWatched { get; set; }
 
+        /// <summary>Grace period in minutes before a marked video's files are deleted (0 = immediate).</summary>
+        public int? DeleteGracePeriod { get; set; }
+
         public string DownloadPath { get; set; }
 
         public bool? WriteSubtitles { get; set; }

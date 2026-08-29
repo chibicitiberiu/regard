@@ -329,6 +329,7 @@ namespace Regard.Backend.Jobs
             await videoStorageService.Delete(video);
             video.DownloadedPath = null;
             video.DownloadedSize = null;
+            video.DeleteScheduledAt = null;   // file already gone; don't leave a stale "marked for deletion" badge
 
             if (optionManager.GetForSubscription(Options.Subscriptions_MarkDeletedAsWatched, sub.Id))
             {

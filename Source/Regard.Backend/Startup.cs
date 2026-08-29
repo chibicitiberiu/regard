@@ -165,6 +165,7 @@ namespace Regard.Backend
 
             services.AddScoped<DeleteFilesJob>();
             services.AddScoped<DeleteWatchedFilesJob>();
+            services.AddScoped<ProcessScheduledDeletionsJob>();
             services.AddScoped<DeleteSubscriptionFilesJob>();
             services.AddScoped<DeleteSubscriptionFolderFilesJob>();
             services.AddScoped<DeleteUserJob>();

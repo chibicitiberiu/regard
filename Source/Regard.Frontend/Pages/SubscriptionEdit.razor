@@ -65,6 +65,13 @@
                          Label="Delete files when watched: "
                          Required="false" />
 
+    <RgInputText Id="subscription_deleteGracePeriod"
+                 @bind-Value="DeleteGracePeriodStr"
+                 Label="Delete grace period (minutes, 0 = immediate):"
+                 Required="false"
+                 ValidationFor="() => DeleteGracePeriodStr"
+                 autocapitalize="none" />
+
     <RgSimpleInputSelect Id="subscription_markDeletedAsWatched"
                          TKey="bool?"
                          @bind-Value="Request.MarkDeletedAsWatched"

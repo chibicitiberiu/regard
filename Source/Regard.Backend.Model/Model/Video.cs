@@ -59,6 +59,14 @@ namespace Regard.Backend.Model
 
         public long? DownloadedSize { get; set; }
 
+        /// <summary>
+        /// When non-null, this downloaded video is scheduled for deletion at this time — a grace period
+        /// after it was marked (on watch, or manually). A periodic sweep (ProcessScheduledDeletionsJob)
+        /// removes the files once the time passes; "Unmark for deletion" clears it. Also cleared when the
+        /// file is actually removed. During the grace window the video still counts toward the quota.
+        /// </summary>
+        public DateTimeOffset? DeleteScheduledAt { get; set; }
+
         public int SubscriptionId { get; set; }
         //subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)
 

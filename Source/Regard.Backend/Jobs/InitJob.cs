@@ -90,6 +90,7 @@ namespace Regard.Backend.Jobs
             await SynchronizeJob.ScheduleGlobal(scheduler, configuration["SynchronizationSchedule"]);
             await YoutubeDLUpdateJob.Schedule(scheduler, DateTimeOffset.Now.AddSeconds(10), TimeSpan.FromDays(1));
             await FetchThumbnailsJob.Schedule(scheduler, DateTimeOffset.Now.AddSeconds(30), TimeSpan.FromMinutes(30));
+            await ProcessScheduledDeletionsJob.Schedule(scheduler, DateTimeOffset.Now.AddMinutes(1), TimeSpan.FromMinutes(5));
 
             // Jellyfin watched-sync (opt-in). Guard + validate the cron: RegardScheduler.Schedule
             // re-throws on an invalid/empty cron, which would fail the whole init.

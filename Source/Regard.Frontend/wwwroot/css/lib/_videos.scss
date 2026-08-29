@@ -156,6 +156,32 @@
     background: $neon-red-glow;
 }
 
+/* Live download progress "pie" badge (top-right), shown while a download is ongoing.
+   Determinate fill is set inline via a conic-gradient; indeterminate spins. */
+.video-pie {
+    width: 1.15em;
+    height: 1.15em;
+    border-radius: 50%;
+    padding: 0 !important;
+    background: rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.85);
+}
+
+/* "Marked for deletion" badge — tinted so it reads as a pending/at-risk state, not a normal status. */
+.video-badges .video-badge-delete {
+    color: var(--color-fg-warning, #ffcc66);
+}
+
+.video-pie-indeterminate {
+    background: conic-gradient(var(--color-bg-success) 0deg 90deg, rgba(0, 0, 0, 0.45) 90deg 360deg);
+    animation: video-pie-spin 0.9s linear infinite;
+}
+
+@keyframes video-pie-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 .empty-state {
     padding: 3em 2em;
     text-align: center;

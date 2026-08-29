@@ -215,6 +215,9 @@ namespace Regard.Backend.Controllers
                 if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_DeleteWatched, sub.Id, out var delWatched))
                     sub.Config.DeleteWatched = delWatched;
 
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_DeleteGracePeriod, sub.Id, out var grace))
+                    sub.Config.DeleteGracePeriod = grace;
+
                 if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_DownloadPath, sub.Id, out var path))
                     sub.Config.DownloadPath = path;
 
@@ -360,6 +363,10 @@ namespace Regard.Backend.Controllers
             if (request.DeleteWatched.HasValue)
                 optionManager.SetForSubscription(Options.Subscriptions_DeleteWatched, request.Id, request.DeleteWatched.Value);
             else optionManager.UnsetForSubscription(Options.Subscriptions_DeleteWatched, request.Id);
+
+            if (request.DeleteGracePeriod.HasValue)
+                optionManager.SetForSubscription(Options.Subscriptions_DeleteGracePeriod, request.Id, request.DeleteGracePeriod.Value);
+            else optionManager.UnsetForSubscription(Options.Subscriptions_DeleteGracePeriod, request.Id);
 
             if (!string.IsNullOrEmpty(request.DownloadPath))
                 optionManager.SetForSubscription(Options.Subscriptions_DownloadPath, request.Id, request.DownloadPath);

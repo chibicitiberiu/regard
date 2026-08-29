@@ -228,9 +228,30 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> MarkNotWatched([FromBody] VideoMarkNotWatchedRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            // Also clear any resume position so an explicitly-unwatched video starts from the beginning.
+            // Also clear any resume position so an explicitly-unwatched video starts from the beginning,
+            // and cancel any grace-period deletion the (now-undone) watch had scheduled.
             videoManager.Update(user, request.VideoIds,
-                video => { video.IsWatched = false; video.PlaybackPositionSeconds = null; });
+                video => { video.IsWatched = false; video.PlaybackPositionSeconds = null; video.DeleteScheduledAt = null; });
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("mark_for_deletion")]
+        [Authorize]
+        public async Task<IActionResult> MarkForDeletion([FromBody] VideoMarkForDeletionRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            await videoManager.MarkForDeletion(user, request.VideoIds);
+            return Ok(responseFactory.Success());
+        }
+
+        [HttpPost]
+        [Route("unmark_for_deletion")]
+        [Authorize]
+        public async Task<IActionResult> UnmarkForDeletion([FromBody] VideoUnmarkForDeletionRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            videoManager.UnmarkForDeletion(user, request.VideoIds);
             return Ok(responseFactory.Success());
         }
 

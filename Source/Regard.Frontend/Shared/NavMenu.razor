@@ -11,8 +11,12 @@
             <ul class="navbar-nav navbar-nav-right">
                 <li class="nav-item" onclick="">
 
-                    <a @ref="notificationsLink" href="#" class="nav-link" @onclick="@ToggleNotificationsPanel" @onclick:preventDefault="true">
-                        <Icon Glyph="HaveNotifications ? Icons.NotificationsFull : Icons.NotificationsEmpty" />
+                    <a @ref="notificationsLink" href="#" class="nav-link notif-bell" @onclick="@ToggleNotificationsPanel" @onclick:preventDefault="true">
+                        <Icon Glyph="Icons.NotificationsFull" />
+                        @if (HaveNotifications)
+                        {
+                            <span class="notif-dot"></span>
+                        }
                     </a>
                     <DropDownPanel @bind-IsVisible="NotificationsPanelVisible"
                                    AttachTo="notificationsLink"
