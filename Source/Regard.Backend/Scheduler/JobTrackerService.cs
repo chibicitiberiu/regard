@@ -131,6 +131,9 @@ namespace Regard.Backend.Services
             if (jobData != null)
                 job.JobData = new Dictionary<string, object>(jobData);
 
+            // Remember the original retry budget so a failing job can show "Retry n/total".
+            job.JobData["_initialRetry"] = retryCount;
+
             dataContext.Add(job);
             dataContext.SaveChanges();
 
@@ -248,6 +251,7 @@ namespace Regard.Backend.Services
             // still pending (leave the in-progress notification up), and <=0 means this was the final
             // attempt. This is what stops a 3-retry download from firing up to 4 "failed" notifications.
             if (job.RetryCount <= 0)
+            {
                 _ = notificationService.PostOrUpdate(
                     job.UserId, NotificationKey(job),
                     failure?.Title ?? job.Name,
@@ -256,8 +260,36 @@ namespace Regard.Backend.Services
                     progress: null, ongoing: false,
                     videoDbId: failure?.VideoDbId, jobId: job.Id,
                     primaryAction: NotificationPrimaryAction.OpenLogs, cancellable: false);
+            }
+            else if (job.Notify)
+            {
+                // A retry is still pending — replace the "in progress" card with a live "Retrying (n/total)"
+                // status so it doesn't look stuck. RetryCount is pre-decrement here, so it names the retry
+                // about to be scheduled.
+                int total = ReadInitialRetry(job);
+                string label = total > 0 ? $"Retrying ({total - job.RetryCount + 1}/{total})" : "Retrying";
+                _ = notificationService.PostOrUpdate(
+                    job.UserId, NotificationKey(job),
+                    label,
+                    failure?.Text ?? job.Name,
+                    NotificationSeverity.Warning,
+                    progress: null, ongoing: true,
+                    videoDbId: failure?.VideoDbId, jobId: job.Id,
+                    primaryAction: NotificationPrimaryAction.OpenLogs, cancellable: false);
+            }
 
             JobFailed?.Invoke(this, new JobFailedEventArgs() { Job = job, Reason = reason, Details = details });
+        }
+
+        private static int ReadInitialRetry(JobInfo job)
+        {
+            try
+            {
+                if (job.JobData != null && job.JobData.TryGetValue("_initialRetry", out var v) && v != null)
+                    return Convert.ToInt32(v);
+            }
+            catch { /* JobData round-trips through JSON; ignore odd shapes */ }
+            return 0;
         }
 
         /// <summary>
