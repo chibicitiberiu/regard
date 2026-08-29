@@ -267,6 +267,93 @@ namespace Regard.Backend.Configuration
             0
         );
 
+        // ---- Download throttling / anti-bot (server-wide) ----
+
+        /// <summary>Master switch for download pacing + per-host throttling. Global/server option.</summary>
+        public static readonly OptionDefinition<bool> Server_Throttle_Enabled = new OptionDefinition<bool>(
+            true,
+            "server.throttle.enabled",
+            "Server:Throttle:Enabled",
+            "REGARD_THROTTLE_ENABLED",
+            0
+        );
+
+        /// <summary>
+        /// Absolute path to a Netscape-format cookies.txt used for yt-dlp (--cookies), to clear YouTube's
+        /// bot gate. Uploaded via the admin page (written to DataDirectory/cookies.txt). Global/server.
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_Ytdl_CookiesFile = new OptionDefinition<string>(
+            null,
+            "server.ytdl.cookies_file",
+            "Server:Ytdl:CookiesFile",
+            "REGARD_YTDL_COOKIES_FILE",
+            0
+        );
+
+        /// <summary>Seconds yt-dlp sleeps between HTTP requests during extraction (--sleep-requests). Global/server.</summary>
+        public static readonly OptionDefinition<int> Server_Ytdl_SleepRequests = new OptionDefinition<int>(
+            2,
+            "server.ytdl.sleep_requests",
+            "Server:Ytdl:SleepRequests",
+            "REGARD_YTDL_SLEEP_REQUESTS",
+            0
+        );
+
+        /// <summary>Minimum seconds yt-dlp sleeps before each download (--sleep-interval). Global/server.</summary>
+        public static readonly OptionDefinition<int> Server_Ytdl_SleepInterval = new OptionDefinition<int>(
+            5,
+            "server.ytdl.sleep_interval",
+            "Server:Ytdl:SleepInterval",
+            "REGARD_YTDL_SLEEP_INTERVAL",
+            0
+        );
+
+        /// <summary>Maximum seconds yt-dlp sleeps before each download (--max-sleep-interval). Global/server.</summary>
+        public static readonly OptionDefinition<int> Server_Ytdl_MaxSleepInterval = new OptionDefinition<int>(
+            30,
+            "server.ytdl.max_sleep_interval",
+            "Server:Ytdl:MaxSleepInterval",
+            "REGARD_YTDL_MAX_SLEEP_INTERVAL",
+            0
+        );
+
+        /// <summary>
+        /// Global default download bandwidth cap (yt-dlp --limit-rate, e.g. "2M"); a per-subscription
+        /// Ytdl_LimitRate overrides it. Empty/null = no global cap. Global/server option.
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_Ytdl_LimitRate = new OptionDefinition<string>(
+            "2M",
+            "server.ytdl.limit_rate",
+            "Server:Ytdl:LimitRate",
+            "REGARD_YTDL_LIMIT_RATE",
+            0
+        );
+
+        /// <summary>Min/max seconds between consecutive DOWNLOADS on one host (jittered pacing). Global/server.</summary>
+        public static readonly OptionDefinition<int> Server_Throttle_DownloadMinSeconds = new OptionDefinition<int>(
+            60, "server.throttle.download_min_seconds", "Server:Throttle:DownloadMinSeconds", "REGARD_THROTTLE_DOWNLOAD_MIN_SECONDS", 0);
+
+        public static readonly OptionDefinition<int> Server_Throttle_DownloadMaxSeconds = new OptionDefinition<int>(
+            180, "server.throttle.download_max_seconds", "Server:Throttle:DownloadMaxSeconds", "REGARD_THROTTLE_DOWNLOAD_MAX_SECONDS", 0);
+
+        /// <summary>Min/max seconds between consecutive metadata EXTRACTIONS on one host. Global/server.</summary>
+        public static readonly OptionDefinition<int> Server_Throttle_ExtractMinSeconds = new OptionDefinition<int>(
+            5, "server.throttle.extract_min_seconds", "Server:Throttle:ExtractMinSeconds", "REGARD_THROTTLE_EXTRACT_MIN_SECONDS", 0);
+
+        public static readonly OptionDefinition<int> Server_Throttle_ExtractMaxSeconds = new OptionDefinition<int>(
+            20, "server.throttle.extract_max_seconds", "Server:Throttle:ExtractMaxSeconds", "REGARD_THROTTLE_EXTRACT_MAX_SECONDS", 0);
+
+        /// <summary>Max downloads per host per hour / per day (backstop; 0 or less = unlimited). Global/server.</summary>
+        public static readonly OptionDefinition<int> Server_Throttle_MaxPerHour = new OptionDefinition<int>(
+            15, "server.throttle.max_per_hour", "Server:Throttle:MaxPerHour", "REGARD_THROTTLE_MAX_PER_HOUR", 0);
+
+        public static readonly OptionDefinition<int> Server_Throttle_MaxPerDay = new OptionDefinition<int>(
+            200, "server.throttle.max_per_day", "Server:Throttle:MaxPerDay", "REGARD_THROTTLE_MAX_PER_DAY", 0);
+
+        /// <summary>Max simultaneous downloads per host. Global/server.</summary>
+        public static readonly OptionDefinition<int> Server_Throttle_PerHostConcurrency = new OptionDefinition<int>(
+            1, "server.throttle.per_host_concurrency", "Server:Throttle:PerHostConcurrency", "REGARD_THROTTLE_PER_HOST_CONCURRENCY", 0);
+
         /// <summary>
         /// Write video description to a .description file.
         /// </summary>

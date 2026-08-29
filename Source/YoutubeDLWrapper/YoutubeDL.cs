@@ -225,14 +225,15 @@ namespace YoutubeDLWrapper
         /// for background work (sync). A failed attempt is retried up to <paramref name="retries"/> times.
         /// </summary>
         public async Task<UrlInformation> ExtractInformation(string url, bool fetchVideos,
-            int timeoutMs = 1000 * 60 * 10, int idleTimeoutMs = 0, int retries = 0)
+            int timeoutMs = 1000 * 60 * 10, int idleTimeoutMs = 0, int retries = 0,
+            IEnumerable<string> extraArgs = null)
         {
             Exception lastError = null;
             for (int attempt = 0; attempt <= retries; attempt++)
             {
                 try
                 {
-                    return await ExtractInformationOnce(url, fetchVideos, timeoutMs, idleTimeoutMs);
+                    return await ExtractInformationOnce(url, fetchVideos, timeoutMs, idleTimeoutMs, extraArgs);
                 }
                 catch (Exception ex)
                 {
@@ -243,13 +244,17 @@ namespace YoutubeDLWrapper
             throw lastError;
         }
 
-        private async Task<UrlInformation> ExtractInformationOnce(string url, bool fetchVideos, int timeoutMs, int idleTimeoutMs)
+        private async Task<UrlInformation> ExtractInformationOnce(string url, bool fetchVideos, int timeoutMs, int idleTimeoutMs,
+            IEnumerable<string> extraArgs = null)
         {
             var args = new List<string>()
             {
                 "--ignore-errors",
                 "--dump-single-json"
             };
+            // Per-call anti-bot args (cookies, sleeps). A fresh local list, never shared instance state.
+            if (extraArgs != null)
+                args.AddRange(extraArgs);
             if (fetchVideos == false)
                 args.Add("--flat-playlist");
             args.Add(url);

@@ -58,6 +58,93 @@
                         </div>
                     </section>
 
+                    <section class="settings-section">
+                        <h3>Downloads / anti-bot</h3>
+                        <p>
+                            YouTube throttles heavy downloading. These space out downloads and metadata
+                            fetches so the server looks like a real viewer. For the "confirm you're not a
+                            bot" gate, upload a cookies.txt exported from your browser &mdash; use a
+                            <strong>throwaway Google account</strong>, since download activity can get an
+                            account flagged, and it is shared by all users on this server.
+                        </p>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Enable throttling:</label>
+                            <div class="col-xs-8">
+                                <input type="checkbox" @bind="ThrottleEnabled" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Sleep between metadata requests (s):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" min="0" @bind="SleepRequests" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Per-download sleep min / max (s):</label>
+                            <div class="col-xs-8" style="display:flex; gap:.5rem;">
+                                <input class="form-control" type="number" min="0" @bind="SleepInterval" />
+                                <input class="form-control" type="number" min="0" @bind="MaxSleepInterval" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Download rate limit (e.g. 2M):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" @bind="LimitRate" placeholder="No limit" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Per-host download pacing min / max (s):</label>
+                            <div class="col-xs-8" style="display:flex; gap:.5rem;">
+                                <input class="form-control" type="number" min="0" @bind="DownloadMinSeconds" />
+                                <input class="form-control" type="number" min="0" @bind="DownloadMaxSeconds" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Per-host extraction pacing min / max (s):</label>
+                            <div class="col-xs-8" style="display:flex; gap:.5rem;">
+                                <input class="form-control" type="number" min="0" @bind="ExtractMinSeconds" />
+                                <input class="form-control" type="number" min="0" @bind="ExtractMaxSeconds" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Max downloads per host (hour / day, 0 = ∞):</label>
+                            <div class="col-xs-8" style="display:flex; gap:.5rem;">
+                                <input class="form-control" type="number" min="0" @bind="MaxPerHour" />
+                                <input class="form-control" type="number" min="0" @bind="MaxPerDay" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Simultaneous downloads per host:</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" min="1" @bind="PerHostConcurrency" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Max parallel jobs (restart to change):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" value="@MaxParallelJobs" disabled />
+                                <small>Set via the REGARD_MAX_PARALLEL_JOBS env var.</small>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Cookies file:</label>
+                            <div class="col-xs-8">
+                                <span class="@(CookiesConfigured ? "fg-success" : "fg-error")">
+                                    @(CookiesConfigured ? "cookies loaded ✓" : "no cookies")
+                                </span>
+                                <InputFile OnChange="OnCookiesFile" accept=".txt" />
+                                @if (CookiesConfigured)
+                                {
+                                    <button class="secondary" type="button" @onclick="OnClearCookies">Remove</button>
+                                }
+                                @if (!string.IsNullOrEmpty(cookiesNote))
+                                {
+                                    <div><small>@cookiesNote</small></div>
+                                }
+                            </div>
+                        </div>
+                    </section>
+
                     <div class="form-group row">
                         <div class="col-xs-12 row">
                             <span class="@(serverSaved ? "fg-success" : "fg-error")">@serverStatus</span>

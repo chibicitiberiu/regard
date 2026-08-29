@@ -26,6 +26,24 @@ namespace Regard.Frontend.Pages
         protected string DefaultStorageQuotaStr { get; set; } = string.Empty;
         protected int JobHistoryRetentionDays { get; set; }
 
+        // Throttling / anti-bot
+        protected bool ThrottleEnabled { get; set; }
+        protected int SleepRequests { get; set; }
+        protected int SleepInterval { get; set; }
+        protected int MaxSleepInterval { get; set; }
+        protected string LimitRate { get; set; } = string.Empty;
+        protected int DownloadMinSeconds { get; set; }
+        protected int DownloadMaxSeconds { get; set; }
+        protected int ExtractMinSeconds { get; set; }
+        protected int ExtractMaxSeconds { get; set; }
+        protected int MaxPerHour { get; set; }
+        protected int MaxPerDay { get; set; }
+        protected int PerHostConcurrency { get; set; }
+        protected int MaxParallelJobs { get; set; }
+        protected bool CookiesConfigured { get; set; }
+        private string cookiesFileContent = null;   // null = unchanged; "" = remove; non-empty = replace
+        protected string cookiesNote = string.Empty;
+
         // Users
         protected List<ApiAdminUser> users = new();
         protected string currentUsername;
@@ -58,6 +76,22 @@ namespace Regard.Frontend.Pages
                 DefaultVideoQuotaStr = s.DefaultVideoQuota?.ToString() ?? string.Empty;
                 DefaultStorageQuotaStr = s.DefaultStorageQuotaGb?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
                 JobHistoryRetentionDays = s.JobHistoryRetentionDays;
+                ThrottleEnabled = s.ThrottleEnabled;
+                SleepRequests = s.SleepRequests;
+                SleepInterval = s.SleepInterval;
+                MaxSleepInterval = s.MaxSleepInterval;
+                LimitRate = s.LimitRate ?? string.Empty;
+                DownloadMinSeconds = s.DownloadMinSeconds;
+                DownloadMaxSeconds = s.DownloadMaxSeconds;
+                ExtractMinSeconds = s.ExtractMinSeconds;
+                ExtractMaxSeconds = s.ExtractMaxSeconds;
+                MaxPerHour = s.MaxPerHour;
+                MaxPerDay = s.MaxPerDay;
+                PerHostConcurrency = s.PerHostConcurrency;
+                MaxParallelJobs = s.MaxParallelJobs;
+                CookiesConfigured = s.CookiesConfigured;
+                cookiesFileContent = null;
+                cookiesNote = string.Empty;
             }
             loadingServer = false;
         }
@@ -83,11 +117,47 @@ namespace Regard.Frontend.Pages
                 DefaultVideoQuota = ParseIntOrNull(DefaultVideoQuotaStr),
                 DefaultStorageQuotaGb = ParseDoubleOrNull(DefaultStorageQuotaStr),
                 JobHistoryRetentionDays = JobHistoryRetentionDays,
+                ThrottleEnabled = ThrottleEnabled,
+                SleepRequests = SleepRequests,
+                SleepInterval = SleepInterval,
+                MaxSleepInterval = MaxSleepInterval,
+                LimitRate = LimitRate,
+                DownloadMinSeconds = DownloadMinSeconds,
+                DownloadMaxSeconds = DownloadMaxSeconds,
+                ExtractMinSeconds = ExtractMinSeconds,
+                ExtractMaxSeconds = ExtractMaxSeconds,
+                MaxPerHour = MaxPerHour,
+                MaxPerDay = MaxPerDay,
+                PerHostConcurrency = PerHostConcurrency,
+                CookiesFileContent = cookiesFileContent,
             };
             var (resp, httpResp) = await Backend.SaveServerSettings(request);
             savingServer = false;
             serverSaved = httpResp.IsSuccessStatusCode;
             serverStatus = serverSaved ? "Saved." : ("Save failed: " + resp?.Message);
+            if (serverSaved)
+                await LoadServer();   // refresh cookies-configured indicator + clear the pending upload
+        }
+
+        protected async Task OnCookiesFile(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+        {
+            try
+            {
+                using var reader = new System.IO.StreamReader(e.File.OpenReadStream(5 * 1024 * 1024));
+                cookiesFileContent = await reader.ReadToEndAsync();
+                cookiesNote = $"{e.File.Name} ready — click Save to apply";
+            }
+            catch (Exception ex)
+            {
+                cookiesFileContent = null;
+                cookiesNote = "Could not read file: " + ex.Message;
+            }
+        }
+
+        protected void OnClearCookies()
+        {
+            cookiesFileContent = string.Empty;   // empty string = remove on Save
+            cookiesNote = "cookies will be removed on Save";
         }
 
         protected async Task ToggleAdmin(ApiAdminUser u)

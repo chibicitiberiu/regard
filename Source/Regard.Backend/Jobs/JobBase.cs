@@ -42,6 +42,17 @@ namespace Regard.Backend.Jobs
             if (Job == null)
                 throw new ArgumentException("Invalid job ID");
 
+            // Pre-flight: a job may defer itself (e.g. download throttling). Re-fire the SAME trigger later
+            // and skip the lifecycle, so a deferred run posts no false start/complete notification and
+            // frees the worker immediately (no busy waiting).
+            var deferUntil = await ShouldDefer(context);
+            if (deferUntil.HasValue)
+            {
+                await RescheduleSelf(context, deferUntil.Value);
+                jobTrackerService.OnJobScheduled(Job, deferUntil.Value);
+                return;
+            }
+
             jobTrackerService.OnJobStarted(Job, GetOngoingNotification());
 
             try
@@ -63,8 +74,30 @@ namespace Regard.Backend.Jobs
             }
             finally
             {
+                OnAfterExecute();
                 PersistJobState();
             }
+        }
+
+        /// <summary>
+        /// Pre-flight hook: return a time to reschedule this job for (deferring the run and freeing the
+        /// worker), or null to run now. Default never defers. Used by download throttling.
+        /// </summary>
+        protected virtual Task<DateTimeOffset?> ShouldDefer(IJobExecutionContext context)
+            => Task.FromResult<DateTimeOffset?>(null);
+
+        /// <summary>Cleanup that must run whether the job succeeded, failed, or was cancelled (not on defer).</summary>
+        protected virtual void OnAfterExecute() { }
+
+        private async Task RescheduleSelf(IJobExecutionContext context, DateTimeOffset when)
+        {
+            // Re-fire the same durable job (same JobInfo id) with a fresh trigger — no new JobInfo row.
+            var trigger = TriggerBuilder.Create()
+                .ForJob(context.JobDetail.Key)
+                .UsingJobData("JobId", Job.Id)
+                .StartAt(when)
+                .Build();
+            await context.Scheduler.ScheduleJob(trigger);
         }
 
         /// <summary>

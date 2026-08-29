@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Regard.Common.API.Admin;
 using Regard.Common.API.Settings;
 using Regard.Frontend.Shared;
 using Regard.Services;
@@ -14,6 +15,7 @@ namespace Regard.Frontend.Pages
     {
         [Inject] protected BackendService Backend { get; set; }
 
+        protected ApiThrottleStatus throttle;
         protected bool loading = true;
         protected bool saving = false;
         protected bool saved = false;
@@ -82,6 +84,7 @@ namespace Regard.Frontend.Pages
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();
+            throttle = (await Backend.GetThrottleStatus())?.Data;
             var resp = await Backend.GetSettings();
             var s = resp?.Data;
             if (s != null)

@@ -39,6 +39,11 @@ namespace Regard.Backend.Downloader
         protected readonly DownloadCancellationRegistry cancellationRegistry;
         protected readonly VideoManager videoManager;
         protected readonly VideoUpdateNotifier videoUpdateNotifier;
+        protected readonly HostThrottle hostThrottle;
+        protected readonly NotificationService notificationService;
+
+        // Host whose download slot this run reserved (released in OnAfterExecute); null when deferred.
+        private string reservedHost = null;
 
         private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of\s+~?\s*([\d\.]+)([KMG]i?B)");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
@@ -70,7 +75,9 @@ namespace Regard.Backend.Downloader
                                 UserQuotaService userQuotaService,
                                 DownloadCancellationRegistry cancellationRegistry,
                                 VideoManager videoManager,
-                                VideoUpdateNotifier videoUpdateNotifier) : base(logger, dataContext, jobTrackerService)
+                                VideoUpdateNotifier videoUpdateNotifier,
+                                HostThrottle hostThrottle,
+                                NotificationService notificationService) : base(logger, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
             this.optionManager = optionManager;
@@ -82,6 +89,52 @@ namespace Regard.Backend.Downloader
             this.cancellationRegistry = cancellationRegistry;
             this.videoManager = videoManager;
             this.videoUpdateNotifier = videoUpdateNotifier;
+            this.hostThrottle = hostThrottle;
+            this.notificationService = notificationService;
+        }
+
+        private static string QueuedNotificationKey(int videoId) => $"download:{videoId}";
+
+        protected override async Task<DateTimeOffset?> ShouldDefer(IJobExecutionContext context)
+        {
+            if (Job.JobData.TryGetValue(Data_VideoId, out object vidObj))
+                VideoId = Convert.ToInt32(vidObj);
+
+            var v = dataContext.Videos.Find(VideoId);
+            if (v == null || v.DownloadedPath != null)
+                return null;   // invalid / already downloaded — let ExecuteJob take its error/no-op path
+
+            string host = UrlHostKey.Of(v.OriginalUrl);
+            if (hostThrottle.TryReserveDownload(host, VideoId, out var retryAt))
+            {
+                reservedHost = host;   // released in OnAfterExecute
+                return null;           // proceed now
+            }
+
+            // Deferred: surface a persistent per-video "Queued for download" notification (keyed by video,
+            // so it survives the reschedule cycle) with position / ETA, then reschedule.
+            int pos = hostThrottle.QueuePosition(host, VideoId);
+            int mins = Math.Max(1, (int)Math.Ceiling((retryAt - DateTimeOffset.UtcNow).TotalMinutes));
+            string detail = pos > 1
+                ? $"{v.Name} — position {pos} in the {host} queue (~{mins} min)"
+                : $"{v.Name} — pacing {host}, next attempt ~{mins} min";
+            _ = notificationService.PostOrUpdate(
+                null, QueuedNotificationKey(VideoId),
+                "Queued for download", detail,
+                NotificationSeverity.Info, progress: null, ongoing: true,
+                videoDbId: VideoId, jobId: Job.Id,
+                primaryAction: NotificationPrimaryAction.None, cancellable: false);
+
+            return retryAt;
+        }
+
+        protected override void OnAfterExecute()
+        {
+            if (reservedHost != null)
+            {
+                hostThrottle.ReleaseDownload(reservedHost);
+                reservedHost = null;
+            }
         }
 
         public static Task Schedule(RegardScheduler scheduler, Video video)
@@ -139,6 +192,10 @@ namespace Regard.Backend.Downloader
                 Job.RetryCount = 0;
                 throw new ArgumentException($"Download failed - video {VideoId} is already downloaded!");
             }
+
+            // Proceeding (throttle slot reserved): clear any "Queued for download" card — the job's live
+            // "Downloading" notification now takes over.
+            _ = notificationService.Remove(null, QueuedNotificationKey(VideoId));
 
             // Hard-quota gate: block (and explain) before spending any bandwidth if the user is
             // already at/over their count or size quota. Manual downloads otherwise bypass the count
@@ -374,13 +431,35 @@ namespace Regard.Backend.Downloader
             yield return "--color";
             yield return "no_color";
 
-            // TODO: Network Options
+            // Network / anti-bot options (server-wide): cookies + inter-request sleep, and a randomized
+            // per-download sleep so a batch doesn't hammer YouTube back-to-back.
+            foreach (var arg in YtdlAntibotArgs.Build(optionManager))
+                yield return arg;
+
+            if (optionManager.GetGlobal(Options.Server_Throttle_Enabled))
+            {
+                int sleepMin = optionManager.GetGlobal(Options.Server_Ytdl_SleepInterval);
+                int sleepMax = optionManager.GetGlobal(Options.Server_Ytdl_MaxSleepInterval);
+                if (sleepMin > 0)
+                {
+                    yield return "--sleep-interval";
+                    yield return sleepMin.ToString();
+                    if (sleepMax > sleepMin)
+                    {
+                        yield return "--max-sleep-interval";
+                        yield return sleepMax.ToString();
+                    }
+                }
+            }
             // TODO: Geo Restriction
 
             #region Download Options
 
+            // Per-subscription bandwidth cap, else the server-wide default (a real viewer doesn't saturate).
             string limitRate = optionManager.GetForSubscription(Options.Ytdl_LimitRate, video.SubscriptionId);
-            if (limitRate != null)
+            if (string.IsNullOrWhiteSpace(limitRate))
+                limitRate = optionManager.GetGlobal(Options.Server_Ytdl_LimitRate);
+            if (!string.IsNullOrWhiteSpace(limitRate))
             {
                 yield return "-r";
                 yield return limitRate;

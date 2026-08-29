@@ -1,8 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Nito.AsyncEx;
 using Regard.Backend.Common.Services;
+using Regard.Backend.Configuration;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,13 +18,15 @@ namespace Regard.Backend.Services
         private readonly ILogger log;
         private readonly YoutubeDLManager ytdlManager;
         private readonly AsyncReaderWriterLock ytdlLock = new AsyncReaderWriterLock();
+        private readonly IServiceScopeFactory scopeFactory;
         private YoutubeDL ytdl = null;
 
         public Version CurrentVersion { get; private set; }
 
-        public YoutubeDLService(ILoggerFactory logFactory, IConfiguration configuration)
+        public YoutubeDLService(ILoggerFactory logFactory, IConfiguration configuration, IServiceScopeFactory scopeFactory)
         {
             log = logFactory.CreateLogger<YoutubeDLService>();
+            this.scopeFactory = scopeFactory;
             ytdlManager = new YoutubeDLManager(logFactory)
             {
                 StorePath = configuration["DataDirectory"],
@@ -87,6 +92,14 @@ namespace Regard.Backend.Services
                 throw new Exception("YoutubeDL not yet downloaded!");
 
             return await action.Invoke(ytdl);
+        }
+
+        public IReadOnlyList<string> GetAntibotArgs()
+        {
+            // Scoped IOptionManager resolved per call (this service is a singleton).
+            using var scope = scopeFactory.CreateScope();
+            var optionManager = scope.ServiceProvider.GetRequiredService<IOptionManager>();
+            return YtdlAntibotArgs.Build(optionManager);
         }
     }
 }

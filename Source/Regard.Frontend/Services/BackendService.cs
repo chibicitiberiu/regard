@@ -227,6 +227,9 @@ namespace Regard.Services
         public Task<ApiResponse<ApiServerSettings>> GetServerSettings()
             => Get<ApiServerSettings>("api/admin/settings");
 
+        public Task<ApiResponse<ApiThrottleStatus>> GetThrottleStatus()
+            => Get<ApiThrottleStatus>("api/throttle/status");
+
         public Task<(ApiResponse, HttpResponseMessage)> SaveServerSettings(ApiServerSettings data)
             => Post("api/admin/settings", data);
 

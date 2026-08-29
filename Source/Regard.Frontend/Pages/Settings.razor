@@ -38,6 +38,27 @@
                         </section>
                     }
 
+                    @if (throttle != null && throttle.Enabled)
+                    {
+                        <section class="settings-section">
+                            <h3>Download pacing</h3>
+                            <p>
+                                Downloads are paced to look like a real viewer and avoid rate limits:
+                                about one every @throttle.DownloadMinSeconds–@throttle.DownloadMaxSeconds s per site@(throttle.MaxPerDay > 0 ? $", up to {throttle.MaxPerDay}/day" : "").
+                                @(throttle.CookiesConfigured ? "Cookies are configured." : "No cookies configured — some videos may not download until an admin adds them.")
+                            </p>
+                            @if (throttle.Hosts != null && throttle.Hosts.Count > 0)
+                            {
+                                <ul class="throttle-hosts">
+                                    @foreach (var h in throttle.Hosts)
+                                    {
+                                        <li>@h.Host — @h.InFlight downloading, @h.Queued queued, @h.UsedLastDay today</li>
+                                    }
+                                </ul>
+                            }
+                        </section>
+                    }
+
                     <section class="settings-section">
                         <h3>Downloads</h3>
 

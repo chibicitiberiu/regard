@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Regard.Backend.Configuration;
 using Regard.Backend.Jobs;
 using Regard.Backend.Model;
@@ -27,13 +28,15 @@ namespace Regard.Backend.Controllers
         private readonly UserQuotaService quotaService;
         private readonly RegardScheduler scheduler;
         private readonly ApiResponseFactory responseFactory;
+        private readonly Microsoft.Extensions.Configuration.IConfiguration configuration;
 
         public AdminController(UserManager<UserAccount> userManager,
                                RoleManager<IdentityRole> roleManager,
                                IOptionManager optionManager,
                                UserQuotaService quotaService,
                                RegardScheduler scheduler,
-                               ApiResponseFactory responseFactory)
+                               ApiResponseFactory responseFactory,
+                               Microsoft.Extensions.Configuration.IConfiguration configuration)
         {
             this.userManager = userManager;
             this.roleManager = roleManager;
@@ -41,6 +44,14 @@ namespace Regard.Backend.Controllers
             this.quotaService = quotaService;
             this.scheduler = scheduler;
             this.responseFactory = responseFactory;
+            this.configuration = configuration;
+        }
+
+        /// <summary>Fixed on-disk location of the uploaded yt-dlp cookies.txt (null if DataDirectory unset).</summary>
+        private string CookiesPath()
+        {
+            var dataDir = configuration["DataDirectory"];
+            return string.IsNullOrEmpty(dataDir) ? null : System.IO.Path.Combine(dataDir, "cookies.txt");
         }
 
         // ---- Server settings ---------------------------------------------------------------
@@ -58,6 +69,20 @@ namespace Regard.Backend.Controllers
                 DefaultVideoQuota = countQuota >= 0 ? countQuota : (int?)null,
                 DefaultStorageQuotaGb = sizeQuotaMb >= 0 ? sizeQuotaMb / (double)MbPerGb : (double?)null,
                 JobHistoryRetentionDays = optionManager.GetGlobal(Options.Server_JobHistoryRetentionDays),
+                ThrottleEnabled = optionManager.GetGlobal(Options.Server_Throttle_Enabled),
+                SleepRequests = optionManager.GetGlobal(Options.Server_Ytdl_SleepRequests),
+                SleepInterval = optionManager.GetGlobal(Options.Server_Ytdl_SleepInterval),
+                MaxSleepInterval = optionManager.GetGlobal(Options.Server_Ytdl_MaxSleepInterval),
+                LimitRate = optionManager.GetGlobal(Options.Server_Ytdl_LimitRate),
+                CookiesConfigured = CookiesPath() is string cp && System.IO.File.Exists(cp),
+                DownloadMinSeconds = optionManager.GetGlobal(Options.Server_Throttle_DownloadMinSeconds),
+                DownloadMaxSeconds = optionManager.GetGlobal(Options.Server_Throttle_DownloadMaxSeconds),
+                ExtractMinSeconds = optionManager.GetGlobal(Options.Server_Throttle_ExtractMinSeconds),
+                ExtractMaxSeconds = optionManager.GetGlobal(Options.Server_Throttle_ExtractMaxSeconds),
+                MaxPerHour = optionManager.GetGlobal(Options.Server_Throttle_MaxPerHour),
+                MaxPerDay = optionManager.GetGlobal(Options.Server_Throttle_MaxPerDay),
+                PerHostConcurrency = optionManager.GetGlobal(Options.Server_Throttle_PerHostConcurrency),
+                MaxParallelJobs = configuration.GetValue("REGARD_MAX_PARALLEL_JOBS", 1),
             };
             return Ok(responseFactory.Success(settings));
         }
@@ -71,6 +96,42 @@ namespace Regard.Backend.Controllers
             optionManager.SetGlobal(Options.User_SizeQuota,
                 request.DefaultStorageQuotaGb.HasValue ? (long)(request.DefaultStorageQuotaGb.Value * MbPerGb) : -1);
             optionManager.SetGlobal(Options.Server_JobHistoryRetentionDays, request.JobHistoryRetentionDays);
+
+            optionManager.SetGlobal(Options.Server_Throttle_Enabled, request.ThrottleEnabled);
+            optionManager.SetGlobal(Options.Server_Ytdl_SleepRequests, request.SleepRequests);
+            optionManager.SetGlobal(Options.Server_Ytdl_SleepInterval, request.SleepInterval);
+            optionManager.SetGlobal(Options.Server_Ytdl_MaxSleepInterval, request.MaxSleepInterval);
+            optionManager.SetGlobal(Options.Server_Ytdl_LimitRate, request.LimitRate ?? "");
+            optionManager.SetGlobal(Options.Server_Throttle_DownloadMinSeconds, request.DownloadMinSeconds);
+            optionManager.SetGlobal(Options.Server_Throttle_DownloadMaxSeconds, request.DownloadMaxSeconds);
+            optionManager.SetGlobal(Options.Server_Throttle_ExtractMinSeconds, request.ExtractMinSeconds);
+            optionManager.SetGlobal(Options.Server_Throttle_ExtractMaxSeconds, request.ExtractMaxSeconds);
+            optionManager.SetGlobal(Options.Server_Throttle_MaxPerHour, request.MaxPerHour);
+            optionManager.SetGlobal(Options.Server_Throttle_MaxPerDay, request.MaxPerDay);
+            optionManager.SetGlobal(Options.Server_Throttle_PerHostConcurrency, request.PerHostConcurrency);
+
+            // Cookies file: null = leave as-is; "" = remove; non-empty = replace (atomic temp+move).
+            if (request.CookiesFileContent != null)
+            {
+                var path = CookiesPath();
+                if (path == null)
+                    return BadRequest(responseFactory.Error("Server DataDirectory is not configured; cannot store cookies."));
+
+                if (request.CookiesFileContent.Length == 0)
+                {
+                    if (System.IO.File.Exists(path))
+                        System.IO.File.Delete(path);
+                    optionManager.SetGlobal(Options.Server_Ytdl_CookiesFile, "");
+                }
+                else
+                {
+                    var tmp = path + ".tmp";
+                    System.IO.File.WriteAllText(tmp, request.CookiesFileContent);
+                    System.IO.File.Move(tmp, path, overwrite: true);
+                    optionManager.SetGlobal(Options.Server_Ytdl_CookiesFile, path);
+                }
+            }
+
             return Ok(responseFactory.Success());
         }
 

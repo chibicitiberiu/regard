@@ -134,7 +134,10 @@ namespace Regard.Backend
                 q.UseInMemoryStore();
                 // Serialize jobs: the SQLite-backed store doesn't tolerate many concurrent
                 // writers, and one-at-a-time downloads are fine for a personal media server.
-                q.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
+                // Parallel jobs let different hosting domains download/extract at once (per-host serialism
+                // is enforced by HostThrottle). The app DB tolerates concurrent writers (WAL +
+                // busy_timeout); set to 1 to force strict global serialization.
+                q.UseDefaultThreadPool(tp => tp.MaxConcurrency = Math.Max(1, Configuration.GetValue("REGARD_MAX_PARALLEL_JOBS", 3)));
 
                 // Synchronize job
                 q.ScheduleJob<InitJob>(trigger => trigger.StartNow());
@@ -147,6 +150,7 @@ namespace Regard.Backend
             services.AddSingleton<JobTrackerService>();
             services.AddSingleton<NotificationService>();
             services.AddSingleton<DownloadCancellationRegistry>();
+            services.AddSingleton<HostThrottle>();
             services.AddSingleton<UserLogger>();
 
             services.AddHttpClient<SponsorBlockClient>(c =>
