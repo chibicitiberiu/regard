@@ -191,13 +191,26 @@
 
 .watch-description {
     margin-top: 1rem;
+    max-width: 70ch;
     white-space: normal;
     word-break: break-word;
     text-align: left;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: var(--color-fg-secondary);
 }
 
 .watch-description p {
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.85rem;
+
+    &:last-child { margin-bottom: 0; }
+}
+
+.watch-description a {
+    color: var(--color-fg-info);
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
 }
 
 /* Up next list. */
