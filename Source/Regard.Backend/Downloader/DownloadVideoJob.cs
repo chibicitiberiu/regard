@@ -100,11 +100,13 @@ namespace Regard.Backend.Downloader
             if (Job.JobData.TryGetValue(Data_VideoId, out object vidObj))
                 VideoId = Convert.ToInt32(vidObj);
 
-            var v = dataContext.Videos.Find(VideoId);
-            if (v == null || v.DownloadedPath != null)
+            // Load into the `video` field (not a local) so the "Downloading" ongoing notification, posted
+            // by OnJobStarted BEFORE ExecuteJob runs, already has the video's name.
+            video = dataContext.Videos.Find(VideoId);
+            if (video == null || video.DownloadedPath != null)
                 return null;   // invalid / already downloaded — let ExecuteJob take its error/no-op path
 
-            string host = UrlHostKey.Of(v.OriginalUrl);
+            string host = UrlHostKey.Of(video.OriginalUrl);
             if (hostThrottle.TryReserveDownload(host, VideoId, out var retryAt))
             {
                 reservedHost = host;   // released in OnAfterExecute
@@ -116,8 +118,8 @@ namespace Regard.Backend.Downloader
             int pos = hostThrottle.QueuePosition(host, VideoId);
             int mins = Math.Max(1, (int)Math.Ceiling((retryAt - DateTimeOffset.UtcNow).TotalMinutes));
             string detail = pos > 1
-                ? $"{v.Name} — position {pos} in the {host} queue (~{mins} min)"
-                : $"{v.Name} — pacing {host}, next attempt ~{mins} min";
+                ? $"{video.Name} — position {pos} in the {host} queue (~{mins} min)"
+                : $"{video.Name} — pacing {host}, next attempt ~{mins} min";
             _ = notificationService.PostOrUpdate(
                 null, QueuedNotificationKey(VideoId),
                 "Queued for download", detail,
