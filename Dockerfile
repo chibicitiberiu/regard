@@ -15,10 +15,17 @@ RUN dotnet publish Source/Regard.Frontend/Regard.Frontend.csproj -c Release -o /
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 
 # yt-dlp runs as a python zipapp; ffmpeg is needed for merges + thumbnail conversion;
-# ca-certificates for the HTTPS pull of yt-dlp from github.
+# ca-certificates for the HTTPS pull of yt-dlp from github. python3-pip is only here to add
+# curl_cffi below.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends python3 ffmpeg ca-certificates curl unzip && \
+    apt-get install -y --no-install-recommends python3 python3-pip ffmpeg ca-certificates curl unzip && \
     rm -rf /var/lib/apt/lists/*
+
+# curl_cffi: browser TLS-fingerprint impersonation for yt-dlp (--impersonate <target>). The yt-dlp
+# zipapp runs under the system python3, so install it there. The wheel bundles curl-impersonate, so
+# no extra native libs are needed. PEP 668: Debian marks the base env externally-managed, hence
+# --break-system-packages (this is a single-purpose container, not a shared system).
+RUN pip3 install --break-system-packages --no-cache-dir curl_cffi
 
 # deno: YouTube extraction now requires a JS runtime, otherwise yt-dlp degrades and many
 # videos fail to extract. Install the static binary to /usr/local/bin (on PATH for uid 1000).
