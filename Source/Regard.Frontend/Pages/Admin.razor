@@ -1,10 +1,8 @@
-@page "/admin"
-@attribute [Authorize(Roles = "admin")]
+@* Embedded as the "Administration" tab inside Settings (gated there by <AuthorizeView Roles="admin">).
+   Reachable at /settings?tab=admin; the old /admin route redirects there (AdminRedirect.razor). *@
 @using Regard.Common.API.Admin
 
-<div class="settings-page admin-page">
-    <h2>Administration</h2>
-
+<div class="admin-page">
     <TabView>
         <TabPage>
             <Title>Server</Title>

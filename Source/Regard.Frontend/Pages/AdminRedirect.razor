@@ -1,0 +1,9 @@
+@* Admin folded into Settings. Keep /admin working for old bookmarks by redirecting to the tab. *@
+@page "/admin"
+@attribute [Authorize(Roles = "admin")]
+@inject NavigationManager Nav
+
+@code {
+    protected override void OnInitialized()
+        => Nav.NavigateTo("settings?tab=admin", replace: true);
+}

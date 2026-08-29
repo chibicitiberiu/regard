@@ -36,19 +36,5 @@
     }
 }
 
-.text-muted {
-    color: var(--color-fg-secondary);
-}
-
-// Storage & quota summary block (Settings page + reused wording on Admin).
-.quota-summary {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-
-    .quota-bar {
-        max-width: 320px;
-        height: 8px;
-        margin-top: 0.15rem;
-    }
-}
+// .text-muted and .quota-summary/.quota-bar now live in _settings.scss (shared across all
+// settings pages).

@@ -1,0 +1,151 @@
+// Settings / Admin / edit pages. These classes were used in markup but never styled — this gives the
+// pages a real card layout and title typography. Shared by Settings.razor, the Admin component,
+// SubscriptionEdit and FolderEdit.
+
+.settings-page {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 0 0.5rem 2rem;
+
+    > h2 {
+        font-family: var(--font-family-title);
+        font-weight: 600;
+        font-size: 1.9rem;
+        letter-spacing: 0.02em;
+        margin: 0.25rem 0 1rem;
+        color: var(--color-fg-window);
+    }
+}
+
+// Card. A soft panel so each group of settings reads as its own block on the dark background.
+.settings-section {
+    background: var(--color-bg-window);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--border-radius-window);
+    padding: 1.1rem 1.35rem 1.25rem;
+    margin-bottom: 1.1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+
+    > h3 {
+        font-family: var(--font-family-title);
+        font-weight: 600;
+        font-size: 1.15rem;
+        letter-spacing: 0.02em;
+        margin: 0 0 0.9rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        color: var(--color-fg-window);
+    }
+
+    > p {
+        margin: 0 0 0.9rem;
+        color: var(--color-fg-secondary);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+}
+
+// Form rows inside a card: breathing room and vertically-centred labels against their inputs.
+.settings-section .form-group.row {
+    margin-bottom: 0.85rem;
+    align-items: flex-start;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.col-form-label {
+    padding-top: 0.5em;
+    color: var(--color-fg-secondary);
+}
+
+// A checkbox/radio sitting inline with its label.
+.inline-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    margin-right: 1rem;
+
+    input {
+        width: auto;
+        margin: 0;
+    }
+}
+
+// Indented sub-option blocks (revealed when a parent option is toggled on).
+.codec-list,
+.subtitle-suboptions,
+.transcode-mode {
+    margin-top: 0.6rem;
+    padding-left: 0.85rem;
+    border-left: 2px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.transcode-warning {
+    margin: 0.3rem 0 0;
+    font-size: 0.85rem;
+}
+
+details.advanced {
+    margin-top: 0.5rem;
+
+    > summary {
+        cursor: pointer;
+        color: var(--color-fg-secondary);
+        font-size: 0.9rem;
+        padding: 0.35rem 0;
+        user-select: none;
+
+        &:hover {
+            color: var(--color-fg);
+        }
+    }
+}
+
+.text-muted {
+    color: var(--color-fg-secondary);
+}
+
+small.text-muted,
+.settings-section small {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--color-fg-secondary);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.pattern-preview {
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--color-fg-secondary);
+
+    code {
+        word-break: break-all;
+    }
+}
+
+.throttle-hosts {
+    margin: 0.4rem 0 0;
+    padding-left: 1.1rem;
+    font-size: 0.88rem;
+    color: var(--color-fg-secondary);
+}
+
+// Storage & quota summary (moved here from _admin.scss so all settings styling lives together).
+.quota-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .quota-bar {
+        max-width: 20rem;
+        height: 8px;
+        margin-top: 0.15rem;
+    }
+}

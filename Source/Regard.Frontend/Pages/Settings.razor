@@ -289,5 +289,13 @@
                 <JobLog />
             </Content>
         </TabPage>
+        <AuthorizeView Roles="admin" Context="adminCtx">
+            <TabPage Name="admin">
+                <Title>Administration</Title>
+                <Content>
+                    <Admin />
+                </Content>
+            </TabPage>
+        </AuthorizeView>
     </TabView>
 </div>

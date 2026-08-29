@@ -1,7 +1,10 @@
 ﻿@page "/subscription/edit/{subscriptionId:int}"
 
+<div class="settings-page">
+<h2>Edit subscription</h2>
 <EditForm Model="Request"
           OnValidSubmit="OnSubmit">
+<section class="settings-section">
 
     <RgInputText Id="subscription_name"
                  @bind-Value="Request.Name"
@@ -194,7 +197,9 @@
         </div>
     </div>
 
+</section>
 </EditForm>
+</div>
 
 <Modal @ref="previewModal">
     <Title>Filter preview</Title>

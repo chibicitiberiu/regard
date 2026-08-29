@@ -1,7 +1,10 @@
 ﻿@page "/folder/edit/{folderId:int}"
 
+<div class="settings-page">
+<h2>Edit folder</h2>
 <EditForm Model="Request"
           OnValidSubmit="OnSubmit">
+<section class="settings-section">
 
     <RgInputText Id="folder_name"
                  @bind-Value="Request.Name"
@@ -83,4 +86,6 @@
         </div>
     </div>
 
+</section>
 </EditForm>
+</div>
