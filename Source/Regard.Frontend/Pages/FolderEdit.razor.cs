@@ -45,6 +45,13 @@ namespace Regard.Frontend.Pages
             }
         }
 
+        // Inherited-default text for the "Default (…)" inherit option (null until the config loads).
+        private static string OnOff(bool v) => v ? "On" : "Off";
+        protected string AutoDownloadDefaultText => Folder?.Config is { } c ? OnOff(c.AutoDownloadDefault) : null;
+        protected string DownloadOrderDefaultText => Folder?.Config is { } c ? SubscriptionEdit.OrderText(c.DownloadOrderDefault) : null;
+        protected string DeleteWatchedDefaultText => Folder?.Config is { } c ? OnOff(c.DeleteWatchedDefault) : null;
+        protected string MarkDeletedAsWatchedDefaultText => Folder?.Config is { } c ? OnOff(c.MarkDeletedAsWatchedDefault) : null;
+
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();

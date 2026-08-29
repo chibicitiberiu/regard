@@ -70,7 +70,7 @@ namespace Regard.Backend.Controllers
                 .ToArray();
 
             if ((request.Parts & ApiSubscriptionFolder.Parts.Config) != 0)
-                AddConfigs(folders);
+                AddConfigs(folders, user.Id);
 
             if ((request.Parts & ApiSubscriptionFolder.Parts.Stats) != 0)
                 AddStatistics(folders);
@@ -81,7 +81,13 @@ namespace Regard.Backend.Controllers
             }));
         }
 
-        private void AddConfigs(ApiSubscriptionFolder[] folders)
+        // Resolve an option from a folder's PARENT scope (parent folder → user → global → default).
+        private TValue ResolveInherited<TValue>(OptionDefinition<TValue> pref, ApiSubscriptionFolder folder, string userId)
+            => folder.ParentId.Value.HasValue
+                ? optionManager.GetForSubscriptionFolder(pref, folder.ParentId.Value.Value)
+                : optionManager.GetForUser(pref, userId);
+
+        private void AddConfigs(ApiSubscriptionFolder[] folders, string userId)
         {
             foreach (var folder in folders)
             {
@@ -104,6 +110,11 @@ namespace Regard.Backend.Controllers
 
                 if (optionManager.GetForSubscriptionFolderNoResolve(Options.Subscriptions_DownloadPath, folder.Id, out var path))
                     folder.Config.DownloadPath = path;
+
+                folder.Config.AutoDownloadDefault = ResolveInherited(Options.Subscriptions_AutoDownload, folder, userId);
+                folder.Config.DownloadOrderDefault = ResolveInherited(Options.Subscriptions_DownloadOrder, folder, userId);
+                folder.Config.DeleteWatchedDefault = ResolveInherited(Options.Subscriptions_DeleteWatched, folder, userId);
+                folder.Config.MarkDeletedAsWatchedDefault = ResolveInherited(Options.Subscriptions_MarkDeletedAsWatched, folder, userId);
             }
         }
 

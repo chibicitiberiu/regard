@@ -1,4 +1,5 @@
-﻿using Regard.Frontend.Utils;
+﻿using Microsoft.AspNetCore.Components;
+using Regard.Frontend.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,17 +10,23 @@ namespace Regard.Frontend.Shared.Controls
 {
     public class RgSimpleInputSelect<TKey> : RgInputSelect<TKey, TKey>
     {
+        /// <summary>
+        /// When set, the "inherit" (null) option reads "Default (&lt;this&gt;)" — the value the field
+        /// would resolve to when left unset — instead of the bare "(unset)".
+        /// </summary>
+        [Parameter] public string DefaultValueText { get; set; }
+
         public RgSimpleInputSelect()
         {
             KeyFunc = x => x;
-            DisplayTextFunc = KeyToString; 
+            DisplayTextFunc = KeyToString;
             SetDefaultItemsSource();
         }
 
         private string KeyToString(TKey key)
         {
             if (key == null)
-                return "(unset)";
+                return string.IsNullOrEmpty(DefaultValueText) ? "(unset)" : $"Default ({DefaultValueText})";
 
             if (typeof(TKey).IsEnum || typeof(TKey).IsNullableEnum())
                 return CamelCaseAddSpaces(key.ToString());

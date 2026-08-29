@@ -273,13 +273,92 @@
                 </div>
             </details>
 
-            <div class="form-group row">
-                <div class="col-xs-12 row">
-                    <span class="@(saved ? "fg-success" : "fg-error")">@statusMessage</span>
-                    <button class="primary ml-auto" @onclick="OnSave" disabled="@saving">Save</button>
-                </div>
-            </div>
                     </section>
+
+                    <section class="settings-section">
+                        <h3>Subscription defaults</h3>
+                        <p class="text-muted">
+                            Defaults for your subscriptions. A subscription or folder can still override
+                            each of these — leave one on "Default" to inherit the server default.
+                        </p>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Automatic download:</label>
+                            <div class="col-xs-8">
+                                <select class="form-control" @bind="AutoDownloadStr">
+                                    <option value="">@AutoDownloadDefaultLabel</option>
+                                    <option value="on">On</option>
+                                    <option value="off">Off</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Download order:</label>
+                            <div class="col-xs-8">
+                                <select class="form-control" @bind="DownloadOrderStr">
+                                    <option value="">@DownloadOrderDefaultLabel</option>
+                                    <option value="Newest">Newest first</option>
+                                    <option value="Oldest">Oldest first</option>
+                                    <option value="Playlist">Playlist order</option>
+                                    <option value="ReversePlaylist">Reverse playlist order</option>
+                                    <option value="Popularity">Most popular</option>
+                                    <option value="Rating">Highest rated</option>
+                                    <option value="Name">Name</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Keep at most (videos):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" @bind="SubMaxCountStr" placeholder="Default (-1 = all)" />
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Keep at most (MB):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" @bind="SubMaxSizeStr" placeholder="Default (-1 = unlimited)" />
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Delete files when watched:</label>
+                            <div class="col-xs-8">
+                                <select class="form-control" @bind="DeleteWatchedStr">
+                                    <option value="">@DeleteWatchedDefaultLabel</option>
+                                    <option value="on">On</option>
+                                    <option value="off">Off</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Mark watched when files deleted:</label>
+                            <div class="col-xs-8">
+                                <select class="form-control" @bind="MarkDeletedAsWatchedStr">
+                                    <option value="">@MarkDeletedAsWatchedDefaultLabel</option>
+                                    <option value="on">On</option>
+                                    <option value="off">Off</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Delete grace period (minutes):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" @bind="DeleteGracePeriodStr" placeholder="Default (0 = immediate)" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="form-group row">
+                        <div class="col-xs-12 row">
+                            <span class="@(saved ? "fg-success" : "fg-error")">@statusMessage</span>
+                            <button class="primary ml-auto" @onclick="OnSave" disabled="@saving">Save</button>
+                        </div>
+                    </div>
                 }
             </Content>
         </TabPage>

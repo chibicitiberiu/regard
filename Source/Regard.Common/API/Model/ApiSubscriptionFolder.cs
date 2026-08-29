@@ -39,6 +39,12 @@ namespace Regard.Common.API.Model
         public bool? DeleteWatched { get; set; }
 
         public string DownloadPath { get; set; }
+
+        // Effective inherited defaults (from the parent folder / user / global) for the tri-state fields.
+        public bool AutoDownloadDefault { get; set; }
+        public VideoOrder DownloadOrderDefault { get; set; }
+        public bool DeleteWatchedDefault { get; set; }
+        public bool MarkDeletedAsWatchedDefault { get; set; }
     }
 
     public class ApiSubscriptionFolderStats

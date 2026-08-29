@@ -23,6 +23,7 @@
     <RgSimpleInputSelect Id="folder_autoDownload"
                          TKey="bool?"
                          @bind-Value="Request.AutoDownload"
+                         DefaultValueText="@AutoDownloadDefaultText"
                          Label="Automatic download: "
                          Required="false" />
 
@@ -51,18 +52,21 @@
     <RgSimpleInputSelect Id="folder_downloadOrder"
                          TKey="Regard.Model.VideoOrder?"
                          @bind-Value="Request.DownloadOrder"
+                         DefaultValueText="@DownloadOrderDefaultText"
                          Label="Download order: "
                          Required="false" />
 
     <RgSimpleInputSelect Id="folder_deleteWatched"
                          TKey="bool?"
                          @bind-Value="Request.DeleteWatched"
+                         DefaultValueText="@DeleteWatchedDefaultText"
                          Label="Delete files when watched: "
                          Required="false" />
 
     <RgSimpleInputSelect Id="folder_markDeletedAsWatched"
                          TKey="bool?"
                          @bind-Value="Request.MarkDeletedAsWatched"
+                         DefaultValueText="@MarkDeletedAsWatchedDefaultText"
                          Label="Mark watched when files deleted: "
                          Required="false" />
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Regard.Common.API.Admin;
 using Regard.Common.API.Settings;
 using Regard.Frontend.Shared;
+using Regard.Model;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,22 @@ namespace Regard.Frontend.Pages
         protected string statusMessage = string.Empty;
 
         protected ApiUserUsage usage;
+
+        // Subscription defaults (a subscription/folder overrides these). "" = inherit; for the bool
+        // selects "on"/"off"; the numeric ones are "" = inherit else a number.
+        protected string AutoDownloadStr { get; set; } = string.Empty;
+        protected string DownloadOrderStr { get; set; } = string.Empty;
+        protected string SubMaxCountStr { get; set; } = string.Empty;
+        protected string SubMaxSizeStr { get; set; } = string.Empty;
+        protected string DeleteWatchedStr { get; set; } = string.Empty;
+        protected string MarkDeletedAsWatchedStr { get; set; } = string.Empty;
+        protected string DeleteGracePeriodStr { get; set; } = string.Empty;
+
+        // "Default (…)" labels for the inherit option, filled from the resolved global defaults.
+        protected string AutoDownloadDefaultLabel { get; set; } = "Default";
+        protected string DownloadOrderDefaultLabel { get; set; } = "Default";
+        protected string DeleteWatchedDefaultLabel { get; set; } = "Default";
+        protected string MarkDeletedAsWatchedDefaultLabel { get; set; } = "Default";
 
         // "" = inherit default; "0" = unlimited; otherwise a height cap.
         protected string MaxResolutionStr { get; set; } = string.Empty;
@@ -111,8 +128,24 @@ namespace Regard.Frontend.Pages
             ? (int)Math.Min(100, 100 * usage.UsedBytes / q)
             : 0;
 
+        private static string BoolToStr(bool? v) => v.HasValue ? (v.Value ? "on" : "off") : string.Empty;
+        private static bool? StrToBool(string v) => v == string.Empty ? (bool?)null : v == "on";
+
         private void LoadFrom(ApiUserSettings s)
         {
+            AutoDownloadStr = BoolToStr(s.AutoDownload);
+            DownloadOrderStr = s.DownloadOrder.HasValue ? s.DownloadOrder.Value.ToString() : string.Empty;
+            SubMaxCountStr = s.DownloadMaxCount?.ToString() ?? string.Empty;
+            SubMaxSizeStr = s.DownloadMaxSize?.ToString() ?? string.Empty;
+            DeleteWatchedStr = BoolToStr(s.DeleteWatched);
+            MarkDeletedAsWatchedStr = BoolToStr(s.MarkDeletedAsWatched);
+            DeleteGracePeriodStr = s.DeleteGracePeriod?.ToString() ?? string.Empty;
+
+            AutoDownloadDefaultLabel = $"Default ({(s.AutoDownloadDefault ? "On" : "Off")})";
+            DownloadOrderDefaultLabel = $"Default ({SubscriptionEdit.OrderText(s.DownloadOrderDefault)})";
+            DeleteWatchedDefaultLabel = $"Default ({(s.DeleteWatchedDefault ? "On" : "Off")})";
+            MarkDeletedAsWatchedDefaultLabel = $"Default ({(s.MarkDeletedAsWatchedDefault ? "On" : "Off")})";
+
             MaxResolutionStr = s.MaxResolution.HasValue ? s.MaxResolution.Value.ToString() : string.Empty;
 
             OverrideVideoCodecs = s.ExcludedVideoCodecs != null;
@@ -159,6 +192,15 @@ namespace Regard.Frontend.Pages
 
             var request = new ApiUserSettings
             {
+                AutoDownload = StrToBool(AutoDownloadStr),
+                DownloadOrder = string.IsNullOrEmpty(DownloadOrderStr)
+                    ? (VideoOrder?)null
+                    : Enum.Parse<VideoOrder>(DownloadOrderStr),
+                DownloadMaxCount = string.IsNullOrWhiteSpace(SubMaxCountStr) ? (int?)null : int.Parse(SubMaxCountStr),
+                DownloadMaxSize = string.IsNullOrWhiteSpace(SubMaxSizeStr) ? (long?)null : long.Parse(SubMaxSizeStr),
+                DeleteWatched = StrToBool(DeleteWatchedStr),
+                MarkDeletedAsWatched = StrToBool(MarkDeletedAsWatchedStr),
+                DeleteGracePeriod = string.IsNullOrWhiteSpace(DeleteGracePeriodStr) ? (int?)null : int.Parse(DeleteGracePeriodStr),
                 MaxResolution = string.IsNullOrEmpty(MaxResolutionStr)
                     ? (int?)null
                     : int.Parse(MaxResolutionStr),

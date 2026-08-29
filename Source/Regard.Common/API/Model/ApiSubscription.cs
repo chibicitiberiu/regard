@@ -59,6 +59,13 @@ namespace Regard.Common.API.Model
         public string SponsorblockActions { get; set; }
 
         public List<ApiSubscriptionFilter> Filters { get; set; } = new();
+
+        // Effective inherited defaults: the value each tri-state field would resolve to (from the parent
+        // folder / user / global) when left unset. Used to label the "Default (…)" option on the form.
+        public bool AutoDownloadDefault { get; set; }
+        public VideoOrder DownloadOrderDefault { get; set; }
+        public bool DeleteWatchedDefault { get; set; }
+        public bool MarkDeletedAsWatchedDefault { get; set; }
     }
 
     public class ApiSubscriptionStats

@@ -101,6 +101,26 @@ namespace Regard.Frontend.Pages
 
         protected string PatternPreview => Shared.PatternPreviewHelper.Render(Request.DownloadPath);
 
+        // Friendly text for the inherited default shown on the "Default (…)" inherit option. Null until
+        // the config loads, in which case the control falls back to plain "(unset)".
+        internal static string OrderText(VideoOrder o) => o switch
+        {
+            VideoOrder.Newest => "Newest first",
+            VideoOrder.Oldest => "Oldest first",
+            VideoOrder.Playlist => "Playlist order",
+            VideoOrder.ReversePlaylist => "Reverse playlist order",
+            VideoOrder.Popularity => "Most popular",
+            VideoOrder.Rating => "Highest rated",
+            VideoOrder.Name => "Name",
+            _ => o.ToString(),
+        };
+        private static string OnOff(bool v) => v ? "On" : "Off";
+
+        protected string AutoDownloadDefaultText => Subscription?.Config is { } c ? OnOff(c.AutoDownloadDefault) : null;
+        protected string DownloadOrderDefaultText => Subscription?.Config is { } c ? OrderText(c.DownloadOrderDefault) : null;
+        protected string DeleteWatchedDefaultText => Subscription?.Config is { } c ? OnOff(c.DeleteWatchedDefault) : null;
+        protected string MarkDeletedAsWatchedDefaultText => Subscription?.Config is { } c ? OnOff(c.MarkDeletedAsWatchedDefault) : null;
+
         protected override async Task OnInitializedAsync()
         {
             await base.OnInitializedAsync();

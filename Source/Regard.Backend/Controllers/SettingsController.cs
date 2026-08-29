@@ -5,6 +5,7 @@ using Regard.Backend.Configuration;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.API.Settings;
+using Regard.Model;
 using System;
 using System.Threading.Tasks;
 
@@ -41,6 +42,18 @@ namespace Regard.Backend.Controllers
             // Read only the user's explicitly-set values (no fallback): null = "inherits default".
             var settings = new ApiUserSettings
             {
+                AutoDownload = GetOrNull(Options.Subscriptions_AutoDownload, user.Id),
+                DownloadOrder = GetOrNull(Options.Subscriptions_DownloadOrder, user.Id),
+                DownloadMaxCount = GetOrNull(Options.Subscriptions_MaxCount, user.Id),
+                DownloadMaxSize = GetOrNull(Options.Subscriptions_MaxSize, user.Id),
+                DeleteWatched = GetOrNull(Options.Subscriptions_DeleteWatched, user.Id),
+                MarkDeletedAsWatched = GetOrNull(Options.Subscriptions_MarkDeletedAsWatched, user.Id),
+                DeleteGracePeriod = GetOrNull(Options.Subscriptions_DeleteGracePeriod, user.Id),
+                // Effective global defaults (what "inherit" resolves to) for the "Default (…)" labels.
+                AutoDownloadDefault = optionManager.GetGlobal(Options.Subscriptions_AutoDownload),
+                DownloadOrderDefault = optionManager.GetGlobal(Options.Subscriptions_DownloadOrder),
+                DeleteWatchedDefault = optionManager.GetGlobal(Options.Subscriptions_DeleteWatched),
+                MarkDeletedAsWatchedDefault = optionManager.GetGlobal(Options.Subscriptions_MarkDeletedAsWatched),
                 MaxResolution = GetOrNull(Options.Ytdl_MaxResolution, user.Id),
                 ExcludedVideoCodecs = GetCodecsOrNull(Options.Ytdl_ExcludedVideoCodecs, user.Id),
                 ExcludedAudioCodecs = GetCodecsOrNull(Options.Ytdl_ExcludedAudioCodecs, user.Id),
@@ -70,6 +83,13 @@ namespace Regard.Backend.Controllers
 
             // Per field: a non-null value is pinned as a user override; null clears the override so
             // the value inherits again (mirrors SubscriptionController.Edit's set-or-unset).
+            SetOrUnset(Options.Subscriptions_AutoDownload, user.Id, request.AutoDownload);
+            SetOrUnset(Options.Subscriptions_DownloadOrder, user.Id, request.DownloadOrder);
+            SetOrUnset(Options.Subscriptions_MaxCount, user.Id, request.DownloadMaxCount);
+            SetOrUnset(Options.Subscriptions_MaxSize, user.Id, request.DownloadMaxSize);
+            SetOrUnset(Options.Subscriptions_DeleteWatched, user.Id, request.DeleteWatched);
+            SetOrUnset(Options.Subscriptions_MarkDeletedAsWatched, user.Id, request.MarkDeletedAsWatched);
+            SetOrUnset(Options.Subscriptions_DeleteGracePeriod, user.Id, request.DeleteGracePeriod);
             SetOrUnset(Options.Ytdl_MaxResolution, user.Id, request.MaxResolution);
             SetOrUnsetCodecs(Options.Ytdl_ExcludedVideoCodecs, user.Id, request.ExcludedVideoCodecs);
             SetOrUnsetCodecs(Options.Ytdl_ExcludedAudioCodecs, user.Id, request.ExcludedAudioCodecs);
@@ -119,6 +139,12 @@ namespace Regard.Backend.Controllers
         private bool? GetOrNull(OptionDefinition<bool> pref, string userId)
             => optionManager.GetForUserNoResolve(pref, userId, out bool v) ? v : (bool?)null;
 
+        private long? GetOrNull(OptionDefinition<long> pref, string userId)
+            => optionManager.GetForUserNoResolve(pref, userId, out long v) ? v : (long?)null;
+
+        private VideoOrder? GetOrNull(OptionDefinition<VideoOrder> pref, string userId)
+            => optionManager.GetForUserNoResolve(pref, userId, out VideoOrder v) ? v : (VideoOrder?)null;
+
         private string[] GetCodecsOrNull(OptionDefinition<string> pref, string userId)
         {
             if (!optionManager.GetForUserNoResolve(pref, userId, out string v))
@@ -141,6 +167,18 @@ namespace Regard.Backend.Controllers
         }
 
         private void SetOrUnset(OptionDefinition<bool> pref, string userId, bool? value)
+        {
+            if (value.HasValue) optionManager.SetForUser(pref, userId, value.Value);
+            else optionManager.UnsetForUser(pref, userId);
+        }
+
+        private void SetOrUnset(OptionDefinition<long> pref, string userId, long? value)
+        {
+            if (value.HasValue) optionManager.SetForUser(pref, userId, value.Value);
+            else optionManager.UnsetForUser(pref, userId);
+        }
+
+        private void SetOrUnset(OptionDefinition<VideoOrder> pref, string userId, VideoOrder? value)
         {
             if (value.HasValue) optionManager.SetForUser(pref, userId, value.Value);
             else optionManager.UnsetForUser(pref, userId);

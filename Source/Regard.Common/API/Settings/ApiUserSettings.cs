@@ -1,3 +1,5 @@
+using Regard.Model;
+
 namespace Regard.Common.API.Settings
 {
     /// <summary>
@@ -7,6 +9,38 @@ namespace Regard.Common.API.Settings
     /// </summary>
     public class ApiUserSettings
     {
+        // --- Subscription defaults (a subscription/folder can still override these). null = inherit. ---
+
+        /// <summary>Automatically download new videos of a subscription. null = inherit.</summary>
+        public bool? AutoDownload { get; set; }
+
+        /// <summary>Order in which a subscription's videos are picked for download. null = inherit.</summary>
+        public VideoOrder? DownloadOrder { get; set; }
+
+        /// <summary>How many recent videos to keep per subscription (-1 = all). null = inherit.</summary>
+        public int? DownloadMaxCount { get; set; }
+
+        /// <summary>Max total size to keep per subscription, in MB (-1 = unlimited). null = inherit.</summary>
+        public long? DownloadMaxSize { get; set; }
+
+        /// <summary>Delete a video's files once it's watched. null = inherit.</summary>
+        public bool? DeleteWatched { get; set; }
+
+        /// <summary>Mark a video watched when its files are deleted. null = inherit.</summary>
+        public bool? MarkDeletedAsWatched { get; set; }
+
+        /// <summary>Grace period (minutes) before a marked video's files are deleted (0 = immediate). null = inherit.</summary>
+        public int? DeleteGracePeriod { get; set; }
+
+        // Effective global defaults for the subscription-default fields above (what "inherit" resolves to),
+        // so the UI can label the "Default" option with the real value. Read-only from the client's view.
+        public bool AutoDownloadDefault { get; set; }
+        public VideoOrder DownloadOrderDefault { get; set; }
+        public bool DeleteWatchedDefault { get; set; }
+        public bool MarkDeletedAsWatchedDefault { get; set; }
+
+        // --- Download / format settings ---
+
         /// <summary>Maximum video resolution (height in px); 0 = unlimited. null = inherit.</summary>
         public int? MaxResolution { get; set; }
 
