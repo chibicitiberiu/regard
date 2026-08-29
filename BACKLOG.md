@@ -3,6 +3,10 @@
 Durable list of feature ideas and known issues, so they survive across sessions.
 (Current active work is tracked in the plan files; this is the "later" pile.)
 
+> **UX/feature feedback from the 2026-08-29 testing pass lives in
+> [`UX_FEEDBACK.md`](UX_FEEDBACK.md)** — grouped by area with effort tags and a proposed
+> 6-batch plan. Start there for the current polish/feature queue.
+
 ## Feature ideas
 
 ### ~~Keyword include/exclude filtering per subscription~~ — DONE (`89d27fd`)
