@@ -343,6 +343,14 @@ namespace Regard.Backend.Controllers
         {
             var user = await userManager.GetUserAsync(User);
             var sub = subscriptionManager.Get(user, request.Id);
+
+            // Get returns null for an id that doesn't exist or belongs to someone else, and the null
+            // went straight through to SynchronizeJob.Schedule, which dereferences subscription.Name —
+            // a 500 where a 404 belongs. Reachable by syncing a subscription that was deleted in another
+            // tab, or by any client sending a stale id.
+            if (sub == null)
+                return NotFound(responseFactory.Error("Subscription not found."));
+
             await subscriptionManager.SynchronizeSubscription(sub);
             return Ok(responseFactory.Success());
         }
