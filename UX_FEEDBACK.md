@@ -15,14 +15,14 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
   yellow, pending/running → cyan. Priority = attention(yellow) > pending(cyan) > finished(green).
   _Done (Batch 1, uncommitted): `NotificationsService.DotState` + `_nav.scss` neon-glow classes;
   all three colours + priority verified live/harness with Playwright._
-- `[ ]` **[M] Richer download notifications** — show download speed, ETA, total size on the
+- `[x]` **[M] Richer download notifications** — show download speed, ETA, total size on the
   live card. _yt-dlp progress output already carries speed/ETA/size; the Phase-A regex that
   feeds the pie can capture them. Live values live in `JobTrackerService.liveJobs`._
 - `[x]` **[S] Stop showing "ETA ~1–2 min" on queued jobs.** These are never accurate for
   downloads. Show a queued/indeterminate state instead of a fake minute count. _Done (Batch 1,
   uncommitted): `DownloadVideoJob` queued text now reads "position N in the youtube.com download
   queue" / "waiting for a slot", no minutes. Verified live._
-- `[ ]` **[M] Cancel queued / retrying downloads too**, not only actively-running ones.
+- `[x]` **[M] Cancel queued / retrying downloads too**, not only actively-running ones.
   _Cancel already exists for running jobs (`Video.DownloadSkipped`); extend to
   `Scheduled`/deferred + retry-waiting states._
 - `[x]` **[S] Align "History" and "Clear all"** in the notification area header (vertical
@@ -64,7 +64,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
 
 ## D. Downloads — correctness
 
-- `[ ]` **[M] "Download again" is broken — it must actually re-download.** Observed: clicking
+- `[x]` **[M] "Download again" is broken — it must actually re-download.** Observed: clicking
   **Download again** failed with "video already downloaded" even though the files were
   **missing / incomplete** (a partial prior download). The explicit user action should
   always re-download, unconditionally — not short-circuit on `DownloadedPath != null`.
@@ -97,13 +97,13 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
 
 ## F. Settings — new options / behaviour changes
 
-- `[ ]` **[M] "Create subscription" spins for ~3 minutes — unacceptable, must return fast.**
+- `[x]` **[M] "Create subscription" spins for ~3 minutes — unacceptable, must return fast.**
   Observed: pressing **Create** blocked the UI for roughly 3 minutes. The create call must
   return near-instantly. Fix: fast-path validation only — validate/recognize the URL, create
   the sub row, and defer **all** metadata/enrichment/first-sync to background jobs; the UI
   returns as soon as the URL is accepted. _(Exempting from the host throttle alone isn't
   enough — the 3 min is the synchronous enrich/first-fetch on the request thread.)_
-- `[ ]` **[M] Per-user `cookies.txt`.** _The throttling plan currently has one global
+- `[x]` **[M] Per-user `cookies.txt`.** _The throttling plan currently has one global
   cookies file for all users; this promotes it to a per-user setting. Privacy + ban-blast
   radius both improve. Affects the Phase-A cookies design._
 - `[ ]` **[M] SponsorBlock: skip by default in the player.** Use SponsorBlock's own default
@@ -183,6 +183,14 @@ Ordered by value-for-effort and dependency. Each batch is a small, single-focus 
 - H: server log page
 - H: maintenance actions (VACUUM etc.)
 - H: periodic DB backups
+
+**Batch 3 status (2026-08-30): all four items implemented, uncommitted.** Measured results: create
+returns in ~0.05 s (was ~3 min) and the Add dialog closes in 0.3 s; "Download again" sweeps the old
+files (both the recorded path and the freshly-resolved one, which is what catches a half-finished
+download) and re-fetches; download cards carry speed/ETA/size; queued and retrying downloads can be
+cancelled. Three pre-existing bugs were found on the way and filed in `BACKLOG.md` — the idle watchdog
+killing large healthy downloads (a likely root cause of the original report), `RetryCount` never
+decrementing, and no JS runtime for yt-dlp.
 
 _Batch 3 deliberately sits next to the existing throttling plan
 (`~/.claude/plans/indexed-discovering-penguin.md`) — per-user cookies changes its Phase-A

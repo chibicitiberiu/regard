@@ -32,6 +32,51 @@ a **per-subscription** `PlaylistIndex`. Default `DownloadOrder = Newest` orders 
   oldest-first for both a channel and a curated playlist, and that the `Playlist` /
   `ReversePlaylist` order options match their names against yt-dlp's `playlist_index`.
 
+### Large downloads get killed by the idle watchdog while still writing — likely the source of the broken files
+Observed live on 2026-08-30 (job 417, "Why Runways Have to Be Repainted", ~1 GB at `--limit-rate 2M`):
+`Job failed: youtube-dl stalled: no output for 600053 ms`, while the `.part` on disk had grown from
+256 MB to 754 MB during that window. The watchdog in `YoutubeDL.Run` (`YoutubeDL.cs:90-103`) measures
+**stdout/stderr line activity only** (`lastOutput`, updated in `OutputProcessingThread:140`) and knows
+nothing about the output file, so a download that is demonstrably progressing can be killed at
+`Ytdl_IdleTimeout` (default **10 minutes**, `Options.cs:262-263`).
+
+**Root cause not established.** yt-dlp does emit progress through a pipe with `--newline` when run
+by hand, so it isn't simple block buffering; the real job passes many more args (`--limit-rate 2M`,
+`--sleep-interval`, `--sleep-requests`) and downloads a fragmented `315+251-12` format. Needs its own
+investigation — do not assume the cause.
+
+**Why it matters:** this is a strong candidate for the *original* "download again failed, files were
+missing or incomplete" report. It leaves exactly the orphaned `.part` files the dev library contains,
+including an 832 MB one from 2026-08-29 that pre-dates this work. Candidate fixes: have the watchdog
+also treat output-file growth as liveness, and/or raise the default. Batch 3 Phase 1 makes recovery
+possible but does not address the cause.
+
+### `JobInfo.RetryCount` never decrements — failed jobs retry forever
+Found during the Batch 3 review (2026-08-30), **confirmed by code inspection, not yet reproduced at
+runtime**. `JobRetryService.OnJobFailed` is invoked synchronously by the `JobFailed` event and runs to
+its first `await`, so `job.RetryCount--; SaveChanges()` (`JobRetryService.cs:62-64`) commits on its own
+fresh scope. Control then returns to `JobBase.Execute`'s `finally`, which calls `PersistJobState()` →
+`dataContext.Jobs.Update(Job); SaveChanges()` (`JobBase.cs:78`, `:181-182`) on the job's **own** stale
+tracked instance, whose `RetryCount` is still the pre-decrement value. `Update` marks every property
+modified, so the decrement is overwritten.
+
+Predicted symptoms: a permanently-failing download retries every 15 minutes indefinitely, and the
+retry card always reads "Retrying (1/3)" because its label is
+`total - job.RetryCount + 1` (`JobTrackerService.cs:309`).
+
+Matters for Batch 3 Phase 2: "resolution failure deletes the placeholder row" would otherwise become an
+unbounded loop of jobs against a row that no longer exists. Schedule `ResolveSubscriptionJob` with
+`retryCount: 0` and guard the deletion on the row still existing, or fix the clobber properly.
+
+### No JavaScript runtime for yt-dlp — YouTube extraction is running degraded
+Every YouTube extraction currently logs:
+`WARNING: [youtube] No supported JavaScript runtime could be found. … YouTube extraction without a JS
+runtime has been deprecated, and some formats may be missing.` yt-dlp enables **deno** by default (see
+its EJS wiki page). Neither the host nor the Docker image has it, so some formats are silently missing
+from every extraction. Fixing it means installing deno (host: the user's call; image: a Dockerfile
+line), and it should land alongside the `--impersonate` work since both are anti-bot/extraction
+quality. Verified on 2026-08-30 with yt-dlp 2026.8.19.
+
 ## Known issues found during the live-update rework (2026-08-30), deliberately out of scope
 
 - **DbContexts don't take `DbContextOptions`.** `DataContext(IConfiguration)` chains to the parameterless
