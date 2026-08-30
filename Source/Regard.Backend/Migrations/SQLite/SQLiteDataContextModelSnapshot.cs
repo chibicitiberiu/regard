@@ -576,6 +576,9 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<DateTimeOffset>("LastUpdated")
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("Likes")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(250)

@@ -27,6 +27,7 @@ namespace Regard.Frontend.Pages
         protected int JobHistoryRetentionDays { get; set; }
 
         // Throttling / anti-bot
+        protected bool ReturnYouTubeDislikeEnabled { get; set; }
         protected bool ThrottleEnabled { get; set; }
         protected int SleepRequests { get; set; }
         protected int SleepInterval { get; set; }
@@ -78,6 +79,7 @@ namespace Regard.Frontend.Pages
                 DefaultVideoQuotaStr = s.DefaultVideoQuota?.ToString() ?? string.Empty;
                 DefaultStorageQuotaStr = s.DefaultStorageQuotaGb?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
                 JobHistoryRetentionDays = s.JobHistoryRetentionDays;
+                ReturnYouTubeDislikeEnabled = s.ReturnYouTubeDislikeEnabled;
                 ThrottleEnabled = s.ThrottleEnabled;
                 SleepRequests = s.SleepRequests;
                 SleepInterval = s.SleepInterval;
@@ -121,6 +123,7 @@ namespace Regard.Frontend.Pages
                 DefaultVideoQuota = ParseIntOrNull(DefaultVideoQuotaStr),
                 DefaultStorageQuotaGb = ParseDoubleOrNull(DefaultStorageQuotaStr),
                 JobHistoryRetentionDays = JobHistoryRetentionDays,
+                ReturnYouTubeDislikeEnabled = ReturnYouTubeDislikeEnabled,
                 ThrottleEnabled = ThrottleEnabled,
                 SleepRequests = SleepRequests,
                 SleepInterval = SleepInterval,

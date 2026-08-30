@@ -98,6 +98,21 @@ namespace Regard.Backend.Model
         /// <summary>Video length in whole seconds (from yt-dlp), or null if unknown.</summary>
         public int? Duration { get; set; }
 
+        /// <summary>
+        /// Like count, from yt-dlp's <c>like_count</c> during enrichment, or refreshed from Return
+        /// YouTube Dislike when that's enabled. Null when unknown.
+        /// </summary>
+        public long? Likes { get; set; }
+
+        /// <summary>
+        /// Liked ratio in 0..1 — <c>likes / (likes + dislikes)</c>, NOT a star average. Null when no
+        /// dislike data is available, which is the normal case: YouTube stopped publishing dislike
+        /// counts in 2021, so yt-dlp never supplies one and only Return YouTube Dislike can fill this in.
+        ///
+        /// Storing the ratio rather than an absolute dislike count is deliberate: when a later metadata
+        /// refresh raises <see cref="Likes"/>, the implied dislikes scale with it instead of pairing a
+        /// fresh like count with a frozen dislike number.
+        /// </summary>
         public float? Rating { get; set; }
 
         public string ProviderData { get; set; }

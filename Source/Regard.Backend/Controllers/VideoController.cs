@@ -182,6 +182,16 @@ namespace Regard.Backend.Controllers
                 {
                     apiVideos[0].Likes = votes.Likes;
                     apiVideos[0].Dislikes = votes.Dislikes;
+
+                    // Derive the 0..1 liked ratio from RYD's own counts. Deliberately NOT votes.Rating:
+                    // that field is YouTube's legacy 1..5 star average (verified live — a 97%-liked video
+                    // reports 4.90), and Video.Rating is a 0..1 ratio that the watch page multiplies by 5.
+                    var ratio = ProviderHelpers.CalculateRating(votes.Likes, votes.Dislikes);
+                    apiVideos[0].Rating = ratio;
+
+                    // Persist so the counts survive without re-calling RYD, and so a later metadata
+                    // refresh that raises the like count scales the implied dislikes with it.
+                    await videoManager.SetVotes(videos[0], votes.Likes, ratio);
                 }
             }
 

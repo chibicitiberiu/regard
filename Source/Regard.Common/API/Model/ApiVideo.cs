@@ -70,12 +70,18 @@ namespace Regard.Common.API.Model
         public System.Collections.Generic.List<ApiSponsorSegment> SponsorSegments { get; set; }
 
         /// <summary>
-        /// Real like/dislike estimates from ReturnYouTubeDislike, set only for the single-video watch fetch
-        /// of a YouTube video when the feature is enabled. Null when disabled/unavailable. YouTube stopped
-        /// exposing public dislikes in 2021, so these come from RYD, not yt-dlp.
+        /// Like count. Persisted on the video (from yt-dlp's like_count during enrichment, refreshed from
+        /// ReturnYouTubeDislike when that's enabled), so unlike <see cref="Dislikes"/> this is projected
+        /// for every row and survives a live push.
         /// </summary>
         public long? Likes { get; set; }
 
+        /// <summary>
+        /// Dislike estimate from ReturnYouTubeDislike, set only for the single-video watch fetch of a
+        /// YouTube video when the feature is enabled — YouTube stopped exposing public dislikes in 2021,
+        /// so this never comes from yt-dlp. Not persisted and not merged from a live push, so the client
+        /// re-derives it from <see cref="Likes"/> and <see cref="Rating"/> when it goes null.
+        /// </summary>
         public long? Dislikes { get; set; }
 
         /// <summary>

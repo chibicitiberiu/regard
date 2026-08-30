@@ -18,6 +18,14 @@ namespace Regard.Common.API.Admin
         /// <summary>How long finished jobs are kept in the Job Log, in days.</summary>
         public int JobHistoryRetentionDays { get; set; }
 
+        // ---- External services ----
+
+        /// <summary>
+        /// Fetch dislike estimates from ReturnYouTubeDislike for the watch page. One external call per
+        /// watch-page open; tells that service which videos are watched here.
+        /// </summary>
+        public bool ReturnYouTubeDislikeEnabled { get; set; }
+
         // ---- Download throttling / anti-bot ----
 
         /// <summary>Master switch for download pacing + per-host throttling.</summary>

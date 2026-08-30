@@ -26,6 +26,26 @@
                     </section>
 
                     <section class="settings-section">
+                        <h3>External services</h3>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Return YouTube Dislike:</label>
+                            <div class="col-xs-8">
+                                <label class="inline-check">
+                                    <input type="checkbox" @bind="ReturnYouTubeDislikeEnabled" />
+                                    Show dislike counts on the watch page
+                                </label>
+                                <small class="text-muted">
+                                    YouTube stopped publishing dislike counts in 2021, so these come from
+                                    <a href="https://returnyoutubedislike.com" target="_blank" rel="noopener noreferrer">returnyoutubedislike.com</a>.
+                                    Turning this on sends each watched video's id to that service, and
+                                    their limits (100/min, 10k/day) are shared by everyone on this server.
+                                    With it off, the watch page shows a like count but no ratio.
+                                </small>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
                         <h3>Default per-user quota</h3>
                         <p class="text-muted">
                             Applied to every user unless you set a per-user override on the Users tab.

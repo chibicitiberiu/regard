@@ -35,11 +35,16 @@ namespace Regard.Backend.Configuration
 
         /// <summary>
         /// Fetch real dislike counts for YouTube videos from the ReturnYouTubeDislike API and show them on
-        /// the watch page. Off by default because it makes an external call per watched video (attribution
-        /// to returnyoutubedislike.com is shown when the data is displayed).
+        /// the watch page, with attribution to returnyoutubedislike.com.
+        ///
+        /// On by default: without it the watch page can show a like count but no ratio and no dislikes,
+        /// since YouTube stopped publishing dislike counts in 2021. The trade-off is one external call
+        /// per watch-page open, which tells returnyoutubedislike.com which videos get watched here; their
+        /// documented limits are 100/min and 10k/day per source IP, shared by every user of the server.
+        /// Admins can turn it off in Settings.
         /// </summary>
         public static readonly OptionDefinition<bool> ReturnYouTubeDislike_Enabled = new OptionDefinition<bool>(
-            false,
+            true,
             "ryd.enabled",
             "ReturnYouTubeDislike:Enabled",
             "REGARD_RYD_ENABLED",

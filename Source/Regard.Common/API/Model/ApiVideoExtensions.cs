@@ -32,6 +32,7 @@ namespace Regard.Common.API.Model
             target.UploaderName = pushed.UploaderName;
             target.Views = pushed.Views;
             target.Duration = pushed.Duration;
+            target.Likes = pushed.Likes;
             target.Rating = pushed.Rating;
             target.OriginalUrl = pushed.OriginalUrl;
             target.SponsorsRemoved = pushed.SponsorsRemoved;

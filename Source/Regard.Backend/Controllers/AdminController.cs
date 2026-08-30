@@ -72,6 +72,7 @@ namespace Regard.Backend.Controllers
                 DefaultVideoQuota = countQuota >= 0 ? countQuota : (int?)null,
                 DefaultStorageQuotaGb = sizeQuotaMb >= 0 ? sizeQuotaMb / (double)MbPerGb : (double?)null,
                 JobHistoryRetentionDays = optionManager.GetGlobal(Options.Server_JobHistoryRetentionDays),
+                ReturnYouTubeDislikeEnabled = optionManager.GetGlobal(Options.ReturnYouTubeDislike_Enabled),
                 ThrottleEnabled = optionManager.GetGlobal(Options.Server_Throttle_Enabled),
                 SleepRequests = optionManager.GetGlobal(Options.Server_Ytdl_SleepRequests),
                 SleepInterval = optionManager.GetGlobal(Options.Server_Ytdl_SleepInterval),
@@ -102,6 +103,7 @@ namespace Regard.Backend.Controllers
                 request.DefaultStorageQuotaGb.HasValue ? (long)(request.DefaultStorageQuotaGb.Value * MbPerGb) : -1);
             optionManager.SetGlobal(Options.Server_JobHistoryRetentionDays, request.JobHistoryRetentionDays);
 
+            optionManager.SetGlobal(Options.ReturnYouTubeDislike_Enabled, request.ReturnYouTubeDislikeEnabled);
             optionManager.SetGlobal(Options.Server_Throttle_Enabled, request.ThrottleEnabled);
             optionManager.SetGlobal(Options.Server_Ytdl_SleepRequests, request.SleepRequests);
             optionManager.SetGlobal(Options.Server_Ytdl_SleepInterval, request.SleepInterval);

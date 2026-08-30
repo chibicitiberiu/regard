@@ -191,7 +191,10 @@ namespace Regard.Backend.Providers.YouTubeDL
                             OriginalUrl = (entry.WebpageUrl ?? entry.Url)?.ToString(),
                             Views = entry.ViewCount,
                             Duration = entry.Duration.HasValue ? (int?)Math.Round(entry.Duration.Value) : null,
-                            Rating = ProviderHelpers.CalculateRating(entry.LikeCount, entry.DislikeCount)
+                            // Flat listings carry no like_count, so this is almost always null here; the
+                            // real capture happens in UpdateMetadata. Rating is deliberately NOT set:
+                            // yt-dlp has no dislike data, so computing it would only ever yield null.
+                            Likes = entry.LikeCount
                         };
                         break;
                 }
@@ -233,7 +236,12 @@ namespace Regard.Backend.Providers.YouTubeDL
                 if (updateStatistics)
                 {
                     video.Views = info.ViewCount;
-                    video.Rating = ProviderHelpers.CalculateRating(info.LikeCount, info.DislikeCount);
+                    video.Likes = info.LikeCount;
+
+                    // Rating is deliberately left alone. YouTube stopped publishing dislike counts in
+                    // 2021, so yt-dlp's dislike_count is always null and the old
+                    // CalculateRating(likes, dislikes) here evaluated to null on every refresh — quietly
+                    // erasing the ratio that Return YouTube Dislike had supplied. Only RYD can fill it.
                 }
             }
         }

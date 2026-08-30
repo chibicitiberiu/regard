@@ -22,7 +22,7 @@ namespace Regard.Backend.Services.LiveUpdates
         {
             "Name", "Description", "IsWatched", "Published", "DownloadedPath", "DownloadedSize",
             "SubscriptionId", "PlaylistIndex", "EnrichedAt", "LastUpdated", "ThumbnailPath",
-            "UploaderName", "Views", "Duration", "Rating", "OriginalUrl", "SponsorsRemoved",
+            "UploaderName", "Views", "Duration", "Likes", "Rating", "OriginalUrl", "SponsorsRemoved",
             "DeleteScheduledAt", "PlaybackPositionSeconds",
         };
 

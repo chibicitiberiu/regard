@@ -53,6 +53,38 @@ namespace Regard.Backend.Services
                 .Where(x => x.Subscription.UserId == userAccount.Id);
         }
 
+        /// <summary>
+        /// Records vote data fetched from Return YouTube Dislike onto the video.
+        ///
+        /// Exists because <c>VideoController</c> has no DataContext of its own: mutating the tracked
+        /// entity there would leave the change tracked but never flushed, so the counts would look right
+        /// for that one response and silently persist nothing.
+        ///
+        /// <paramref name="rating"/> is the 0..1 liked ratio, NOT RYD's <c>rating</c> field — that one is
+        /// YouTube's legacy 1..5 star average (~4.9 for a well-liked video) and storing it here would
+        /// render as 24 stars and produce negative derived dislikes.
+        ///
+        /// Best-effort: never throws, because this runs inside a read request that must still return.
+        /// </summary>
+        public async Task SetVotes(Video video, long? likes, float? rating)
+        {
+            if (video == null)
+                return;
+
+            try
+            {
+                // Assign and let EF decide: unchanged numbers mean no modified property, so a repeat
+                // watch-page open writes nothing and broadcasts nothing.
+                video.Likes = likes ?? video.Likes;
+                video.Rating = rating ?? video.Rating;
+                await dataContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "Could not persist vote data for video {0}", video.Id);
+            }
+        }
+
         public void Update(UserAccount user, int[] videoIds, Action<Video> updateMethod)
         {
             var vids = dataContext.Videos.AsQueryable()

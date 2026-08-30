@@ -56,6 +56,7 @@ namespace Regard.Backend.Services
                 UploaderName = video.UploaderName,
                 Views = video.Views,
                 Duration = video.Duration,
+                Likes = video.Likes,
                 Rating = video.Rating,
                 OriginalUrl = video.OriginalUrl,
                 SponsorsRemoved = video.SponsorsRemoved,
