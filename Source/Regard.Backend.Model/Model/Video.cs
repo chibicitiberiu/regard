@@ -118,6 +118,18 @@ namespace Regard.Backend.Model
         public string ProviderData { get; set; }
 
         /// <summary>
+        /// yt-dlp's <c>availability</c> for this video ("public", "subscriber_only", …), carried from the
+        /// provider to the sync job so it can decide whether to keep the video at all.
+        ///
+        /// Deliberately [NotMapped]: it is only ever read in the same call stack that set it, during
+        /// SynchronizeJob.CheckForNewVideos, and persisting it would mean a column, two migrations and a
+        /// LivePushPolicy entry for a value nothing else consumes. Always null on a video loaded from the
+        /// database — do not test it anywhere outside sync.
+        /// </summary>
+        [NotMapped]
+        public string ProviderAvailability { get; set; }
+
+        /// <summary>
         /// The video's chapters as a JSON array of {Start, End, Title} (original-timeline seconds),
         /// captured from yt-dlp during metadata enrichment. Null when the source has no chapters.
         /// Like SponsorSegments these are on the ORIGINAL timeline, so the watch page must not seek by

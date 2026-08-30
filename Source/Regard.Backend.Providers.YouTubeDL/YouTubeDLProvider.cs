@@ -191,6 +191,9 @@ namespace Regard.Backend.Providers.YouTubeDL
                             OriginalUrl = (entry.WebpageUrl ?? entry.Url)?.ToString(),
                             Views = entry.ViewCount,
                             Duration = entry.Duration.HasValue ? (int?)Math.Round(entry.Duration.Value) : null,
+                            // Transient, not a column: the sync job uses it to decide whether to keep a
+                            // members-only video. Flat listings do carry it (from the channel page badge).
+                            ProviderAvailability = entry.Availability,
                             // Flat listings carry no like_count, so this is almost always null here; the
                             // real capture happens in UpdateMetadata. Rating is deliberately NOT set:
                             // yt-dlp has no dislike data, so computing it would only ever yield null.
@@ -213,6 +216,10 @@ namespace Regard.Backend.Providers.YouTubeDL
                 await ytdlService.PaceExtractionAsync(UrlHostKey.Of(video.OriginalUrl));
                 var info = await ytdlService.UsingYoutubeDL(async ytdl =>
                     await ytdl.ExtractInformation(video.OriginalUrl, false, BackgroundTimeoutMs, retries: BackgroundRetries, extraArgs: ytdlService.GetAntibotArgs()));
+
+                // Transient (see Video.ProviderAvailability). Set on every refresh so a caller that
+                // enriches and then re-checks scope sees the current value rather than a stale null.
+                video.ProviderAvailability = info.Availability;
 
                 if (updateMetadata)
                 {

@@ -41,6 +41,16 @@ namespace Regard.Common.API.Subscriptions
 
         public string SponsorblockActions { get; set; }
 
+        public bool? IncludeShorts { get; set; }
+
+        public bool? IncludeMembersOnly { get; set; }
+
+        /// <summary>"yyyy-MM-dd", "" for no bound, null to inherit.</summary>
+        public string PublishedAfter { get; set; }
+
+        /// <summary>"yyyy-MM-dd", "" for no bound, null to inherit.</summary>
+        public string PublishedBefore { get; set; }
+
         public List<Regard.Common.API.Model.ApiSubscriptionFilter> Filters { get; set; } = new();
     }
 }

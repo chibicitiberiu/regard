@@ -375,6 +375,55 @@
                                 <input class="form-control" type="number" @bind="DeleteGracePeriodStr" placeholder="Default (0 = immediate)" />
                             </div>
                         </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Include Shorts:</label>
+                            <div class="col-xs-8">
+                                <select class="form-control" @bind="IncludeShortsStr">
+                                    <option value="">@IncludeShortsDefaultLabel</option>
+                                    <option value="on">On</option>
+                                    <option value="off">Off</option>
+                                </select>
+                                <small class="text-muted">
+                                    Applied while syncing, so excluded Shorts never enter the library.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Include members-only videos:</label>
+                            <div class="col-xs-8">
+                                <select class="form-control" @bind="IncludeMembersOnlyStr">
+                                    <option value="">@IncludeMembersOnlyDefaultLabel</option>
+                                    <option value="on">On</option>
+                                    <option value="off">Off</option>
+                                </select>
+                                <small class="text-muted">
+                                    Downloading these needs a channel membership in your cookies.txt.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Published after:</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="date" @bind="PublishedAfterDate" />
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Published before:</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="date" @bind="PublishedBeforeDate" />
+                            </div>
+                            <div class="col-xs-8 col-xs-offset-4">
+                                <small class="text-muted">
+                                    Auto-download only videos published inside this window (both ends
+                                    inclusive). Leave blank for no limit. Neither date affects a download
+                                    you start yourself.
+                                </small>
+                            </div>
+                        </div>
                     </section>
 
                     <div class="form-group row">

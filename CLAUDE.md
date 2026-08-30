@@ -85,6 +85,21 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
 - There's an `api.py` helper for driving the backend directly. Real endpoints: login is
   `POST /api/auth/login`; notifications the bell reads are `GET /api/notifications/recent?take=N`
   (not `/list`). When in doubt, read live state through the API rather than the DB file.
+- **Enums bind as ints, not names.** `subscription/edit` rejects `"downloadOrder": "Oldest"` with a 400;
+  send `1`. Same for `ApiSubscription.Parts` (`Config` = `1`), which is a flags int rather than an array.
+  A test helper that ignores the response makes this look like a product bug — check for `httpError`.
+- **`Subscriptions_MaxCount` is a cap on the total kept, not on one run.** `DetermineMaximumVideoCount`
+  subtracts what's already downloaded, so setting it to 1 on a subscription that already has 1 file
+  yields zero download slots and nothing is ever queued.
+- **A sync's video count plateaus between tabs.** A flat channel listing drains Videos, then Live, then
+  Shorts, so polling for a "stable" count reports done early. Wait for the `SynchronizeJob` row to reach
+  a terminal `state` (3/4/5) instead.
+- **Cancelling a download sets `DownloadSkipped`** (`JobsController`), so a test that cancels to avoid
+  pulling a real file has to clear the flag afterwards. `DownloadSkipped` is not on `ApiVideo`, so read
+  it from a snapshot of `Regard.db` + `-wal` + `-shm` copied together.
+- **`subscription/delete` with `deleteDownloadedFiles: true` is asynchronous** — it queues a file-sweep
+  job, and the rows are still there right after the call returns. Pass `false` for a subscription with
+  no downloads if you want the delete to be immediate.
 
 ## Architecture cheat-sheet
 
@@ -156,7 +171,30 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
   `Video.razor` — otherwise whether we get a native `<video>` or a video.js player depends on boot
   timing. Everything in `RegardHelpers` drives the raw DOM element.
 - **Providers** are a separate project and can't touch options/`HostThrottle` directly — they go through
-  `IYoutubeDlService` (`GetAntibotArgs`, `PaceExtractionAsync`).
+  `IYoutubeDlService` (`GetAntibotArgs`, `PaceExtractionAsync`). That's why the content-scope filters
+  live in `SynchronizeJob` rather than in `YouTubeDLProvider`.
+- **Content scope** (Batch 5a). "Include Shorts" / "include members-only" are decided during sync, before
+  the row is created, so an excluded video is never stored and an already-stored one is never touched.
+  - **A channel subscription never sees a Short on its own.** `YouTubeUrlHelper.FixYouTubeChannelUri`
+    rewrites `youtube.com/@Handle` (and `/channel/ID`, `/c/`, `/user/`) to that channel's **`/videos`
+    tab** at creation time, and YouTube's Videos tab excludes Shorts — they have their own tab. So with
+    the option on, `CheckForNewVideos` lists the sibling `/shorts` URL as a second pass. A
+    `/@Handle/shorts` URL has three path segments and escapes the rewrite, so subscribing to it directly
+    works too.
+  - Both signals are present in a plain `--flat-playlist` listing: a Short's `url` is
+    `youtube.com/shorts/<id>`, and a members-only video reports `availability: subscriber_only` (yt-dlp
+    reads it off the channel page's badge, so **no cookies and no membership are needed to detect it**).
+    `UrlInformation.Availability` carries it, and `Video.ProviderAvailability` is `[NotMapped]` — a
+    sync-only hint, always null on a video loaded from the database.
+  - **Don't use duration to detect a Short.** Videos 187 and 193 in the dev library are 32 s and 9 s and
+    are ordinary CGP Grey uploads; a length threshold eats them.
+- **The publish-date window is checked twice, on purpose.** Un-enriched videos carry
+  `Published = DateTimeOffset.MinValue` (a sort placeholder set at `SynchronizeJob`), so testing them in
+  `ProcessDownloadRules` would exclude every flat video forever — nothing would ever enrich them again.
+  Stage 1 skips un-enriched videos; `DownloadVideoJob` re-checks right after `EnsureEnriched` and marks
+  an out-of-window video `DownloadSkipped`. Only automatic downloads are gated: `ProcessDownloadRules`
+  passes an `Auto` job-data flag (alongside `Forced`), because a plain manual download is unforced too
+  and must still win over the filter.
 - **Options**: `OptionDefinition<T>(default, key, configKey, envKey, flags)`; `flags = 0` means
   server-only. Read with `optionManager.GetGlobal` (DB → env → config → default). Nothing hardcoded —
   defaults are option defaults, admin-tunable.

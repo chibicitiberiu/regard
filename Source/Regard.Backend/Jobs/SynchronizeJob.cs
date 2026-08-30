@@ -191,38 +191,102 @@ namespace Regard.Backend.Jobs
                 optionManager.GetGlobal(Options.Sync_EagerEnrichCount),
                 optionManager.GetForSubscription(Options.Subscriptions_MaxCount, sub.Id));
 
+            // Content scope. Both are decided here rather than in the provider, which is a separate
+            // project and deliberately can't read options. Filtering before FindMatchingVideo means an
+            // out-of-scope video is never stored AND an already-stored one is never touched: switching
+            // an option back on simply lets the next sync pick the videos up again, since the whole
+            // channel is re-listed every run.
+            bool includeShorts = optionManager.GetForSubscription(Options.Subscriptions_IncludeShorts, sub.Id);
+            bool includeMembersOnly = optionManager.GetForSubscription(Options.Subscriptions_IncludeMembersOnly, sub.Id);
+            int skippedShorts = 0, skippedMembersOnly = 0;
+
             int newCount = 0;
-            await foreach (var video in subProvider.FetchVideos(sub))
+
+            async Task Ingest(IAsyncEnumerable<Video> fetched)
             {
-                Video existingVideo = FindMatchingVideo(sub, video);
-
-                if (existingVideo != null)
+                await foreach (var video in fetched)
                 {
-                    MergeVideoInfo(existingVideo, video);
-                    continue;
-                }
+                    if (!includeShorts && VideoScopeFilter.IsShort(video.OriginalUrl))
+                    {
+                        skippedShorts++;
+                        continue;
+                    }
 
-                FillVideoDetails(sub, video);
+                    if (!includeMembersOnly && VideoScopeFilter.IsMembersOnly(video.ProviderAvailability))
+                    {
+                        skippedMembersOnly++;
+                        continue;
+                    }
 
-                if (newCount < eagerBudget && await TryEnrich(video))
-                {
-                    video.EnrichedAt = DateTimeOffset.UtcNow;
-                }
-                else
-                {
-                    // Deferred (or enrichment failed): mark un-enriched and sort it below the enriched
-                    // newest videos (MinValue) so "latest N" auto-download never picks a flat placeholder.
-                    video.EnrichedAt = null;
-                    video.Published = DateTimeOffset.MinValue;
-                }
+                    Video existingVideo = FindMatchingVideo(sub, video);
 
-                // Store video
-                dataContext.Videos.Add(video);
-                log.LogInformation("New video {0}", video);
-                JobLog($"New video: {video.Name}");
-                await dataContext.SaveChangesAsync();
-                newCount++;
+                    if (existingVideo != null)
+                    {
+                        MergeVideoInfo(existingVideo, video);
+                        continue;
+                    }
+
+                    FillVideoDetails(sub, video);
+
+                    if (newCount < eagerBudget && await TryEnrich(video))
+                    {
+                        video.EnrichedAt = DateTimeOffset.UtcNow;
+                    }
+                    else
+                    {
+                        // Deferred (or enrichment failed): mark un-enriched and sort it below the enriched
+                        // newest videos (MinValue) so "latest N" auto-download never picks a flat placeholder.
+                        video.EnrichedAt = null;
+                        video.Published = DateTimeOffset.MinValue;
+                    }
+
+                    // Store video
+                    dataContext.Videos.Add(video);
+                    log.LogInformation("New video {0}", video);
+                    JobLog($"New video: {video.Name}");
+                    await dataContext.SaveChangesAsync();
+                    newCount++;
+                }
             }
+
+            await Ingest(subProvider.FetchVideos(sub));
+
+            // A channel subscription's URL is normalised to its /videos tab when it's created
+            // (YouTubeUrlHelper.FixYouTubeChannelUri), and that tab excludes Shorts — they have their own
+            // tab. So when the option is on, list the sibling /shorts tab too; otherwise "Include Shorts"
+            // could never actually include anything. With the option off (the default) this doesn't run,
+            // so no extra request is made and sync behaves exactly as it did before.
+            if (includeShorts && VideoScopeFilter.TryGetShortsTabUrl(sub.OriginalUrl, out var shortsUrl))
+            {
+                try
+                {
+                    // A stand-in carrying only what the provider reads (URL + owner, for the cookie jar).
+                    // Every video it yields is re-pointed at the real subscription by FillVideoDetails.
+                    var shortsSub = new Subscription
+                    {
+                        Id = sub.Id,
+                        Name = sub.Name,
+                        UserId = sub.UserId,
+                        SubscriptionProviderId = sub.SubscriptionProviderId,
+                        OriginalUrl = shortsUrl,
+                    };
+                    await Ingest(subProvider.FetchVideos(shortsSub));
+                }
+                catch (Exception ex)
+                {
+                    // A channel with no Shorts tab 404s here. That's not a failed sync — the videos are
+                    // already in — so log it and move on.
+                    log.LogInformation(ex, "No Shorts tab for {0} ({1})", sub.Name, shortsUrl);
+                    JobLog($"No Shorts tab found at {shortsUrl}.");
+                }
+            }
+
+            // Say so in the job log. A channel silently yielding fewer videos than the user expects is
+            // exactly the kind of thing that reads as a broken sync.
+            if (skippedShorts > 0)
+                JobLog($"Skipped {skippedShorts} Short(s) — \"Include Shorts\" is off for this subscription.");
+            if (skippedMembersOnly > 0)
+                JobLog($"Skipped {skippedMembersOnly} members-only video(s) — \"Include members-only videos\" is off for this subscription.");
         }
 
         /// <summary>

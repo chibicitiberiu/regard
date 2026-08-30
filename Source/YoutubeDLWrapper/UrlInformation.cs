@@ -182,6 +182,17 @@ namespace YoutubeDLWrapper
         //                automatically generated captions
 
         /// <summary>
+        /// Opt: Who can watch this — "public", "unlisted", "needs_auth", "subscriber_only",
+        /// "premium_only" or "private". Null when the extractor doesn't say.
+        ///
+        /// Present on FLAT playlist entries as well as full extractions: yt-dlp derives it from the
+        /// channel page's badges (youtube/_tab.py, _extract_video), so a members-only video reports
+        /// "subscriber_only" during a plain --flat-playlist listing, with no cookies and no membership.
+        /// That is what makes it usable as a sync-time scope filter.
+        /// </summary>
+        public string Availability { get; set; }
+
+        /// <summary>
         /// Opt: Length of the video in seconds, as an integer or float.
         /// </summary>
         public double? Duration { get; set; }

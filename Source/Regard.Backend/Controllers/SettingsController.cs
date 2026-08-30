@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Regard.Backend.Common.Utils;
 using Regard.Backend.Configuration;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
@@ -54,11 +55,17 @@ namespace Regard.Backend.Controllers
                 DeleteWatched = GetOrNull(Options.Subscriptions_DeleteWatched, user.Id),
                 MarkDeletedAsWatched = GetOrNull(Options.Subscriptions_MarkDeletedAsWatched, user.Id),
                 DeleteGracePeriod = GetOrNull(Options.Subscriptions_DeleteGracePeriod, user.Id),
+                IncludeShorts = GetOrNull(Options.Subscriptions_IncludeShorts, user.Id),
+                IncludeMembersOnly = GetOrNull(Options.Subscriptions_IncludeMembersOnly, user.Id),
+                PublishedAfter = GetOrNull(Options.Subscriptions_PublishedAfter, user.Id),
+                PublishedBefore = GetOrNull(Options.Subscriptions_PublishedBefore, user.Id),
                 // Effective global defaults (what "inherit" resolves to) for the "Default (…)" labels.
                 AutoDownloadDefault = optionManager.GetGlobal(Options.Subscriptions_AutoDownload),
                 DownloadOrderDefault = optionManager.GetGlobal(Options.Subscriptions_DownloadOrder),
                 DeleteWatchedDefault = optionManager.GetGlobal(Options.Subscriptions_DeleteWatched),
                 MarkDeletedAsWatchedDefault = optionManager.GetGlobal(Options.Subscriptions_MarkDeletedAsWatched),
+                IncludeShortsDefault = optionManager.GetGlobal(Options.Subscriptions_IncludeShorts),
+                IncludeMembersOnlyDefault = optionManager.GetGlobal(Options.Subscriptions_IncludeMembersOnly),
                 MaxResolution = GetOrNull(Options.Ytdl_MaxResolution, user.Id),
                 ExcludedVideoCodecs = GetCodecsOrNull(Options.Ytdl_ExcludedVideoCodecs, user.Id),
                 ExcludedAudioCodecs = GetCodecsOrNull(Options.Ytdl_ExcludedAudioCodecs, user.Id),
@@ -86,6 +93,12 @@ namespace Regard.Backend.Controllers
             if (user == null)
                 return Unauthorized(responseFactory.Error("Not authenticated."));
 
+            // Validated before any write, since the SetOrUnset calls below persist eagerly and a late
+            // rejection would leave the settings half-applied. Same check the subscription editor runs.
+            var dateError = PublishDateFilter.DescribeValidationError(request.PublishedAfter, request.PublishedBefore);
+            if (dateError != null)
+                return BadRequest(responseFactory.Error(dateError));
+
             // Per field: a non-null value is pinned as a user override; null clears the override so
             // the value inherits again (mirrors SubscriptionController.Edit's set-or-unset).
             SetOrUnset(Options.Subscriptions_AutoDownload, user.Id, request.AutoDownload);
@@ -95,6 +108,10 @@ namespace Regard.Backend.Controllers
             SetOrUnset(Options.Subscriptions_DeleteWatched, user.Id, request.DeleteWatched);
             SetOrUnset(Options.Subscriptions_MarkDeletedAsWatched, user.Id, request.MarkDeletedAsWatched);
             SetOrUnset(Options.Subscriptions_DeleteGracePeriod, user.Id, request.DeleteGracePeriod);
+            SetOrUnset(Options.Subscriptions_IncludeShorts, user.Id, request.IncludeShorts);
+            SetOrUnset(Options.Subscriptions_IncludeMembersOnly, user.Id, request.IncludeMembersOnly);
+            SetOrUnset(Options.Subscriptions_PublishedAfter, user.Id, request.PublishedAfter?.Trim());
+            SetOrUnset(Options.Subscriptions_PublishedBefore, user.Id, request.PublishedBefore?.Trim());
             SetOrUnset(Options.Ytdl_MaxResolution, user.Id, request.MaxResolution);
             SetOrUnsetCodecs(Options.Ytdl_ExcludedVideoCodecs, user.Id, request.ExcludedVideoCodecs);
             SetOrUnsetCodecs(Options.Ytdl_ExcludedAudioCodecs, user.Id, request.ExcludedAudioCodecs);

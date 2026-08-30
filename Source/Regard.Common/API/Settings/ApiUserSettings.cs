@@ -32,12 +32,27 @@ namespace Regard.Common.API.Settings
         /// <summary>Grace period (minutes) before a marked video's files are deleted (0 = immediate). null = inherit.</summary>
         public int? DeleteGracePeriod { get; set; }
 
+        /// <summary>Take YouTube Shorts into the library at all (applied at sync time). null = inherit.</summary>
+        public bool? IncludeShorts { get; set; }
+
+        /// <summary>Take members-only videos into the library at all (sync time). null = inherit.</summary>
+        public bool? IncludeMembersOnly { get; set; }
+
+        /// <summary>Auto-download only videos published on/after this "yyyy-MM-dd" date. "" = no bound, null = inherit.</summary>
+        public string PublishedAfter { get; set; }
+
+        /// <summary>Auto-download only videos published on/before this "yyyy-MM-dd" date, whole day
+        /// inclusive. "" = no bound, null = inherit.</summary>
+        public string PublishedBefore { get; set; }
+
         // Effective global defaults for the subscription-default fields above (what "inherit" resolves to),
         // so the UI can label the "Default" option with the real value. Read-only from the client's view.
         public bool AutoDownloadDefault { get; set; }
         public VideoOrder DownloadOrderDefault { get; set; }
         public bool DeleteWatchedDefault { get; set; }
         public bool MarkDeletedAsWatchedDefault { get; set; }
+        public bool IncludeShortsDefault { get; set; }
+        public bool IncludeMembersOnlyDefault { get; set; }
 
         // --- Download / format settings ---
 

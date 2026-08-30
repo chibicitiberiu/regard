@@ -58,6 +58,17 @@ own stale instance back over it, so failed jobs retried forever and the card alw
 after the fix has RetryCount 2 and state Scheduled, while every pre-fix failure still sits at 3.
 
 
+### 45 of the CGP Grey videos in the library are members-only and can never be downloaded
+Found while testing Batch 5a. CGP Grey's `/videos` tab has 194 entries, **45** of which report
+`availability: subscriber_only`; the library holds all 194, because they were ingested before the
+content-scope filter existed. Without a channel membership in that user's `cookies.txt` they can be
+listed but never fetched, so they sit there as permanent download failures.
+
+The new "Include members-only videos" option (off by default) stops *new* ones being added and the sync
+job logs the count, but nothing removes what's already stored — deleting rows is a destructive operation
+that deserves its own opt-in. Candidates: a "remove out-of-scope videos" maintenance action, or marking
+them `DownloadSkipped` so the auto-downloader stops trying.
+
 ### Sidebar tree doesn't highlight on a deep link
 `SubscriptionTree`'s highlight is its own `treeView.SelectedItem`, which only its own click handler
 sets. `AppState.SelectedSubscription` changes drive *navigation* (`AppController.cs:141-149`) but the

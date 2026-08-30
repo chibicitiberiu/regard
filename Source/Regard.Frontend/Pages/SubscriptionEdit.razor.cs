@@ -7,6 +7,7 @@ using Regard.Model;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -103,6 +104,39 @@ namespace Regard.Frontend.Pages
             set => Request.AllSubs = TriToBool(value);
         }
 
+        public string IncludeShortsStr
+        {
+            get => BoolToTri(Request.IncludeShorts);
+            set => Request.IncludeShorts = TriToBool(value);
+        }
+
+        public string IncludeMembersOnlyStr
+        {
+            get => BoolToTri(Request.IncludeMembersOnly);
+            set => Request.IncludeMembersOnly = TriToBool(value);
+        }
+
+        // The wire format is a "yyyy-MM-dd" string, but @bind on <input type="date"> only accepts a date
+        // type — bind a DateOnly? and project. Cleared field => null => the option is unset on save.
+        private static DateOnly? ToDate(string s) =>
+            DateOnly.TryParseExact(s, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+                ? d : (DateOnly?)null;
+        private static string FromDate(DateOnly? d) => d?.ToString(DateFormat, CultureInfo.InvariantCulture);
+
+        private const string DateFormat = "yyyy-MM-dd";
+
+        public DateOnly? PublishedAfterDate
+        {
+            get => ToDate(Request.PublishedAfter);
+            set => Request.PublishedAfter = FromDate(value);
+        }
+
+        public DateOnly? PublishedBeforeDate
+        {
+            get => ToDate(Request.PublishedBefore);
+            set => Request.PublishedBefore = FromDate(value);
+        }
+
         protected string PatternPreview => Shared.PatternPreviewHelper.Render(Request.DownloadPath);
 
         // The subscription's icon URL, absolutized against the backend origin (relative in dev → :5000 → 404
@@ -171,6 +205,8 @@ namespace Regard.Frontend.Pages
         protected string DownloadOrderDefaultText => Subscription?.Config is { } c ? OrderText(c.DownloadOrderDefault) : null;
         protected string DeleteWatchedDefaultText => Subscription?.Config is { } c ? OnOff(c.DeleteWatchedDefault) : null;
         protected string MarkDeletedAsWatchedDefaultText => Subscription?.Config is { } c ? OnOff(c.MarkDeletedAsWatchedDefault) : null;
+        protected string IncludeShortsDefaultText => Subscription?.Config is { } c ? OnOff(c.IncludeShortsDefault) : null;
+        protected string IncludeMembersOnlyDefaultText => Subscription?.Config is { } c ? OnOff(c.IncludeMembersOnlyDefault) : null;
 
         protected override async Task OnInitializedAsync()
         {
@@ -205,6 +241,10 @@ namespace Regard.Frontend.Pages
                     Request.SubFormat = Subscription.Config.SubFormat;
                     Request.SubLang = Subscription.Config.SubLang;
                     Request.SponsorblockActions = Subscription.Config.SponsorblockActions;
+                    Request.IncludeShorts = Subscription.Config.IncludeShorts;
+                    Request.IncludeMembersOnly = Subscription.Config.IncludeMembersOnly;
+                    Request.PublishedAfter = Subscription.Config.PublishedAfter;
+                    Request.PublishedBefore = Subscription.Config.PublishedBefore;
                     Request.Filters = Subscription.Config.Filters?.ToList() ?? new();
                     SubmitEnabled = true;
                     ValidationMessage = string.Empty;
@@ -240,6 +280,10 @@ namespace Regard.Frontend.Pages
             {
                 SubscriptionId = SubscriptionId,
                 Filters = Request.Filters,
+                // Send the form's current window (never null, so the server uses these rather than
+                // falling back to the saved values) — the preview must reflect what's about to be saved.
+                PublishedAfter = Request.PublishedAfter ?? string.Empty,
+                PublishedBefore = Request.PublishedBefore ?? string.Empty,
             });
             if (httpResp.IsSuccessStatusCode)
             {

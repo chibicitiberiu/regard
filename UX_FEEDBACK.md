@@ -113,15 +113,21 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
   radius both improve. Affects the Phase-A cookies design._
 - `[x]` **[M] SponsorBlock: skip by default in the player.** Use SponsorBlock's own default
   categories to skip, not "keep everything". _Player-side skipping using stored segments._
-- `[ ]` **[L] Include Shorts / include member-only videos** — user default + per-subscription
-  override, both **off** by default. Member videos need login cookies. _Sync/filter-time
-  flags; Shorts detection via URL/duration, members via yt-dlp availability._
+- `[x]` **[L] Include Shorts / include member-only videos** — user default + per-subscription
+  override, both **off** by default. Member videos need login cookies. **Done (Batch 5a).** Both are
+  decided during sync, so an excluded video is never stored; turning an option back on picks the
+  videos up on the next sync, since the whole channel is re-listed each run. Detection is by URL
+  shape for Shorts and yt-dlp's `availability: subscriber_only` for member videos, both of which are
+  present in a plain flat listing. Duration is deliberately **not** used — videos 187 and 193 in your
+  own library are 32 s and 9 s and are ordinary uploads.
 - `[x]` **[S] Default "Mark watched when files deleted" = false.** Change the shipped
   default. _Done (Batch 1, uncommitted): `Options.cs` `Subscriptions_MarkDeletedAsWatched`
   default `true`→`false`, no migration. Code+build verified; not exercised behaviourally (would
   mean deleting real downloads). Existing explicit overrides still win._
-- `[ ]` **[M] More subscription filters** beyond title — publish date `>=` / `<=`. _Extends
-  `SubscriptionFilterExtensions`; mind the SQLite `DateTimeOffset` non-translatable gotcha._
+- `[x]` **[M] More subscription filters** beyond title — publish date `>=` / `<=`. **Done (Batch 5a)**
+  as `PublishDateFilter` beside `SubscriptionFilterExtensions`, applied in the same in-memory half of
+  the candidate query (the `DateTimeOffset` gotcha holds). Both ends inclusive; the window applies to
+  automatic download only, never to a download you start yourself.
 - `[x]` **[S/M] Set the icon of manual subscriptions.** Manual (non-provider) subs can't get
   an icon set; allow uploading/choosing one. _Done (uncommitted): `POST api/subscription/set_icon`
   (base64 JSON, raster allowlist rejecting SVG, 5 MB cap) + preview/upload on the edit page; works for
@@ -200,9 +206,26 @@ description renderer. **Section B is now complete.** Notes worth keeping:
 - B: Up-next downloaded-first + badges
 - F: SponsorBlock skip-in-player
 
-**Batch 5 — Content scope & filters**
-- F: include Shorts / include member videos (user + per-sub)
-- F: date filters (`>=` / `<=`)
+**Batch 5a — Content scope & filters (2026-08-30, done)** — include Shorts, include member-only
+videos, publish-date window. No migration: the four options live in the existing key/value option
+store, and the members-only signal rides a `[NotMapped]` property from the provider to the sync job.
+Notes worth keeping:
+- **A channel subscription's URL is normalised to its `/videos` tab** at creation
+  (`YouTubeUrlHelper.FixYouTubeChannelUri`), and that tab excludes Shorts by construction — they live
+  in their own tab. So "Include Shorts", when on, also lists the sibling `/shorts` tab; otherwise the
+  option could never include anything. With it off nothing extra is fetched.
+- **Members-only videos are already in your library.** 45 of the 194 CGP Grey videos report
+  `availability: subscriber_only`; they were ingested before this existed and stay put. From now on
+  they're skipped at sync, and the job log says so. Turning the option off does not remove what's
+  already stored.
+- The date window is **two-stage**. Un-enriched videos carry `Published = MinValue` as a sort
+  placeholder, so the candidate query lets them through and `DownloadVideoJob` re-checks after
+  enrichment, marking an out-of-window video `DownloadSkipped` rather than downloading it. Only
+  automatic downloads are gated — an explicit click always wins, via a new `Auto` job-data flag.
+- Bounds are `yyyy-MM-dd` strings, not `DateTimeOffset?`: that's what `<input type="date">` produces,
+  what the option store's existing string overloads persist, and it makes `""` mean "no bound" free.
+
+**Batch 5b — Reprocess & refresh**
 - D: reprocess downloaded (missing subtitles)
 - D: periodic metadata refresh
 

@@ -183,6 +183,9 @@ namespace Regard.Backend.Downloader
 
             VideoOrder order = optionManager.GetForSubscription(Options.Subscriptions_DownloadOrder, sub.Id);
 
+            string publishedAfter = optionManager.GetForSubscription(Options.Subscriptions_PublishedAfter, sub.Id);
+            string publishedBefore = optionManager.GetForSubscription(Options.Subscriptions_PublishedBefore, sub.Id);
+
             var filters = SubscriptionFilterExtensions.CompileFilters(
                 dataContext.SubscriptionFilters
                     .Where(f => f.SubscriptionId == sub.Id)
@@ -200,7 +203,14 @@ namespace Regard.Backend.Downloader
                 .Where(x => !x.DownloadSkipped)
                 .AsEnumerable()
                 .OrderBy(order)
-                .Where(v => SubscriptionFilterExtensions.PassesTitleFilters(v.Name, filters));
+                .Where(v => SubscriptionFilterExtensions.PassesTitleFilters(v.Name, filters))
+                // Publish-date window. Un-enriched videos are let through rather than tested: sync
+                // stamps them Published = MinValue as a sort placeholder (SynchronizeJob), so testing
+                // them here would exclude every flat video forever — and since enrichment only happens
+                // on open or download, they could never recover. DownloadVideoJob re-checks the window
+                // once EnsureEnriched has filled in the real date.
+                .Where(v => v.EnrichedAt == null
+                            || PublishDateFilter.PassesDateWindow(v.Published, publishedAfter, publishedBefore));
 
             int? limit = DetermineMaximumVideoCount(sub);
             if (limit.HasValue)
@@ -217,7 +227,9 @@ namespace Regard.Backend.Downloader
                 if (hostThrottle.IsKnown(video.Id))
                     continue;
                 hostThrottle.MarkKnown(video.Id);
-                await DownloadVideoJob.Schedule(scheduler, video);
+                // auto: this is the automatic downloader, so the publish-date window applies once the
+                // video is enriched. A user-initiated download goes through VideoManager.Download instead.
+                await DownloadVideoJob.Schedule(scheduler, video, auto: true);
             }
         }
     }

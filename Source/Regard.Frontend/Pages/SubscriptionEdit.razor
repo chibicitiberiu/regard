@@ -166,6 +166,51 @@
         </Field>
     </RgFieldWrapper>
 
+    <RgFieldWrapper Id="subscription_includeShorts" Label="Include Shorts:" Required="false">
+        <Field>
+            <select id="subscription_includeShorts" class="form-control" @bind="IncludeShortsStr">
+                <option value="">@(IncludeShortsDefaultText is null ? "(inherit)" : $"Default ({IncludeShortsDefaultText})")</option>
+                <option value="on">On</option>
+                <option value="off">Off</option>
+            </select>
+        </Field>
+        <HelpText>
+            Applied while syncing, so excluded Shorts never enter the library. Turning this back on picks
+            them up again on the next sync; turning it off leaves Shorts already stored in place.
+        </HelpText>
+    </RgFieldWrapper>
+
+    <RgFieldWrapper Id="subscription_includeMembersOnly" Label="Include members-only videos:" Required="false">
+        <Field>
+            <select id="subscription_includeMembersOnly" class="form-control" @bind="IncludeMembersOnlyStr">
+                <option value="">@(IncludeMembersOnlyDefaultText is null ? "(inherit)" : $"Default ({IncludeMembersOnlyDefaultText})")</option>
+                <option value="on">On</option>
+                <option value="off">Off</option>
+            </select>
+        </Field>
+        <HelpText>
+            Downloading these needs a channel membership in your cookies.txt. Without one they can be
+            listed but never fetched, which is why they're left out by default.
+        </HelpText>
+    </RgFieldWrapper>
+
+    <RgFieldWrapper Id="subscription_publishedAfter" Label="Published after:" Required="false">
+        <Field>
+            <input id="subscription_publishedAfter" type="date" class="form-control" @bind="PublishedAfterDate" />
+        </Field>
+        <HelpText>Only auto-download videos published on or after this date. Leave blank for no limit.</HelpText>
+    </RgFieldWrapper>
+
+    <RgFieldWrapper Id="subscription_publishedBefore" Label="Published before:" Required="false">
+        <Field>
+            <input id="subscription_publishedBefore" type="date" class="form-control" @bind="PublishedBeforeDate" />
+        </Field>
+        <HelpText>
+            Only auto-download videos published on or before this date (the whole day counts). Leave blank
+            for no limit. Neither date affects a download you start yourself.
+        </HelpText>
+    </RgFieldWrapper>
+
     <div class="form-group row">
         <div class="col-xs-3">
             <label class="col-form-label">Filters:</label>
@@ -220,7 +265,8 @@
     <Body>
         <p>
             <span class="fg-success">Green</span> = passes filters,
-            <span class="fg-error">red</span> = filtered out.
+            <span class="fg-error">red</span> = excluded by a title filter,
+            <span class="fg-warning">amber</span> = outside the publish-date window.
             <Icon Glyph="Icons.Queued" /> would download next, <Icon Glyph="Icons.Downloaded" /> already downloaded.
             (Size limits aren't reflected here.)
         </p>
@@ -238,7 +284,9 @@
                     <span style="width: 1.5rem; display: inline-block;">
                         @if (item.IsDownloaded) { <Icon Glyph="Icons.Downloaded" title="Downloaded" /> }
                     </span>
-                    <span class="@(item.PassesFilters ? "fg-success" : "fg-error")">@item.Name</span>
+                    @* Title filter wins the colour when both reject it: it's the rule the user is editing. *@
+                    <span class="@(!item.PassesFilters ? "fg-error" : !item.PassesDateWindow ? "fg-warning" : "fg-success")"
+                          title="@(!item.PassesFilters ? "Excluded by a title filter" : !item.PassesDateWindow ? "Outside the publish-date window" : null)">@item.Name</span>
                 </div>
             }
         </div>

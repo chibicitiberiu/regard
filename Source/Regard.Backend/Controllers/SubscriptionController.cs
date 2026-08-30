@@ -299,6 +299,18 @@ namespace Regard.Backend.Controllers
                 if (optionManager.GetForSubscriptionNoResolve(Options.Sponsorblock_Actions, sub.Id, out var sbActions))
                     sub.Config.SponsorblockActions = sbActions;
 
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_IncludeShorts, sub.Id, out var inclShorts))
+                    sub.Config.IncludeShorts = inclShorts;
+
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_IncludeMembersOnly, sub.Id, out var inclMembers))
+                    sub.Config.IncludeMembersOnly = inclMembers;
+
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_PublishedAfter, sub.Id, out var pubAfter))
+                    sub.Config.PublishedAfter = pubAfter;
+
+                if (optionManager.GetForSubscriptionNoResolve(Options.Subscriptions_PublishedBefore, sub.Id, out var pubBefore))
+                    sub.Config.PublishedBefore = pubBefore;
+
                 sub.Config.Filters = dataContext.SubscriptionFilters
                     .Where(f => f.SubscriptionId == sub.Id)
                     .ToList()
@@ -309,6 +321,8 @@ namespace Regard.Backend.Controllers
                 sub.Config.DownloadOrderDefault = ResolveInherited(Options.Subscriptions_DownloadOrder, sub, userId);
                 sub.Config.DeleteWatchedDefault = ResolveInherited(Options.Subscriptions_DeleteWatched, sub, userId);
                 sub.Config.MarkDeletedAsWatchedDefault = ResolveInherited(Options.Subscriptions_MarkDeletedAsWatched, sub, userId);
+                sub.Config.IncludeShortsDefault = ResolveInherited(Options.Subscriptions_IncludeShorts, sub, userId);
+                sub.Config.IncludeMembersOnlyDefault = ResolveInherited(Options.Subscriptions_IncludeMembersOnly, sub, userId);
             }
         }
 
@@ -407,6 +421,12 @@ namespace Regard.Backend.Controllers
                     "SponsorBlock: Remove and Skip can't be combined (Remove cuts the file, which shifts the "
                     + "timestamps the in-player Skip relies on)."));
 
+            // Same reasoning as the filter regexes above: validate the date window before anything
+            // persists, or a rejected save still leaves half the options written.
+            var dateError = PublishDateFilter.DescribeValidationError(request.PublishedAfter, request.PublishedBefore);
+            if (dateError != null)
+                return BadRequest(responseFactory.Error(dateError));
+
             try
             {
                 subscriptionManager.Update(user, request.Id, request.Name, request.Description, request.ParentFolderId);
@@ -469,6 +489,22 @@ namespace Regard.Backend.Controllers
                 optionManager.SetForSubscription(Options.Sponsorblock_Actions, request.Id, request.SponsorblockActions);
             else optionManager.UnsetForSubscription(Options.Sponsorblock_Actions, request.Id);
 
+            if (request.IncludeShorts.HasValue)
+                optionManager.SetForSubscription(Options.Subscriptions_IncludeShorts, request.Id, request.IncludeShorts.Value);
+            else optionManager.UnsetForSubscription(Options.Subscriptions_IncludeShorts, request.Id);
+
+            if (request.IncludeMembersOnly.HasValue)
+                optionManager.SetForSubscription(Options.Subscriptions_IncludeMembersOnly, request.Id, request.IncludeMembersOnly.Value);
+            else optionManager.UnsetForSubscription(Options.Subscriptions_IncludeMembersOnly, request.Id);
+
+            if (!string.IsNullOrEmpty(request.PublishedAfter))
+                optionManager.SetForSubscription(Options.Subscriptions_PublishedAfter, request.Id, request.PublishedAfter.Trim());
+            else optionManager.UnsetForSubscription(Options.Subscriptions_PublishedAfter, request.Id);
+
+            if (!string.IsNullOrEmpty(request.PublishedBefore))
+                optionManager.SetForSubscription(Options.Subscriptions_PublishedBefore, request.Id, request.PublishedBefore.Trim());
+            else optionManager.UnsetForSubscription(Options.Subscriptions_PublishedBefore, request.Id);
+
             // Replace the subscription's title filters (dedicated table, not the option store)
             if (request.Filters != null)
             {
@@ -507,14 +543,25 @@ namespace Regard.Backend.Controllers
                 .OrderBy(order)
                 .ToList();
 
+            // The date window comes from the request (the unsaved form state), falling back to what's
+            // stored when the client doesn't send it.
+            string pubAfter = request.PublishedAfter ?? optionManager.GetForSubscription(Options.Subscriptions_PublishedAfter, sub.Id);
+            string pubBefore = request.PublishedBefore ?? optionManager.GetForSubscription(Options.Subscriptions_PublishedBefore, sub.Id);
+
+            // Un-enriched videos are exempt here for the same reason as in ProcessDownloadRules: their
+            // Published is a MinValue placeholder, so testing it would mark every flat video as excluded.
+            bool PassesDates(Video v) => v.EnrichedAt == null
+                || PublishDateFilter.PassesDateWindow(v.Published, pubAfter, pubBefore);
+
             // Compute the download window exactly as ProcessDownloadRules would.
             var windowIds = new HashSet<int>();
             long? sizeLimit = videoDownloader.DetermineMaximumAllowedSize(sub);
             if (!(sizeLimit.HasValue && sizeLimit.Value <= 1 * 1024 * 1024))
             {
                 int? limit = videoDownloader.DetermineMaximumVideoCount(sub);
-                var passing = ordered.Where(v => v.DownloadedPath == null && !v.IsWatched
-                    && SubscriptionFilterExtensions.PassesTitleFilters(v.Name, compiled));
+                var passing = ordered.Where(v => v.DownloadedPath == null && !v.IsWatched && !v.DownloadSkipped
+                    && SubscriptionFilterExtensions.PassesTitleFilters(v.Name, compiled)
+                    && PassesDates(v));
                 if (limit.HasValue)
                     passing = passing.Take(limit.Value);
                 foreach (var v in passing)
@@ -528,6 +575,7 @@ namespace Regard.Backend.Controllers
                 IsDownloaded = v.DownloadedPath != null,
                 IsWatched = v.IsWatched,
                 PassesFilters = SubscriptionFilterExtensions.PassesTitleFilters(v.Name, compiled),
+                PassesDateWindow = PassesDates(v),
                 InWindow = windowIds.Contains(v.Id),
             }).ToList();
 

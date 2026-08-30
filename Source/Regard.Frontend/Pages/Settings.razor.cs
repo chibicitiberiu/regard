@@ -7,6 +7,7 @@ using Regard.Model;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -37,12 +38,26 @@ namespace Regard.Frontend.Pages
         protected string DeleteWatchedStr { get; set; } = string.Empty;
         protected string MarkDeletedAsWatchedStr { get; set; } = string.Empty;
         protected string DeleteGracePeriodStr { get; set; } = string.Empty;
+        protected string IncludeShortsStr { get; set; } = string.Empty;
+        protected string IncludeMembersOnlyStr { get; set; } = string.Empty;
+
+        // The wire format is "yyyy-MM-dd", but @bind on <input type="date"> only accepts a date type.
+        // null = no bound. Validated server-side; the picker can't produce a malformed value anyway.
+        protected DateOnly? PublishedAfterDate { get; set; }
+        protected DateOnly? PublishedBeforeDate { get; set; }
+
+        private const string DateFormat = "yyyy-MM-dd";
+        private static DateOnly? ParseDate(string s) =>
+            DateOnly.TryParseExact(s, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+                ? d : (DateOnly?)null;
 
         // "Default (…)" labels for the inherit option, filled from the resolved global defaults.
         protected string AutoDownloadDefaultLabel { get; set; } = "Default";
         protected string DownloadOrderDefaultLabel { get; set; } = "Default";
         protected string DeleteWatchedDefaultLabel { get; set; } = "Default";
         protected string MarkDeletedAsWatchedDefaultLabel { get; set; } = "Default";
+        protected string IncludeShortsDefaultLabel { get; set; } = "Default";
+        protected string IncludeMembersOnlyDefaultLabel { get; set; } = "Default";
 
         // "" = inherit default; "0" = unlimited; otherwise a height cap.
         protected string MaxResolutionStr { get; set; } = string.Empty;
@@ -169,11 +184,17 @@ namespace Regard.Frontend.Pages
             DeleteWatchedStr = BoolToStr(s.DeleteWatched);
             MarkDeletedAsWatchedStr = BoolToStr(s.MarkDeletedAsWatched);
             DeleteGracePeriodStr = s.DeleteGracePeriod?.ToString() ?? string.Empty;
+            IncludeShortsStr = BoolToStr(s.IncludeShorts);
+            IncludeMembersOnlyStr = BoolToStr(s.IncludeMembersOnly);
+            PublishedAfterDate = ParseDate(s.PublishedAfter);
+            PublishedBeforeDate = ParseDate(s.PublishedBefore);
 
             AutoDownloadDefaultLabel = $"Default ({(s.AutoDownloadDefault ? "On" : "Off")})";
             DownloadOrderDefaultLabel = $"Default ({SubscriptionEdit.OrderText(s.DownloadOrderDefault)})";
             DeleteWatchedDefaultLabel = $"Default ({(s.DeleteWatchedDefault ? "On" : "Off")})";
             MarkDeletedAsWatchedDefaultLabel = $"Default ({(s.MarkDeletedAsWatchedDefault ? "On" : "Off")})";
+            IncludeShortsDefaultLabel = $"Default ({(s.IncludeShortsDefault ? "On" : "Off")})";
+            IncludeMembersOnlyDefaultLabel = $"Default ({(s.IncludeMembersOnlyDefault ? "On" : "Off")})";
 
             MaxResolutionStr = s.MaxResolution.HasValue ? s.MaxResolution.Value.ToString() : string.Empty;
 
@@ -233,6 +254,12 @@ namespace Regard.Frontend.Pages
                 DeleteWatched = StrToBool(DeleteWatchedStr),
                 MarkDeletedAsWatched = StrToBool(MarkDeletedAsWatchedStr),
                 DeleteGracePeriod = string.IsNullOrWhiteSpace(DeleteGracePeriodStr) ? (int?)null : int.Parse(DeleteGracePeriodStr),
+                IncludeShorts = StrToBool(IncludeShortsStr),
+                IncludeMembersOnly = StrToBool(IncludeMembersOnlyStr),
+                // "" clears the bound rather than inheriting: an empty date field means "no limit", and a
+                // date option's default is already "" — so the two collapse to the same thing here.
+                PublishedAfter = PublishedAfterDate?.ToString(DateFormat, CultureInfo.InvariantCulture) ?? string.Empty,
+                PublishedBefore = PublishedBeforeDate?.ToString(DateFormat, CultureInfo.InvariantCulture) ?? string.Empty,
                 MaxResolution = string.IsNullOrEmpty(MaxResolutionStr)
                     ? (int?)null
                     : int.Parse(MaxResolutionStr),

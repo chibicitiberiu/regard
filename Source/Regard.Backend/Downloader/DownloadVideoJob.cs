@@ -64,6 +64,7 @@ namespace Regard.Backend.Downloader
 
         private static readonly string Data_VideoId = nameof(VideoId);
         private static readonly string Data_Forced = "Forced";
+        private static readonly string Data_Auto = "Auto";
 
         private string outputPath = null;
         private Video video = null;
@@ -79,6 +80,16 @@ namespace Regard.Backend.Downloader
         /// gone — see PrepareForcedRedownload for why it must not stick around.
         /// </summary>
         private bool forced = false;
+
+        /// <summary>
+        /// True when the automatic downloader queued this job, false when a person clicked Download.
+        /// Only the automatic path is subject to the subscription's publish-date window — an explicit
+        /// click has to win over a filter, or the video would be unreachable from the UI.
+        ///
+        /// This can't be inferred from <see cref="forced"/>: a plain manual download of a not-yet-
+        /// downloaded video is unforced too.
+        /// </summary>
+        private bool auto = false;
 
         /// <summary>Set when this run took the already-downloaded no-op, to suppress the success card.</summary>
         private bool noOpped = false;
@@ -206,8 +217,11 @@ namespace Regard.Backend.Downloader
         /// Queues a download. <paramref name="forced"/> is the user's "Download again": it makes the job
         /// wipe the video's existing files and re-fetch instead of no-opping. Never pass it from
         /// automatic download or restart reconciliation — the no-op is what makes those idempotent.
+        ///
+        /// <paramref name="auto"/> marks a job queued by the automatic downloader rather than by a
+        /// person. Only those are subject to the subscription's publish-date window.
         /// </summary>
-        public static Task Schedule(RegardScheduler scheduler, Video video, bool forced = false)
+        public static Task Schedule(RegardScheduler scheduler, Video video, bool forced = false, bool auto = false)
         {
             var jobData = new Dictionary<string, object>()
             {
@@ -218,6 +232,8 @@ namespace Regard.Backend.Downloader
             // reads back as false without needing a migration — JobDataJson is free-form.
             if (forced)
                 jobData[Data_Forced] = true;
+            if (auto)
+                jobData[Data_Auto] = true;
 
             return scheduler.Schedule<DownloadVideoJob>(
                 name: forced ? $"Re-download video {video}" : $"Download video {video}",
@@ -267,18 +283,24 @@ namespace Regard.Backend.Downloader
         /// a boxed long/JsonElement rather than a bool — hence Convert rather than a cast. A missing key
         /// (every job row created before this feature, and every automatic download) reads as false.
         /// </summary>
-        private bool ReadForcedFlag()
+        private bool ReadForcedFlag() => ReadBoolFlag(Data_Forced);
+
+        /// <summary>Reads the "queued by the automatic downloader" flag. See <see cref="auto"/>.</summary>
+        private bool ReadAutoFlag() => ReadBoolFlag(Data_Auto);
+
+        private bool ReadBoolFlag(string key)
         {
             try
             {
-                return Job.JobData.TryGetValue(Data_Forced, out var value)
+                return Job.JobData.TryGetValue(key, out var value)
                     && value != null
                     && Convert.ToBoolean(value);
             }
             catch (Exception ex)
             {
-                // Never let a malformed flag break a download; the safe reading is "not forced".
-                log.LogWarning(ex, "videoId={0}: could not read the forced flag, treating as false", VideoId);
+                // Never let a malformed flag break a download; false is the safe reading for both flags
+                // (not forced => don't wipe files; not auto => don't apply the date window).
+                log.LogWarning(ex, "videoId={0}: could not read job flag '{1}', treating as false", VideoId, key);
                 return false;
             }
         }
@@ -352,11 +374,39 @@ namespace Regard.Backend.Downloader
             await dataContext.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Re-checks the subscription's publish-date window now that the video is enriched. Returns true
+        /// to carry on downloading.
+        ///
+        /// When the video falls outside the window it is marked DownloadSkipped, which takes it out of
+        /// the auto-download candidate query for good — otherwise every sync would enrich it again just
+        /// to reject it again. The flag is the same one the UI already exposes, so the user can put the
+        /// video back with "Download" at any time.
+        /// </summary>
+        private async Task<bool> PassesPublishDateWindow()
+        {
+            string after = optionManager.GetForSubscription(Options.Subscriptions_PublishedAfter, video.SubscriptionId);
+            string before = optionManager.GetForSubscription(Options.Subscriptions_PublishedBefore, video.SubscriptionId);
+
+            if (PublishDateFilter.PassesDateWindow(video.Published, after, before))
+                return true;
+
+            video.DownloadSkipped = true;
+            await dataContext.SaveChangesAsync();
+
+            noOpped = true;
+            string window = $"{(string.IsNullOrWhiteSpace(after) ? "any" : after)} … {(string.IsNullOrWhiteSpace(before) ? "any" : before)}";
+            JobLog($"Published {video.Published:yyyy-MM-dd}, outside this subscription's download window ({window}) — skipping.");
+            log.LogInformation("videoId={0}: outside the publish-date window ({1}), marking as skipped", VideoId, window);
+            return false;
+        }
+
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
             if (Job.JobData.TryGetValue(Data_VideoId, out object videoId))
                 VideoId = Convert.ToInt32(videoId);
             forced = ReadForcedFlag();
+            auto = ReadAutoFlag();
 
             video = dataContext.Videos.Find(VideoId);
 
@@ -415,6 +465,12 @@ namespace Regard.Backend.Downloader
             // output path / NFO. This covers every download path — including auto-download with
             // DownloadOrder=Oldest, which targets the older, still-flat videos. No-op once enriched.
             await videoManager.EnsureEnriched(video);
+
+            // Second half of the publish-date window check. The candidate query lets un-enriched videos
+            // through, because until this point Published is only a sort placeholder (MinValue); now that
+            // it's real, decide properly. Automatic downloads only — an explicit click outranks the filter.
+            if (auto && !await PassesPublishDateWindow())
+                return;
 
             var opts = ResolveDownloadOptions(video).ToArray();
 

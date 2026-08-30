@@ -169,6 +169,59 @@ namespace Regard.Backend.Configuration
         );
 
         /// <summary>
+        /// Whether YouTube Shorts are taken into the library at all. Off by default.
+        ///
+        /// Applied during sync, so an excluded Short is never stored: see
+        /// SynchronizeJob.CheckForNewVideos. Turning this on makes them appear on the next sync, because
+        /// a sync re-lists the whole channel; turning it off does NOT remove Shorts already stored.
+        /// </summary>
+        public static readonly OptionDefinition<bool> Subscriptions_IncludeShorts = new OptionDefinition<bool>(
+            false,
+            "subscriptions.include_shorts",
+            "Subscriptions:IncludeShorts",
+            null,
+            OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
+        );
+
+        /// <summary>
+        /// Whether members-only videos are taken into the library at all. Off by default, because
+        /// without the channel membership in the user's cookie jar they can be listed but never
+        /// downloaded, so they would sit in the list failing forever.
+        /// </summary>
+        public static readonly OptionDefinition<bool> Subscriptions_IncludeMembersOnly = new OptionDefinition<bool>(
+            false,
+            "subscriptions.include_members_only",
+            "Subscriptions:IncludeMembersOnly",
+            null,
+            OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
+        );
+
+        /// <summary>
+        /// Lower bound of the auto-download publish-date window, as "yyyy-MM-dd" ("" = no bound).
+        /// Inclusive from midnight UTC of that day. Applies to the automatic downloader only — an
+        /// explicit download always wins.
+        /// </summary>
+        public static readonly OptionDefinition<string> Subscriptions_PublishedAfter = new OptionDefinition<string>(
+            "",
+            "subscriptions.published_after",
+            "Subscriptions:PublishedAfter",
+            null,
+            OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
+        );
+
+        /// <summary>
+        /// Upper bound of the auto-download publish-date window, as "yyyy-MM-dd" ("" = no bound).
+        /// Inclusive of the whole of that day (see PublishDateFilter.PassesDateWindow).
+        /// </summary>
+        public static readonly OptionDefinition<string> Subscriptions_PublishedBefore = new OptionDefinition<string>(
+            "",
+            "subscriptions.published_before",
+            "Subscriptions:PublishedBefore",
+            null,
+            OptionFlags.User | OptionFlags.SubscriptionFolder | OptionFlags.Subscription
+        );
+
+        /// <summary>
         /// Pattern indicating where files are downloaded automatically.
         /// </summary>
         public static readonly OptionDefinition<string> Subscriptions_DownloadPath = new OptionDefinition<string>(
