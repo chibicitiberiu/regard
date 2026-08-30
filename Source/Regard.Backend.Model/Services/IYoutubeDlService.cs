@@ -23,7 +23,12 @@ namespace Regard.Backend.Common.Services
         /// so providers (which can't read options) still get cookie'd/paced extraction. A fresh list each
         /// call — never shared instance state.
         /// </summary>
-        IReadOnlyList<string> GetAntibotArgs();
+        /// <param name="userId">
+        /// Whose cookie jar to use. Providers pass it when they can reach an owner (a Subscription has
+        /// one); null falls back to the server-wide jar, which is what URL probing before a subscription
+        /// exists has to use.
+        /// </param>
+        IReadOnlyList<string> GetAntibotArgs(string userId = null);
 
         /// <summary>
         /// Impersonation targets the current yt-dlp can actually use (client names, lowercased, e.g.

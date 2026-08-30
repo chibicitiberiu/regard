@@ -222,6 +222,30 @@
             </div>
 
             <div class="form-group row">
+                <label class="col-xs-4 col-form-label">Your cookies file:</label>
+                <div class="col-xs-8">
+                    <span class="@(CookiesConfigured ? "fg-success" : "text-muted")">
+                        @(CookiesConfigured ? "your own cookies are in use ✓" : "using the server's shared cookies")
+                    </span>
+                    <InputFile OnChange="OnCookiesFile" accept=".txt" />
+                    @if (CookiesConfigured)
+                    {
+                        <button class="secondary" type="button" @onclick="OnClearCookies">Remove</button>
+                    }
+                    @if (!string.IsNullOrEmpty(cookiesNote))
+                    {
+                        <div><small>@cookiesNote</small></div>
+                    }
+                    <small class="text-muted">
+                        A cookies.txt exported from your browser lets downloads pass YouTube's
+                        "confirm you're not a bot" gate as you. Use a <strong>throwaway Google
+                        account</strong> &mdash; heavy downloading can get an account flagged. Yours is
+                        private to your subscriptions; without one, the server's shared cookies are used.
+                    </small>
+                </div>
+            </div>
+
+            <div class="form-group row">
                 <label class="col-xs-4 col-form-label">SponsorBlock:</label>
                 <div class="col-xs-8">
                     <SponsorBlockEditor @bind-Value="SponsorblockActions" />

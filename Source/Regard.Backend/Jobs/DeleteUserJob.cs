@@ -32,18 +32,21 @@ namespace Regard.Backend.Jobs
         private readonly UserManager<UserAccount> userManager;
         private readonly SubscriptionManager subscriptionManager;
         private readonly IVideoStorageService videoStorage;
+        private readonly UserCookiesService cookiesService;
 
         public DeleteUserJob(ILogger<DeleteUserJob> log,
                              DataContext dataContext,
                              JobTrackerService jobTrackerService,
                              UserManager<UserAccount> userManager,
                              SubscriptionManager subscriptionManager,
-                             IVideoStorageService videoStorage)
+                             IVideoStorageService videoStorage,
+                             UserCookiesService cookiesService)
             : base(log, dataContext, jobTrackerService)
         {
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
             this.videoStorage = videoStorage;
+            this.cookiesService = cookiesService;
         }
 
         /// <summary>
@@ -123,7 +126,12 @@ namespace Regard.Backend.Jobs
                 folders = folders.Except(leaves).ToList();
             }
 
-            // 4. Delete the account (cascade removes options/messages/job history).
+            // 4. Remove the user's yt-dlp cookie jar. It lives on disk rather than in the database, so
+            // the account cascade does not reach it — and it holds live session cookies for their Google
+            // account, which must not outlive the account.
+            cookiesService.Delete(user.Id);
+
+            // 5. Delete the account (cascade removes options/messages/job history).
             ReportProgress(0.95f, "Removing account");
             var result = await userManager.DeleteAsync(user);
             if (!result.Succeeded)

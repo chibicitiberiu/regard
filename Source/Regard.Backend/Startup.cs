@@ -203,6 +203,7 @@ namespace Regard.Backend
             services.AddScoped<SubscriptionManager>();
             services.AddScoped<VideoManager>();
             services.AddScoped<UserQuotaService>();
+            services.AddScoped<UserCookiesService>();
             services.AddSingleton<StorageManager>();
             services.AddSingleton<ThumbnailService>();
             services.AddScoped<MetadataService>();

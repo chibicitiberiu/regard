@@ -101,5 +101,18 @@ namespace Regard.Common.API.Settings
         /// {Video.Name}. This is the per-user default; a subscription can override it. null = inherit.
         /// </summary>
         public string DownloadPath { get; set; }
+
+        /// <summary>
+        /// Read-only: whether this user has their own yt-dlp cookies.txt. A bool, never a path — the
+        /// server derives the path from the account, because a client-supplied one would let any user
+        /// point yt-dlp at (and overwrite) arbitrary server files.
+        /// </summary>
+        public bool CookiesConfigured { get; set; }
+
+        /// <summary>
+        /// Write-only (never returned by GET): uploaded cookies.txt **content**. null = leave as-is;
+        /// empty string = remove; non-empty = replace.
+        /// </summary>
+        public string CookiesFileContent { get; set; }
     }
 }

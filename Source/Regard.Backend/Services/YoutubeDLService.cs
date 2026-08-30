@@ -192,12 +192,12 @@ namespace Regard.Backend.Services
             return await action.Invoke(ytdl);
         }
 
-        public IReadOnlyList<string> GetAntibotArgs()
+        public IReadOnlyList<string> GetAntibotArgs(string userId = null)
         {
             // Scoped IOptionManager resolved per call (this service is a singleton).
             using var scope = scopeFactory.CreateScope();
             var optionManager = scope.ServiceProvider.GetRequiredService<IOptionManager>();
-            return YtdlAntibotArgs.Build(optionManager, impersonateTargets, log);
+            return YtdlAntibotArgs.Build(optionManager, impersonateTargets, log, userId: userId);
         }
 
         public Task PaceExtractionAsync(string host) => hostThrottle.PaceExtractionAsync(host);

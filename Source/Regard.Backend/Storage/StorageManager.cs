@@ -17,6 +17,13 @@ namespace Regard.Backend.Services
 
         public string DownloadDirectory { get; }
 
+        /// <summary>
+        /// Per-user yt-dlp cookie jars. Deliberately NOT under <see cref="ThumbnailsDirectory"/> and
+        /// deliberately not served: unlike /thumbs there is no static-file mount for this, because these
+        /// files are session credentials for the user's Google account.
+        /// </summary>
+        public string CookiesDirectory { get; }
+
         public Uri ThumbnailsBaseUrl { get; } = new Uri("thumbs", UriKind.Relative);
 
         public StorageManager(ILogger<VideoStorageService> log,
@@ -25,6 +32,7 @@ namespace Regard.Backend.Services
             Log = log;
             DataDirectory = configuration["DataDirectory"];
             ThumbnailsDirectory = Path.Combine(DataDirectory, "Thumbnails");
+            CookiesDirectory = Path.Combine(DataDirectory, "Cookies");
             DownloadDirectory = configuration["DownloadDirectory"];
         }
 
@@ -39,6 +47,7 @@ namespace Regard.Backend.Services
             });
 
             Directory.CreateDirectory(DownloadDirectory);
+            Directory.CreateDirectory(CookiesDirectory);   // no UseStaticFiles for this one, ever
         }
     }
 }

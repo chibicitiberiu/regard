@@ -282,12 +282,20 @@ namespace Regard.Backend.Configuration
         /// Absolute path to a Netscape-format cookies.txt used for yt-dlp (--cookies), to clear YouTube's
         /// bot gate. Uploaded via the admin page (written to DataDirectory/cookies.txt). Global/server.
         /// </summary>
+        /// <remarks>
+        /// User-scoped: a user with their own uploaded cookies gets theirs, everyone else falls through
+        /// to the server-wide file, so an existing global jar keeps working unchanged. The value is a
+        /// filesystem path, and it is written **only** by the server from the authenticated user's id —
+        /// never from a request body. Letting a user set this string would hand them an arbitrary file
+        /// read (yt-dlp parses whatever it points at) and an arbitrary overwrite (yt-dlp saves the jar
+        /// back when the run ends).
+        /// </remarks>
         public static readonly OptionDefinition<string> Server_Ytdl_CookiesFile = new OptionDefinition<string>(
             null,
             "server.ytdl.cookies_file",
             "Server:Ytdl:CookiesFile",
             "REGARD_YTDL_COOKIES_FILE",
-            0
+            OptionFlags.User
         );
 
         /// <summary>

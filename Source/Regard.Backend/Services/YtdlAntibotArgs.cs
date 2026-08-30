@@ -24,14 +24,21 @@ namespace Regard.Backend.Services
         // call. Keyed on the (target, availability) pair so a config or environment change re-reports.
         private static string lastImpersonateWarning;
 
+        /// <summary>
+        /// Builds the per-call anti-bot args. <paramref name="subscriptionId"/> or
+        /// <paramref name="userId"/> select whose cookie jar to use; give whichever is available and the
+        /// resolution falls back to the server-wide jar when the user has none.
+        /// </summary>
         public static List<string> Build(IOptionManager optionManager,
                                          IReadOnlyList<string> availableImpersonateTargets = null,
-                                         ILogger log = null)
+                                         ILogger log = null,
+                                         int? subscriptionId = null,
+                                         string userId = null)
         {
             var args = new List<string>();
 
             // Cookies apply regardless of the throttle toggle — they're what clears the bot gate.
-            var cookiesFile = optionManager.GetGlobal(Options.Server_Ytdl_CookiesFile);
+            var cookiesFile = ResolveCookiesFile(optionManager, subscriptionId, userId);
             if (!string.IsNullOrWhiteSpace(cookiesFile) && File.Exists(cookiesFile))
             {
                 args.Add("--cookies");
@@ -59,6 +66,28 @@ namespace Regard.Backend.Services
             }
 
             return args;
+        }
+
+        /// <summary>
+        /// Picks the cookie jar for whoever this call is on behalf of: their own if they've uploaded one,
+        /// otherwise the server-wide jar.
+        ///
+        /// Worth knowing, because it reads wrong at a glance: the option carries only OptionFlags.User,
+        /// yet GetForSubscription still works. Its per-subscription lookup is what that flag gates; the
+        /// else branch walks folder -> user -> global regardless (OptionManager.cs:198-205). So a
+        /// subscription id resolves through its owner without granting per-subscription cookie overrides
+        /// that nothing should be setting.
+        /// </summary>
+        private static string ResolveCookiesFile(IOptionManager optionManager, int? subscriptionId, string userId)
+        {
+            if (subscriptionId.HasValue)
+                return optionManager.GetForSubscription(Options.Server_Ytdl_CookiesFile, subscriptionId.Value);
+
+            if (!string.IsNullOrEmpty(userId))
+                return optionManager.GetForUser(Options.Server_Ytdl_CookiesFile, userId);
+
+            // No owner in scope (e.g. probing a URL before any subscription exists): the shared jar.
+            return optionManager.GetGlobal(Options.Server_Ytdl_CookiesFile);
         }
 
         /// <summary>

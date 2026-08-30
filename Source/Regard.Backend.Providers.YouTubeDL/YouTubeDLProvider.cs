@@ -145,8 +145,9 @@ namespace Regard.Backend.Providers.YouTubeDL
             // description, published date, rating) is filled in later by the sync job — eagerly for the
             // newest few, lazily for the rest. Background timeout + retries.
             await ytdlService.PaceExtractionAsync(UrlHostKey.Of(subscription.OriginalUrl));
+            // The subscription carries its owner, so sync uses that user's cookie jar.
             UrlInformation info = await ytdlService.UsingYoutubeDL(async ytdl =>
-                await ytdl.ExtractInformation(subscription.OriginalUrl, false, BackgroundTimeoutMs, retries: BackgroundRetries, extraArgs: ytdlService.GetAntibotArgs()));
+                await ytdl.ExtractInformation(subscription.OriginalUrl, false, BackgroundTimeoutMs, retries: BackgroundRetries, extraArgs: ytdlService.GetAntibotArgs(subscription.UserId)));
 
             if (info == null)
                 throw new Exception("Failed to fetch videos (timed out)!");

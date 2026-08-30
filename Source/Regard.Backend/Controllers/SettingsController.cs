@@ -19,16 +19,19 @@ namespace Regard.Backend.Controllers
         private readonly ApiResponseFactory responseFactory;
         private readonly IOptionManager optionManager;
         private readonly UserQuotaService quotaService;
+        private readonly UserCookiesService cookiesService;
 
         public SettingsController(UserManager<UserAccount> userManager,
                                   ApiResponseFactory responseFactory,
                                   IOptionManager optionManager,
-                                  UserQuotaService quotaService)
+                                  UserQuotaService quotaService,
+                                  UserCookiesService cookiesService)
         {
             this.userManager = userManager;
             this.responseFactory = responseFactory;
             this.optionManager = optionManager;
             this.quotaService = quotaService;
+            this.cookiesService = cookiesService;
         }
 
         [HttpGet]
@@ -42,6 +45,8 @@ namespace Regard.Backend.Controllers
             // Read only the user's explicitly-set values (no fallback): null = "inherits default".
             var settings = new ApiUserSettings
             {
+                CookiesConfigured = cookiesService.HasCookies(
+                    user.Id, optionManager.GetForUserNoResolve(Options.Server_Ytdl_CookiesFile, user.Id, out string cookiesPath) ? cookiesPath : null),
                 AutoDownload = GetOrNull(Options.Subscriptions_AutoDownload, user.Id),
                 DownloadOrder = GetOrNull(Options.Subscriptions_DownloadOrder, user.Id),
                 DownloadMaxCount = GetOrNull(Options.Subscriptions_MaxCount, user.Id),
@@ -105,6 +110,25 @@ namespace Regard.Backend.Controllers
             SetOrUnset(Options.Ytdl_SubLang, user.Id, request.SubLang);
             SetOrUnset(Options.Sponsorblock_Actions, user.Id, request.SponsorblockActions);
             SetOrUnset(Options.Subscriptions_DownloadPath, user.Id, request.DownloadPath);
+
+            // Cookies are handled apart from the SetOrUnset list on purpose. The option holds a
+            // filesystem path that is passed to yt-dlp as --cookies, and yt-dlp both reads it and writes
+            // the jar back — so routing it through the generic string setter would let any signed-in user
+            // read and overwrite arbitrary server files. The request carries content only; the path comes
+            // from the authenticated account.
+            if (request.CookiesFileContent != null)
+            {
+                try
+                {
+                    var stored = await cookiesService.ApplyAsync(user.Id, request.CookiesFileContent);
+                    if (stored != null)
+                        optionManager.SetForUser(Options.Server_Ytdl_CookiesFile, user.Id, stored);
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(responseFactory.Error(ex.Message));
+                }
+            }
 
             return Ok(responseFactory.Success());
         }

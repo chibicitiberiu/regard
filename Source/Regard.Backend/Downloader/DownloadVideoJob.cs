@@ -625,7 +625,10 @@ namespace Regard.Backend.Downloader
 
             // Network / anti-bot options (server-wide): cookies + inter-request sleep, and a randomized
             // per-download sleep so a batch doesn't hammer YouTube back-to-back.
-            foreach (var arg in YtdlAntibotArgs.Build(optionManager, ytdlService.ImpersonateTargets, log))
+            // Pass the subscription so the download uses its owner's cookie jar (falling back to the
+            // server-wide one). Downloads are the case that matters most for the bot gate.
+            foreach (var arg in YtdlAntibotArgs.Build(optionManager, ytdlService.ImpersonateTargets, log,
+                                                      subscriptionId: video.SubscriptionId))
                 yield return arg;
 
             if (optionManager.GetGlobal(Options.Server_Throttle_Enabled))

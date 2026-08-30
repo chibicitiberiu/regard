@@ -80,6 +80,35 @@ namespace Regard.Frontend.Pages
         // Per-category SponsorBlock actions ("category:action" CSV); "" = none.
         protected string SponsorblockActions { get; set; } = string.Empty;
 
+        // Per-user cookies. Same convention as the admin page's global jar: null = leave alone,
+        // "" = remove, non-empty = replace. Only the CONTENT ever leaves the browser — the server
+        // decides where it lands.
+        protected bool CookiesConfigured { get; set; }
+        private string cookiesFileContent = null;
+        protected string cookiesNote = string.Empty;
+
+        protected async Task OnCookiesFile(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+        {
+            try
+            {
+                using var reader = new System.IO.StreamReader(e.File.OpenReadStream(1024 * 1024));
+                cookiesFileContent = await reader.ReadToEndAsync();
+                cookiesNote = $"{e.File.Name} ready — click Save to apply";
+            }
+            catch (Exception ex)
+            {
+                cookiesFileContent = null;
+                cookiesNote = "Could not read file: " + ex.Message;
+            }
+        }
+
+        protected void OnClearCookies()
+        {
+            // Empty string is the "remove it" signal; the server deletes the file and clears the option.
+            cookiesFileContent = string.Empty;
+            cookiesNote = "Cookies will be removed — click Save to apply";
+        }
+
         protected string PatternPreview => PatternPreviewHelper.Render(DownloadPath);
 
         protected bool IsTranscodeTarget =>
@@ -177,6 +206,9 @@ namespace Regard.Frontend.Pages
 
             DownloadPath = s.DownloadPath ?? string.Empty;
             SponsorblockActions = s.SponsorblockActions ?? string.Empty;
+            CookiesConfigured = s.CookiesConfigured;
+            cookiesFileContent = null;
+            cookiesNote = string.Empty;
         }
 
         private void ToggleCodec(HashSet<string> set, string token, ChangeEventArgs e)
@@ -224,6 +256,7 @@ namespace Regard.Frontend.Pages
                     ? SubLangStr : null,
                 SubFormat = (SubtitlesStr == "on" && !string.IsNullOrEmpty(SubFormatStr)) ? SubFormatStr : null,
                 DownloadPath = string.IsNullOrWhiteSpace(DownloadPath) ? null : DownloadPath,
+                CookiesFileContent = cookiesFileContent,
                 SponsorblockActions = string.IsNullOrWhiteSpace(SponsorblockActions) ? null : SponsorblockActions,
             };
 
