@@ -51,22 +51,27 @@ including an 832 MB one from 2026-08-29 that pre-dates this work. Candidate fixe
 also treat output-file growth as liveness, and/or raise the default. Batch 3 Phase 1 makes recovery
 possible but does not address the cause.
 
-### `JobInfo.RetryCount` never decrements — failed jobs retry forever
-Found during the Batch 3 review (2026-08-30), **confirmed by code inspection, not yet reproduced at
-runtime**. `JobRetryService.OnJobFailed` is invoked synchronously by the `JobFailed` event and runs to
-its first `await`, so `job.RetryCount--; SaveChanges()` (`JobRetryService.cs:62-64`) commits on its own
-fresh scope. Control then returns to `JobBase.Execute`'s `finally`, which calls `PersistJobState()` →
-`dataContext.Jobs.Update(Job); SaveChanges()` (`JobBase.cs:78`, `:181-182`) on the job's **own** stale
-tracked instance, whose `RetryCount` is still the pre-decrement value. `Update` marks every property
-modified, so the decrement is overwritten.
+### ~~`JobInfo.RetryCount` never decrements~~ — FIXED (`31c19fe`)
+`JobRetryService` decremented a freshly-loaded copy, then `JobBase`'s finally-block persist wrote its
+own stale instance back over it, so failed jobs retried forever and the card always read
+"Retrying (1/3)". Fixed by mutating the shared instance. Verified against the database: a job failed
+after the fix has RetryCount 2 and state Scheduled, while every pre-fix failure still sits at 3.
 
-Predicted symptoms: a permanently-failing download retries every 15 minutes indefinitely, and the
-retry card always reads "Retrying (1/3)" because its label is
-`total - job.RetryCount + 1` (`JobTrackerService.cs:309`).
 
-Matters for Batch 3 Phase 2: "resolution failure deletes the placeholder row" would otherwise become an
-unbounded loop of jobs against a row that no longer exists. Schedule `ResolveSubscriptionJob` with
-`retryCount: 0` and guard the deletion on the row still existing, or fix the clobber properly.
+### Sidebar tree doesn't highlight on a deep link
+`SubscriptionTree`'s highlight is its own `treeView.SelectedItem`, which only its own click handler
+sets. `AppState.SelectedSubscription` changes drive *navigation* (`AppController.cs:141-149`) but the
+tree's listener (`SubscriptionTree.razor.cs:119-127`) only recomputes `isHomeActive`. So navigating to
+`/subscription/5` directly — from the watch page's new uploader link, a bookmark, or a typed URL —
+leaves the sidebar unhighlighted. Pre-existing; noted while adding that link (Batch 4a), which
+deliberately does not paper over it by writing AppState (that would navigate twice and still not
+highlight).
+
+### `VideoOrder.Rating` ("Highest rated") quietly changed meaning
+Inert before Batch 4a — `Video.Rating` was null for every YouTube video, so the sort did nothing. It's
+now populated for videos whose watch page was opened while Return YouTube Dislike was on, so a handful
+of arbitrary rows float to the top and everything else ties at null. Either backfill the ratio during
+enrichment or hide the sort option until coverage is better.
 
 ### No JavaScript runtime for yt-dlp — YouTube extraction is running degraded
 Every YouTube extraction currently logs:
