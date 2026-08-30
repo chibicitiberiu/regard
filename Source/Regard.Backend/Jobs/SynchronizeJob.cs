@@ -30,7 +30,6 @@ namespace Regard.Backend.Jobs
         private readonly IVideoStorageService videoStorageService;
         private readonly IVideoDownloaderService videoDownloader;
         private readonly MetadataService metadataService;
-        private readonly VideoUpdateNotifier videoUpdateNotifier;
         private RegardScheduler scheduler;
 
         public SynchronizeJob(ILogger<SynchronizeJob> log,
@@ -42,7 +41,6 @@ namespace Regard.Backend.Jobs
                               IVideoStorageService videoStorageService,
                               IVideoDownloaderService videoDownloader,
                               MetadataService metadataService,
-                              VideoUpdateNotifier videoUpdateNotifier,
                               RegardScheduler scheduler) : base(log, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
@@ -51,7 +49,6 @@ namespace Regard.Backend.Jobs
             this.videoStorageService = videoStorageService;
             this.videoDownloader = videoDownloader;
             this.metadataService = metadataService;
-            this.videoUpdateNotifier = videoUpdateNotifier;
             this.scheduler = scheduler;
         }
 
@@ -226,11 +223,6 @@ namespace Regard.Backend.Jobs
                 await dataContext.SaveChangesAsync();
                 newCount++;
             }
-
-            // New tiles appeared — tell the owner's clients to refetch (one coarse push per sync run,
-            // however many videos were added).
-            if (newCount > 0)
-                await videoUpdateNotifier.NotifyVideosChanged(sub.Id, sub.UserId);
         }
 
         /// <summary>
@@ -346,9 +338,6 @@ namespace Regard.Backend.Jobs
             }
 
             await dataContext.SaveChangesAsync();
-
-            // The file vanished on disk — push the now-not-downloaded state so an open tile drops its badge.
-            await videoUpdateNotifier.NotifyVideoUpdated(video, sub.UserId);
         }
 
         private async Task OnMissingSize(Video video)

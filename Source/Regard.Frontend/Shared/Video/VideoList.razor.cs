@@ -126,6 +126,7 @@ namespace Regard.Frontend.Shared.Video
             await base.OnInitializedAsync();
             Messaging.VideoUpdated += Messaging_VideoUpdated;
             Messaging.VideosChanged += Messaging_VideosChanged;
+            Messaging.SubscriptionsDeleted += Messaging_SubscriptionsDeleted;
             Notifications.ActivityChanged += OnNotificationsActivityChanged;
 
             await LoadFilterState();
@@ -303,10 +304,7 @@ namespace Regard.Frontend.Shared.Video
                     videos.BeginBatch();
                     videos.Clear();
                     foreach (var video in resp.Data.Videos)
-                    {
-                        FixRelativeUrl(video);
                         videos.Add(new VideoViewModel(video));
-                    }
                     videos.EndBatch();
 
                     totalVideoCount = resp.Data.TotalCount;
@@ -318,32 +316,55 @@ namespace Regard.Frontend.Shared.Video
             }
         }
 
-        private void FixRelativeUrl(ApiVideo apiVideo)
-        {
-            if (!apiVideo.ThumbnailUrl.IsAbsoluteUri)
-                apiVideo.ThumbnailUrl = new Uri(AppState.BackendBase, apiVideo.ThumbnailUrl);
-        }
 
         private void Messaging_VideoUpdated(object sender, ApiVideo e)
         {
-            // This fires on the SignalR callback context, not a UI event, so marshal to the renderer's
-            // sync context with InvokeAsync — otherwise the collection change + StateHasChanged don't
-            // actually re-render the card.
-            _ = InvokeAsync(() =>
+            // MessagingService already marshalled this onto the render context and absolutized its URLs.
+            for (int i = 0; i < videos.Count; i++)
             {
-                for (int i = 0; i < videos.Count; i++)
+                if (videos[i].ApiVideo.Id == e.Id)
                 {
-                    if (videos[i].ApiVideo.Id == e.Id)
-                    {
-                        FixRelativeUrl(e);
-                        // Replace the item (not just set a property): ListView only re-renders on
-                        // collection changes, so a plain property assignment wouldn't refresh the card.
-                        videos[i] = new VideoViewModel(e);
-                        StateHasChanged();
-                        break;
-                    }
+                    // Merge rather than replace the DTO: a pushed ApiVideo has no StreamMimeType/EmbedUrl
+                    // (those are added by the list controller), so overwriting would blank them. Still
+                    // swap the view-model instance, because the list only re-renders on a collection change.
+                    videos[i] = new VideoViewModel(videos[i].ApiVideo.MergeLiveFields(e));
+                    StateHasChanged();
+                    break;
                 }
-            });
+            }
+            // A video that isn't on the current page is deliberately ignored: re-paging underneath someone
+            // because a background download finished is worse than a momentarily stale count.
+        }
+
+        /// <summary>
+        /// Drops tiles belonging to subscriptions that no longer exist. Videos are removed from the
+        /// database by cascade rather than through EF, so the change feed can't see them individually —
+        /// the subscription delete is the signal. Nothing handled this before, so deleting a subscription
+        /// left its videos on screen until a manual refresh.
+        /// </summary>
+        private void Messaging_SubscriptionsDeleted(object sender, int[] ids)
+        {
+            var gone = new HashSet<int>(ids);
+            int removed = 0;
+            for (int i = videos.Count - 1; i >= 0; i--)
+            {
+                if (gone.Contains(videos[i].ApiVideo.SubscriptionId))
+                {
+                    videos.RemoveAt(i);
+                    removed++;
+                }
+            }
+
+            if (removed == 0)
+                return;
+
+            totalVideoCount = Math.Max(0, totalVideoCount - removed);
+            if (videos.Count == 0 && page > 0)
+            {
+                page--;
+                _ = Populate();
+            }
+            StateHasChanged();
         }
 
         private System.Timers.Timer refetchDebounce;
@@ -378,16 +399,18 @@ namespace Regard.Frontend.Shared.Video
         async Task OnVideoMarkWatched(VideoViewModel videoVM)
         {
             await Backend.VideoMarkWatched(new VideoMarkWatchedRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
-            // Refresh so the card reflects the change immediately (ListView only re-renders on collection
-            // changes, and the SignalR video-updated push isn't reliably delivered) and any watch-state
-            // filter re-applies (a now-watched video leaves the "Unwatched"/"Started" view).
-            await Populate();
+            // The card itself updates from the live push. Still refetch when a watch-state filter is
+            // active, because set membership changed and only the server can decide it: a now-watched
+            // video has to leave the "Unwatched"/"Started" view, which patching a tile can't express.
+            if (watchState != VideoWatchState.All)
+                await Populate();
         }
 
         async Task OnVideoMarkNotWatched(VideoViewModel videoVM)
         {
             await Backend.VideoMarkNotWatched(new VideoMarkNotWatchedRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
-            await Populate();
+            if (watchState != VideoWatchState.All)
+                await Populate();
         }
 
         async Task OnVideoDownload(VideoViewModel videoVM)
@@ -398,19 +421,20 @@ namespace Regard.Frontend.Shared.Video
         async Task OnVideoDeleteFiles(VideoViewModel videoVM)
         {
             await Backend.VideoDeleteFiles(new VideoDeleteFilesRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
-            await Populate();   // reflect the removed download badge immediately
+            // Badge updates arrive live; only a downloaded-state filter needs the set recomputed.
+            if (isDownloaded.HasValue)
+                await Populate();
         }
 
         async Task OnVideoMarkForDeletion(VideoViewModel videoVM)
         {
             await Backend.VideoMarkForDeletion(new VideoMarkForDeletionRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
-            await Populate();   // show the "marked for deletion" badge immediately
+            // The "marked for deletion" badge arrives via the live change feed; no refetch needed.
         }
 
         async Task OnVideoUnmarkForDeletion(VideoViewModel videoVM)
         {
             await Backend.VideoUnmarkForDeletion(new VideoUnmarkForDeletionRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
-            await Populate();
         }
 
         // Tooltip for the "marked for deletion" badge, e.g. "Files marked for deletion in 3 hours".
@@ -447,6 +471,7 @@ namespace Regard.Frontend.Shared.Video
         {
             Messaging.VideoUpdated -= Messaging_VideoUpdated;
             Messaging.VideosChanged -= Messaging_VideosChanged;
+            Messaging.SubscriptionsDeleted -= Messaging_SubscriptionsDeleted;
             Notifications.ActivityChanged -= OnNotificationsActivityChanged;
             refetchDebounce?.Dispose();
         }

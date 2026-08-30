@@ -188,8 +188,16 @@ namespace Regard.Services
         public Task<(ApiResponse<SubscriptionImportResponse>, HttpResponseMessage)> SubscriptionImport(SubscriptionImportRequest data)
             => Post<SubscriptionImportRequest, SubscriptionImportResponse>("api/subscription/import", data);
 
-        public Task<(ApiResponse<SubscriptionListResponse>, HttpResponseMessage)> SubscriptionList(SubscriptionListRequest data)
-            => Post<SubscriptionListRequest, SubscriptionListResponse>("api/subscription/list", data);
+        // Media URLs arrive relative and are absolutized here, at the single point where fetched DTOs
+        // enter the app (pushed ones are handled in MessagingService), so no component has to remember.
+        public async Task<(ApiResponse<SubscriptionListResponse>, HttpResponseMessage)> SubscriptionList(SubscriptionListRequest data)
+        {
+            var result = await Post<SubscriptionListRequest, SubscriptionListResponse>("api/subscription/list", data);
+            if (result.Item1?.Data?.Subscriptions != null)
+                foreach (var sub in result.Item1.Data.Subscriptions)
+                    sub.Absolutize(BaseUrl);
+            return result;
+        }
 
         public Task<(ApiResponse, HttpResponseMessage)> SubscriptionDelete(SubscriptionDeleteRequest data)
             => Post("api/subscription/delete", data);
@@ -309,8 +317,14 @@ namespace Regard.Services
 
         #region Videos
 
-        public Task<(ApiResponse<VideoListResponse>, HttpResponseMessage)> VideoList(VideoListRequest data)
-            => Post<VideoListRequest, VideoListResponse>("api/video/list", data);
+        public async Task<(ApiResponse<VideoListResponse>, HttpResponseMessage)> VideoList(VideoListRequest data)
+        {
+            var result = await Post<VideoListRequest, VideoListResponse>("api/video/list", data);
+            if (result.Item1?.Data?.Videos != null)
+                foreach (var video in result.Item1.Data.Videos)
+                    video.Absolutize(BaseUrl);
+            return result;
+        }
 
         public Task<(ApiResponse, HttpResponseMessage)> VideoDownload(VideoDownloadRequest data)
             => Post("api/video/download", data);

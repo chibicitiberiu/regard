@@ -1,3 +1,4 @@
+using Regard.Backend.Services.LiveUpdates;
 using System;
 using System.IO;
 using System.Linq;
@@ -60,7 +61,15 @@ namespace Regard.Backend
             {
                 opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/octet-stream" });
             });
-            services.AddScoped<MessagingService>();
+            // Live updates: an EF SaveChanges interceptor broadcasts entity changes to the owning user,
+            // so liveness is a property of persisting a change rather than something each mutation site
+            // has to remember. Registered here, ahead of AddQuartzServer, because hosted services stop in
+            // reverse order — the dispatcher must outlive the jobs so it can flush their final writes.
+            services.AddSingleton<SubscriptionOwnerCache>();
+            services.AddSingleton<LiveUpdateDispatcher>();
+            services.AddHostedService(sp => sp.GetRequiredService<LiveUpdateDispatcher>());
+            services.AddSingleton<ChangeFeedInterceptor>();
+            services.AddHostedService<JobPushBridge>();   // job progress/state over SignalR (Job Log)
 
             // Authentication and security
             services.AddIdentity<UserAccount, IdentityRole>()
@@ -202,7 +211,6 @@ namespace Regard.Backend
             services.AddSingleton<IYoutubeDlService, YoutubeDLService>();
             services.AddSingleton<ApiResponseFactory>();
             services.AddSingleton<ApiModelFactory>();
-            services.AddSingleton<VideoUpdateNotifier>();
 
             // Email (password-reset delivery). Scoped to match the scoped IOptionManager it reads.
             services.AddScoped<IEmailService, EmailService>();

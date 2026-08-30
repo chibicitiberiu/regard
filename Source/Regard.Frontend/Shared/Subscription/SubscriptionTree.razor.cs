@@ -34,6 +34,10 @@ namespace Regard.Frontend.Shared.Subscription
 
         private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeFolders = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
 
+        // Subscription nodes by id. Lets a live update find its node directly instead of scanning the
+        // parent computed from the (possibly already changed) incoming DTO.
+        private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeSubs = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
+
         [Inject] protected AppState AppState { get; set; }
 
         [Inject] protected SubscriptionManagerService SubscriptionManager { get; set; }
@@ -85,6 +89,7 @@ namespace Regard.Frontend.Shared.Subscription
                 return;
 
             treeFolders.Clear();
+            treeSubs.Clear();
             treeView.Root.Children.Clear();
 
             // Create and add nodes to dictionary
@@ -97,7 +102,7 @@ namespace Regard.Frontend.Shared.Subscription
 
             // Parent all the nodes
             foreach (var pair in treeFolders)
-                GetParentFolder(pair.Value.Data.ParentId).Children.Add(pair.Value);
+                AddSorted(GetParentFolder(pair.Value.Data.ParentId), pair.Value);
             
             // Create subscription leafs
             foreach (var sub in AppState.Subscriptions.Values)
@@ -136,6 +141,13 @@ namespace Regard.Frontend.Shared.Subscription
             {
                 RebuildTree();
             }
+            else if (e.Action == NotifyCollectionChangedAction.Replace)
+            {
+                // A live update of an existing subscription. Reuse the node (see ReplaceSubscription) so
+                // the selection survives -- remove+add would deselect and navigate the user home.
+                foreach (var newItem in e.NewItems)
+                    ReplaceSubscription(newItem.Value);
+            }
             else
             {
                 foreach (var oldItem in e.OldItems)
@@ -144,6 +156,8 @@ namespace Regard.Frontend.Shared.Subscription
                 foreach (var newItem in e.NewItems)
                     AddSubscription(newItem.Value);
             }
+
+            StateHasChanged();
         }
 
         private void Folders_DictionaryChanged(object sender, DictionaryChangedEventArgs<int, ApiSubscriptionFolder> e)
@@ -151,9 +165,16 @@ namespace Regard.Frontend.Shared.Subscription
             if (treeView == null)   // not rendered yet; OnAfterRender will build from current state
                 return;
 
-            if (e.Action == NotifyCollectionChangedAction.Reset || e.Action == NotifyCollectionChangedAction.Replace)
+            if (e.Action == NotifyCollectionChangedAction.Reset)
             {
                 RebuildTree();
+            }
+            else if (e.Action == NotifyCollectionChangedAction.Replace)
+            {
+                // Update in place rather than rebuilding the whole tree: a rebuild detaches every node,
+                // which loses the selection (and expansion state) of whatever the user is viewing.
+                foreach (var newItem in e.NewItems)
+                    ReplaceFolder(newItem.Value);
             }
             else
             {
@@ -172,7 +193,7 @@ namespace Regard.Frontend.Shared.Subscription
                 foreach (var newItem in e.NewItems)
                 {
                     var tvFolder = treeFolders[newItem.Key];
-                    GetParentFolder(tvFolder.Data.ParentId).Children.Add(tvFolder);
+                    AddSorted(GetParentFolder(tvFolder.Data.ParentId), tvFolder);
                 }
             }
 
@@ -193,34 +214,98 @@ namespace Regard.Frontend.Shared.Subscription
                 sub.ThumbnailUrl = new Uri(AppState.BackendBase, sub.ThumbnailUrl);
         }
 
+        /// <summary>
+        /// Adds a node under <paramref name="parent"/> at its sorted position. Folder nodes hold a
+        /// SortedObservableCollection, so Add() already places them correctly; TreeView.Root is a plain
+        /// node whose children are unsorted (they only look ordered because the API returns them that
+        /// way), so root-level nodes are positioned by hand.
+        /// </summary>
+        private void AddSorted(TreeViewNode<SubscriptionItemViewModelBase> parent,
+                               TreeViewNode<SubscriptionItemViewModelBase> node)
+        {
+            if (parent != treeView.Root)
+            {
+                parent.Children.Add(node);
+                return;
+            }
+
+            int i = 0;
+            while (i < parent.Children.Count
+                   && string.CompareOrdinal(parent.Children[i].Data.SortKey, node.Data.SortKey) < 0)
+                i++;
+
+            parent.Children.Insert(i, node);
+        }
+
         private void AddSubscription(ApiSubscription sub)
         {
             FixRelativeUrl(sub);
             var vmSub = new SubscriptionViewModel(sub);
             var tvSub = new SortedTreeViewNode<SubscriptionItemViewModelBase, string>(vmSub);
 
-            GetParentFolder(sub.ParentFolderId).Children.Add(tvSub);
+            treeSubs[sub.Id] = tvSub;
+            AddSorted(GetParentFolder(sub.ParentFolderId), tvSub);
+        }
+
+        /// <summary>
+        /// Applies a live update to an existing subscription node. The node object is reused, so
+        /// TreeView.SelectedItem (which holds a node reference) keeps pointing at it — the old
+        /// remove-then-add path deselected it, which navigated the user back to the home page. The node
+        /// is only re-inserted when its sort position or parent actually changed, since
+        /// SortedObservableCollection sorts on insert and never re-sorts in place.
+        /// </summary>
+        private void ReplaceSubscription(ApiSubscription sub)
+        {
+            if (!treeSubs.TryGetValue(sub.Id, out var node))
+            {
+                AddSubscription(sub);
+                return;
+            }
+
+            FixRelativeUrl(sub);
+            var vm = new SubscriptionViewModel(sub);
+            bool reorder = node.Data.SortKey != vm.SortKey || node.Data.ParentId != sub.ParentFolderId;
+
+            node.Data = vm;   // repaints through ChildPropertyChanged -> TreeView.StateHasChanged
+
+            if (reorder)
+            {
+                node.Parent?.Children.Remove(node);
+                AddSorted(GetParentFolder(sub.ParentFolderId), node);
+            }
+        }
+
+        /// <summary>Same as <see cref="ReplaceSubscription"/>; reusing the node also keeps the subtree.</summary>
+        private void ReplaceFolder(ApiSubscriptionFolder folder)
+        {
+            if (!treeFolders.TryGetValue(folder.Id, out var node))
+                return;
+
+            var vm = new SubscriptionFolderViewModel(folder);
+            int? parentId = folder.ParentId;
+            bool reorder = node.Data.SortKey != vm.SortKey || node.Data.ParentId != parentId;
+
+            node.Data = vm;
+
+            if (reorder)
+            {
+                node.Parent?.Children.Remove(node);
+                AddSorted(GetParentFolder(parentId), node);
+            }
         }
 
         private bool RemoveSubscription(ApiSubscription subscription)
         {
-            var parent = GetParentFolder(subscription.ParentFolderId);
+            if (!treeSubs.TryGetValue(subscription.Id, out var node))
+                return false;
 
-            foreach (var child in parent.Children)
-            {
-                if (child.Data is SubscriptionViewModel subVm
-                    && subVm.Subscription.Id == subscription.Id)
-                {
-                    parent.Children.Remove(child);
+            treeSubs.Remove(subscription.Id);
+            (node.Parent ?? GetParentFolder(subscription.ParentFolderId)).Children.Remove(node);
 
-                    if (child == treeView.SelectedItem)
-                        treeView.SelectedItem = null;
+            if (node == treeView.SelectedItem)
+                treeView.SelectedItem = null;
 
-                    return true;
-                }
-            }
-
-            return false;
+            return true;
         }
 
         private bool RemoveFolder(ApiSubscriptionFolder folder)

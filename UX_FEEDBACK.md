@@ -79,17 +79,21 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
 
 ## E. Settings — structure & polish
 
-- `[ ]` **[S] Show what "Default / unset / inherit" resolves to.** Every inheritable setting
-  should say the effective default inline, e.g. "Default (Newest first)".
-- `[ ]` **[M] Fold Admin settings into the normal Settings page** as a section (gated by
-  role), not a separate special button/page.
-- `[ ]` **[M] Restyle the settings pages** — card backgrounds, better layout, title
-  typography. Applies to all settings pages **including Edit Subscription**. _Biggest
-  single visual lift; pure `.scss` + markup._
-- `[ ]` **[M] Mirror subscription-only settings into user settings** ("Delete files when
-  watched", etc.). A per-sub override needs a user-level default to override; today some
-  have no base to inherit from. _"unset" at sub level should fall back to the user default._
-- `[ ]` **[M] Storage & quota bar** in settings — show a usage bar when limits are set.
+- `[x]` **[S] Show what "Default / unset / inherit" resolves to.** Every inheritable setting
+  should say the effective default inline, e.g. "Default (Newest first)". _Done (Batch 2, `0c4ae8b`):
+  config DTOs now ship the resolved parent-scope value; `RgSimpleInputSelect.DefaultValueText`._
+- `[x]` **[M] Fold Admin settings into the normal Settings page** as a section (gated by
+  role), not a separate special button/page. _Done (Batch 2, `17f4aec`): admin-gated tab; `/admin`
+  redirects; standalone nav icon removed._
+- `[x]` **[M] Restyle the settings pages** — card backgrounds, better layout, title
+  typography. Applies to all settings pages **including Edit Subscription**. _Done (Batch 2,
+  `17f4aec` + `3f71b9b`): new `_settings.scss` cards + Advent Pro headings; edit pages carded and
+  scrolling with the main pane._
+- `[x]` **[M] Mirror subscription-only settings into user settings** ("Delete files when
+  watched", etc.). _Done (Batch 2, `0c4ae8b`): seven inheritable options added to user settings via a
+  "Subscription defaults" card; verified the sub-level inherit resolves to the user value._
+- `[x]` **[M] Storage & quota bar** in settings — show a usage bar when limits are set. _Already
+  existed end-to-end (`UserQuotaService` + `/api/settings/usage`); restyled in Batch 2._
 
 ## F. Settings — new options / behaviour changes
 
@@ -113,14 +117,17 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
   mean deleting real downloads). Existing explicit overrides still win._
 - `[ ]` **[M] More subscription filters** beyond title — publish date `>=` / `<=`. _Extends
   `SubscriptionFilterExtensions`; mind the SQLite `DateTimeOffset` non-translatable gotcha._
-- `[ ]` **[S/M] Set the icon of manual subscriptions.** Manual (non-provider) subs can't get
-  an icon set; allow uploading/choosing one.
+- `[x]` **[S/M] Set the icon of manual subscriptions.** Manual (non-provider) subs can't get
+  an icon set; allow uploading/choosing one. _Done (uncommitted): `POST api/subscription/set_icon`
+  (base64 JSON, raster allowlist rejecting SVG, 5 MB cap) + preview/upload on the edit page; works for
+  every subscription, not just manual ones._
 
 ## G. Subscriptions
 
-- `[ ]` **[S/M] Subscription icon doesn't refresh automatically** — stays stale until a
-  page reload. _Push the update over the existing SignalR video/sub notifier once the
-  thumbnail fetch completes._
+- `[x]` **[S/M] Subscription icon doesn't refresh automatically** — stays stale until a
+  page reload. _Done (uncommitted). Root cause turned out to be systemic: the whole change-broadcast
+  subsystem was disconnected. Replaced with an EF SaveChanges change feed, so icons (and every other
+  entity change) push live. See the live-update work._
 
 ## H. Ops / maintenance / admin
 

@@ -58,6 +58,8 @@ namespace Regard.Backend.Thumbnails
                     await thumbnailService.Fetch(sub);
                     dataContext.SaveChanges();
                     ++countSubs;
+                    // ThumbnailPath just changed from a remote URL to a local one, so the live change
+                    // feed broadcasts it and open nav trees swap the placeholder for the real icon.
                 }
                 catch (Exception ex)
                 {

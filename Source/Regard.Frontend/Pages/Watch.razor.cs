@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Regard.Frontend.Pages
 {
-    public partial class Watch
+    public partial class Watch : IDisposable
     {
         private const int UpNextTarget = 8;
 
@@ -51,9 +51,55 @@ namespace Regard.Frontend.Pages
 
         [Inject] protected AppState AppState { get; set; }
 
+        [Inject] protected Regard.Frontend.Services.MessagingService Messaging { get; set; }
+
         [Parameter] public int VideoId { get; set; }
 
         public MarkupString FormattedDescription { get; set; }
+
+        protected override void OnInitialized()
+        {
+            base.OnInitialized();
+            // Until now the watch page ignored live updates entirely, so a download finishing (or the
+            // video being deleted) while you sat here was invisible until you navigated away.
+            Messaging.VideoUpdated += Messaging_VideoUpdated;
+            Messaging.VideosChanged += Messaging_VideosChanged;
+        }
+
+        public void Dispose()
+        {
+            Messaging.VideoUpdated -= Messaging_VideoUpdated;
+            Messaging.VideosChanged -= Messaging_VideosChanged;
+        }
+
+        private void Messaging_VideoUpdated(object sender, ApiVideo e)
+        {
+            // Merge, never replace: a pushed DTO carries no EmbedUrl/StreamMimeType/SponsorSegments,
+            // so assigning it wholesale would tear those out from under the running player.
+            if (video != null && e.Id == video.Id)
+            {
+                video.MergeLiveFields(e);
+                StateHasChanged();
+                return;
+            }
+
+            if (upNext != null)
+            {
+                var existing = upNext.FirstOrDefault(v => v.Id == e.Id);
+                if (existing != null)
+                {
+                    existing.MergeLiveFields(e);
+                    StateHasChanged();
+                }
+            }
+        }
+
+        private void Messaging_VideosChanged(object sender, int subscriptionId)
+        {
+            // The surrounding set changed (a sync added videos); refresh what plays next.
+            if (video != null && subscriptionId == video.SubscriptionId)
+                _ = InvokeAsync(async () => { await LoadUpNext(); StateHasChanged(); });
+        }
 
         protected override async Task OnParametersSetAsync()
         {

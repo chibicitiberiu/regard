@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Regard.Backend.Services.LiveUpdates;
 using Microsoft.EntityFrameworkCore;
 
 using Microsoft.Extensions.Configuration;
@@ -41,9 +42,26 @@ namespace Regard.Backend.DB
 
         public DbSet<Notification> Notifications { get; set; }
 
-        protected DataContext(IConfiguration configuration)
+        private readonly ChangeFeedInterceptor changeFeed;
+
+        protected DataContext(IConfiguration configuration, ChangeFeedInterceptor changeFeed = null)
         {
             this.Configuration = configuration;
+            this.changeFeed = changeFeed;
+        }
+
+        /// <summary>
+        /// Options shared by every provider. Called from each derived OnConfiguring — deliberately not
+        /// via base.OnConfiguring(), because that also calls UseLazyLoadingProxies(), which has never
+        /// actually run (no derived context chained to it) and would now throw at model build:
+        /// Video.Subscription is not virtual. The change feed is added here so one registration covers
+        /// both the SQLite and SQL Server contexts; note these contexts take no DbContextOptions, so
+        /// configuring interceptors via AddDbContext's options lambda would be silently ignored.
+        /// </summary>
+        protected void ApplyCommonOptions(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (changeFeed != null)
+                optionsBuilder.AddInterceptors(changeFeed);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -160,11 +178,11 @@ namespace Regard.Backend.DB
                 .HasIndex(x => new { x.UserId, x.Key });
         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            base.OnConfiguring(optionsBuilder);
-            optionsBuilder.UseLazyLoadingProxies();
-        }
+        // NOTE: there is deliberately no OnConfiguring override here. The derived contexts configure
+        // their provider and call ApplyCommonOptions instead. A previous version called
+        // UseLazyLoadingProxies() here, but nothing ever chained to it, so lazy loading has always been
+        // off — and turning it on would throw, since Video.Subscription isn't virtual. Code that needs
+        // a navigation must Include it (or read the FK).
 
         public IQueryable<Subscription> GetSubscriptionsRecursive(SubscriptionFolder root)
         {

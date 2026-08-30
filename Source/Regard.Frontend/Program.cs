@@ -27,6 +27,7 @@ namespace Regard.Frontend
             Console.WriteLine($"Regard frontend running at {builder.HostEnvironment.BaseAddress} (backend API: {builder.Configuration["BACKEND_URL"]})");
 
 
+            builder.Services.AddSingleton<UiDispatcher>();
             builder.Services.AddSingleton<AppState>();
             builder.Services.AddSingleton<SubscriptionManagerService>();
             builder.Services.AddSingleton<MessagingService>();

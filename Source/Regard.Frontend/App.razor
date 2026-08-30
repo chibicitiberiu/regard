@@ -1,4 +1,5 @@
 @inject AppController appCtrl
+@inject Regard.Frontend.Services.UiDispatcher Ui
 
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly">
@@ -23,5 +24,15 @@
     {
         await base.OnInitializedAsync();
         await appCtrl.OnInitialize();
+    }
+
+    // Hand the renderer's dispatcher to UiDispatcher so every SignalR push is marshalled onto the render
+    // context. Done from the root component (not a layout): it renders first and is never disposed, so no
+    // push can arrive before the invoker exists or after it becomes invalid.
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (firstRender)
+            Ui.Attach(f => InvokeAsync(f));
     }
 } 

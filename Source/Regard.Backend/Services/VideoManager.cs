@@ -13,23 +13,10 @@ using System.Threading.Tasks;
 
 namespace Regard.Backend.Services
 {
-    #region Events
+    // VideoUpdatedEventArgs / the VideoUpdated event were removed: the event was declared but never
+    // raised anywhere, and its only would-be subscriber was a bridge that was never instantiated. Live
+    // updates come from the EF change feed (Services/LiveUpdates/ChangeFeedInterceptor).
 
-    public class VideoUpdatedEventArgs
-    { 
-        /// <summary>
-        /// User who initiated the operation
-        /// </summary>
-        public UserAccount User { get; set; }
-
-        /// <summary>
-        /// Updated video
-        /// </summary>
-        public Video Video { get; set; }
-    }
-
-
-    #endregion
 
     public class VideoManager
     {
@@ -37,23 +24,18 @@ namespace Regard.Backend.Services
         private readonly RegardScheduler scheduler;
         private readonly IProviderManager providerManager;
         private readonly IOptionManager optionManager;
-        private readonly VideoUpdateNotifier videoUpdateNotifier;
         private readonly ILogger<VideoManager> log;
-
-        public event EventHandler<VideoUpdatedEventArgs> VideoUpdated;
 
         public VideoManager(DataContext dataContext,
                             RegardScheduler scheduler,
                             IProviderManager providerManager,
                             IOptionManager optionManager,
-                            VideoUpdateNotifier videoUpdateNotifier,
                             ILogger<VideoManager> log)
         {
             this.dataContext = dataContext;
             this.scheduler = scheduler;
             this.providerManager = providerManager;
             this.optionManager = optionManager;
-            this.videoUpdateNotifier = videoUpdateNotifier;
             this.log = log;
         }
 
@@ -77,12 +59,6 @@ namespace Regard.Backend.Services
 
             vids.ForEach(updateMethod);
             dataContext.SaveChanges();
-
-            // Push the new state live so open listings update in place without a refetch (watched toggle,
-            // (un)mark-for-deletion, ...). Fire-and-forget: ToApi reads the entity synchronously before the
-            // send, and the hub send doesn't touch the scoped DataContext.
-            foreach (var video in vids)
-                _ = videoUpdateNotifier.NotifyVideoUpdated(video, user.Id);
         }
 
         /// <summary>
@@ -174,11 +150,6 @@ namespace Regard.Backend.Services
             if (changed)
                 dataContext.SaveChanges();
 
-            // Push the trash badge live for grace-scheduled videos. (Immediate deletes are pushed by the
-            // delete job once the files actually go.)
-            foreach (var v in scheduled)
-                _ = videoUpdateNotifier.NotifyVideoUpdated(v, userId);
-
             if (deleteNow.Count > 0)
                 await DeleteWatchedFilesJob.Schedule(scheduler, deleteNow.Select(v => v.Id).ToArray());
         }
@@ -250,13 +221,6 @@ namespace Regard.Backend.Services
                 await provider.UpdateMetadata(new[] { video }, true, true);
                 video.EnrichedAt = DateTimeOffset.UtcNow;
                 await dataContext.SaveChangesAsync();
-
-                // A flat placeholder just became a real tile (title, published date, ...) — push it live.
-                var ownerId = dataContext.Subscriptions.AsQueryable()
-                    .Where(s => s.Id == video.SubscriptionId)
-                    .Select(s => s.UserId)
-                    .FirstOrDefault();
-                await videoUpdateNotifier.NotifyVideoUpdated(video, ownerId);
             }
             catch (Exception ex)
             {
@@ -310,9 +274,6 @@ namespace Regard.Backend.Services
             await provider.UpdateMetadata(Enumerable.Repeat(video, 1), true, true);
             dataContext.Videos.Add(video);
             await dataContext.SaveChangesAsync();
-
-            // A new tile appeared — tell the owner's clients to refetch the current view.
-            await videoUpdateNotifier.NotifyVideosChanged(subscriptionId, user.Id);
         }
 
         public async Task ValidateUrl(Uri url)

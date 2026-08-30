@@ -117,8 +117,8 @@ namespace Regard.Frontend.Shared.Controls
             {
                 foreach (var oldChild in e.OldItems.Cast<TreeViewNode<Model>>())
                 {
-                    oldChild.ChildPropertyChanged -= ChildPropertyChanged;
-                    oldChild.TreeChanged -= TreeChanged;
+                    oldChild.ChildPropertyChanged -= ForwardChildPropertyChanged;
+                    oldChild.TreeChanged -= ForwardTreeChanged;
                     oldChild.Parent = null;
                 }
             }
@@ -126,14 +126,24 @@ namespace Regard.Frontend.Shared.Controls
             {
                 foreach (var newChild in e.NewItems.Cast<TreeViewNode<Model>>())
                 {
-                    newChild.ChildPropertyChanged += ChildPropertyChanged;
-                    newChild.TreeChanged += TreeChanged;
+                    newChild.ChildPropertyChanged += ForwardChildPropertyChanged;
+                    newChild.TreeChanged += ForwardTreeChanged;
                     newChild.Parent = this;
                 }
             }
 
             TreeChanged?.Invoke(sender, e);
         }
+
+        // Forward through methods rather than subscribing this node's event delegates directly:
+        // `child.ChildPropertyChanged += ChildPropertyChanged` copies whatever THIS node's event holds
+        // at that moment, so a subtree attached before its own parent is wired up stays permanently
+        // disconnected (a nested folder's changes never reached the TreeView, so it never repainted).
+        private void ForwardChildPropertyChanged(object sender, PropertyChangedEventArgs e)
+            => ChildPropertyChanged?.Invoke(sender, e);
+
+        private void ForwardTreeChanged(object sender, CollectionChangedEventArgs e)
+            => TreeChanged?.Invoke(sender, e);
 
         private void OnDataPropertyChanged(object sender, PropertyChangedEventArgs e)
         {

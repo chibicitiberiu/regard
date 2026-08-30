@@ -23,7 +23,6 @@ namespace Regard.Backend.Jobs
 
         protected readonly IVideoStorageService videoStorage;
         protected readonly SubscriptionManager subscriptionManager;
-        protected readonly VideoUpdateNotifier videoUpdateNotifier;
         protected readonly List<Video> videosToDelete = new List<Video>();
 
         public int[] VideoIds { get; set; }
@@ -32,13 +31,11 @@ namespace Regard.Backend.Jobs
                               SubscriptionManager subscriptionManager,
                               JobTrackerService jobTrackerService,
                               ILogger<DeleteFilesJob> logger,
-                              DataContext dataContext,
-                              VideoUpdateNotifier videoUpdateNotifier)
+                              DataContext dataContext)
             : base(logger, dataContext, jobTrackerService)
         {
             this.videoStorage = videoStorage;
             this.subscriptionManager = subscriptionManager;
-            this.videoUpdateNotifier = videoUpdateNotifier;
         }
 
         public static Task Schedule(RegardScheduler scheduler, int[] videoIds)
@@ -85,15 +82,8 @@ namespace Regard.Backend.Jobs
 
             await dataContext.SaveChangesAsync();
 
-            // Push the now-not-downloaded state so cards drop their downloaded badge live.
-            foreach (var video in videosToDelete)
-            {
-                var ownerId = dataContext.Subscriptions.AsQueryable()
-                    .Where(s => s.Id == video.SubscriptionId)
-                    .Select(s => s.UserId)
-                    .FirstOrDefault();
-                await videoUpdateNotifier.NotifyVideoUpdated(video, ownerId);
-            }
+            // Clients learn the videos are no longer downloaded through the live change feed, which
+            // observes the SaveChanges above (this used to run an owner lookup per deleted video).
         }
 
         protected virtual void LogBegin()

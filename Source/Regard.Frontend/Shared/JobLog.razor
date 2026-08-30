@@ -1,6 +1,7 @@
 @using Regard.Common.API.Model
 @implements System.IDisposable
 @inject Regard.Services.BackendService Backend
+@inject Regard.Frontend.Services.MessagingService Messaging
 
 <div class="job-log">
     @if (loading)
@@ -67,7 +68,9 @@
 
 @code {
     private const int take = 20;
-    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(3);
+    // Job state now arrives over SignalR (JobPushBridge), so this poll is only a slow safety net: it
+    // keeps a scheduled job's ETA counting down and covers ownerless system jobs, which aren't pushed.
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(10);
 
     private ApiJobInfo[] jobs = System.Array.Empty<ApiJobInfo>();
     private readonly Dictionary<long, string> logs = new();
@@ -79,8 +82,24 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Messaging.JobUpdated += OnJobUpdated;
         await Load();
         _ = PollLoop();
+    }
+
+    // Patch the row in place when the server pushes a job change, so state and progress move immediately
+    // instead of on the next poll tick. A job we don't currently have on screen is left to Load/Refresh.
+    private void OnJobUpdated(object sender, ApiJobInfo job)
+    {
+        for (int i = 0; i < jobs.Length; i++)
+        {
+            if (jobs[i].Id == job.Id)
+            {
+                jobs[i] = job;
+                StateHasChanged();
+                return;
+            }
+        }
     }
 
     // Poll while the Job Log is open so running jobs show live progress/logs and scheduled jobs' ETA
@@ -194,6 +213,7 @@
 
     public void Dispose()
     {
+        Messaging.JobUpdated -= OnJobUpdated;
         cts?.Cancel();
         cts?.Dispose();
     }

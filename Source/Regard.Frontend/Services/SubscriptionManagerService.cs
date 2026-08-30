@@ -118,11 +118,8 @@ namespace Regard.Frontend.Services
                 Id = subscription.Id,
                 ParentFolderId = parentFolderId,
             });
-            // The backend SubscriptionUpdated -> SignalR bridge isn't active, so nothing pushes the new
-            // parent to us; re-load so the tree reflects the move immediately. (Mutating the cached
-            // ApiSubscription in place would desync the incremental tree update and duplicate the node.)
-            if (http.IsSuccessStatusCode)
-                await Load(force: true);
+            // ParentFolderId is part of the change feed's allowlist, so the move arrives as a
+            // NotifySubscriptionUpdated and the tree reparents the node in place. No reload needed.
             return http.IsSuccessStatusCode;
         }
 
@@ -137,8 +134,7 @@ namespace Regard.Frontend.Services
                 Id = folder.Id,
                 ParentFolderId = parentFolderId,
             });
-            if (http.IsSuccessStatusCode)
-                await Load(force: true);
+            // Same as above: the folder's ParentId change is pushed, so the tree updates itself.
             return http.IsSuccessStatusCode;
         }
 

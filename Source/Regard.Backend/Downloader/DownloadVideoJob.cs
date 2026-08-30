@@ -41,7 +41,6 @@ namespace Regard.Backend.Downloader
         protected readonly UserQuotaService userQuotaService;
         protected readonly DownloadCancellationRegistry cancellationRegistry;
         protected readonly VideoManager videoManager;
-        protected readonly VideoUpdateNotifier videoUpdateNotifier;
         protected readonly HostThrottle hostThrottle;
         protected readonly NotificationService notificationService;
 
@@ -78,7 +77,6 @@ namespace Regard.Backend.Downloader
                                 UserQuotaService userQuotaService,
                                 DownloadCancellationRegistry cancellationRegistry,
                                 VideoManager videoManager,
-                                VideoUpdateNotifier videoUpdateNotifier,
                                 HostThrottle hostThrottle,
                                 NotificationService notificationService) : base(logger, dataContext, jobTrackerService)
         {
@@ -91,7 +89,6 @@ namespace Regard.Backend.Downloader
             this.userQuotaService = userQuotaService;
             this.cancellationRegistry = cancellationRegistry;
             this.videoManager = videoManager;
-            this.videoUpdateNotifier = videoUpdateNotifier;
             this.hostThrottle = hostThrottle;
             this.notificationService = notificationService;
         }
@@ -309,13 +306,8 @@ namespace Regard.Backend.Downloader
                 await dataContext.SaveChangesAsync();
             }
 
-            // Tell the owner's connected clients the video is now downloaded, so its card's badge updates
-            // live (the DB write above bypasses VideoManager.Update, so nothing else notifies).
-            var ownerId = dataContext.Subscriptions.AsQueryable()
-                .Where(s => s.Id == video.SubscriptionId)
-                .Select(s => s.UserId)
-                .FirstOrDefault();
-            await videoUpdateNotifier.NotifyVideoUpdated(video, ownerId);
+            // The "now downloaded" state reaches connected clients through the live change feed
+            // (ChangeFeedInterceptor), which observes the SaveChanges above.
 
             if (configuration.GetValue<bool>("Metadata:Enabled"))
                 await WriteEpisodeMetadata();

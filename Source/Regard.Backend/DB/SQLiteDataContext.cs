@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Regard.Backend.Services.LiveUpdates;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -11,7 +12,8 @@ namespace Regard.Backend.DB
 {
     public class SQLiteDataContext : DataContext
     {
-        public SQLiteDataContext(IConfiguration configuration) : base(configuration)
+        public SQLiteDataContext(IConfiguration configuration, ChangeFeedInterceptor changeFeed = null)
+            : base(configuration, changeFeed)
         {
         }
 
@@ -29,6 +31,7 @@ namespace Regard.Backend.DB
             }
             optionsBuilder.UseSqlite(connectionString);
             optionsBuilder.AddInterceptors(SqlitePragmaInterceptor.Instance);
+            ApplyCommonOptions(optionsBuilder);
         }
 
         // Retry SQLITE_BUSY/LOCKED as a backstop to the 30s busy_timeout pragma (which handles the common

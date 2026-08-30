@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Regard.Backend.Services.LiveUpdates;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -10,11 +11,13 @@ namespace Regard.Backend.DB
 {
     public class SQLServerDataContext : DataContext
     {
-        public SQLServerDataContext(IConfiguration configuration) : base(configuration) { }
+        public SQLServerDataContext(IConfiguration configuration, ChangeFeedInterceptor changeFeed = null)
+            : base(configuration, changeFeed) { }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlServer(Configuration.GetConnectionString("SqlServer"));
+            ApplyCommonOptions(optionsBuilder);
         }
     }
 

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Regard.Common;
 using Regard.Common.API.Model;
+using Regard.Frontend.Utils;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,8 @@ namespace Regard.Frontend.Services
     {
         private readonly IConfiguration configuration;
         private readonly AuthenticationService authService;
+        private readonly AppState appState;
+        private readonly UiDispatcher ui;
         private HubConnection hubConnection;
 
         // Serializes (re)connects. Auth-state changes can fire several times in quick
@@ -34,13 +37,18 @@ namespace Regard.Frontend.Services
         public event EventHandler<int[]> SubscriptionFoldersDeleted;
         public event EventHandler<ApiVideo> VideoUpdated;
         public event EventHandler<int> VideosChanged;
+        public event EventHandler<ApiJobInfo> JobUpdated;
+        public event EventHandler<long> JobRemoved;
         public event EventHandler<ApiNotification> NotificationReceived;
         public event EventHandler<string> NotificationRemoved;
 
-        public MessagingService(IConfiguration configuration, AuthenticationService authService)
+        public MessagingService(IConfiguration configuration, AuthenticationService authService,
+                                AppState appState, UiDispatcher ui)
         {
             this.configuration = configuration;
             this.authService = authService;
+            this.appState = appState;
+            this.ui = ui;
             authService.AuthenticationStateChanged += AuthService_AuthenticationStateChanged;
         }
 
@@ -135,7 +143,6 @@ namespace Regard.Frontend.Services
             connection.Reconnecting += HubConnection_Reconnecting;
             connection.Closed += HubConnection_Closed;
 
-            connection.On<string>("ShowToast", ShowToast);
             connection.On<ApiSubscription>("NotifySubscriptionCreated", NotifySubscriptionCreated);
             connection.On<ApiSubscription>("NotifySubscriptionUpdated", NotifySubscriptionUpdated);
             connection.On<int[]>("NotifySubscriptionsDeleted", NotifySubscriptionsDeleted);
@@ -144,6 +151,8 @@ namespace Regard.Frontend.Services
             connection.On<int[]>("NotifySubscriptionFoldersDeleted", NotifySubscriptionFoldersDeleted);
             connection.On<ApiVideo>("NotifyVideoUpdated", NotifyVideoUpdated);
             connection.On<int>("NotifyVideosChanged", NotifyVideosChanged);
+            connection.On<ApiJobInfo>("NotifyJobUpdated", NotifyJobUpdated);
+            connection.On<long>("NotifyJobRemoved", NotifyJobRemoved);
             connection.On<ApiNotification>("NotifyNotification", NotifyNotification);
             connection.On<string>("NotifyNotificationRemoved", NotifyNotificationRemoved);
 
@@ -165,59 +174,71 @@ namespace Regard.Frontend.Services
             Console.WriteLine("Hub reconnected: " + arg);
         }
 
-        private void ShowToast(string toast)
-        {
-            Console.WriteLine("Toast: " + toast);
-        }
+        // Every push is normalized and marshalled here, once, rather than in each consumer: incoming DTOs
+        // carry relative media URLs (broken in dev, where the frontend and backend are on different
+        // ports), and hub callbacks arrive off the render context, where a StateHasChanged does nothing.
 
         private void NotifySubscriptionCreated(ApiSubscription subscription)
         {
-            SubscriptionCreated?.Invoke(this, subscription);
+            subscription.Absolutize(appState.BackendBase);
+            ui.Post(() => SubscriptionCreated?.Invoke(this, subscription));
         }
 
         private void NotifySubscriptionUpdated(ApiSubscription subscription)
         {
-            SubscriptionUpdated?.Invoke(this, subscription);
+            subscription.Absolutize(appState.BackendBase);
+            ui.Post(() => SubscriptionUpdated?.Invoke(this, subscription));
         }
 
         private void NotifySubscriptionsDeleted(int[] ids)
         {
-            SubscriptionsDeleted?.Invoke(this, ids);
+            ui.Post(() => SubscriptionsDeleted?.Invoke(this, ids));
         }
 
         private void NotifySubscriptionFolderCreated(ApiSubscriptionFolder folder)
         {
-            SubscriptionFolderCreated?.Invoke(this, folder);
+            ui.Post(() => SubscriptionFolderCreated?.Invoke(this, folder));
         }
 
         private void NotifySubscriptionFolderUpdated(ApiSubscriptionFolder folder)
         {
-            SubscriptionFolderUpdated?.Invoke(this, folder);
+            ui.Post(() => SubscriptionFolderUpdated?.Invoke(this, folder));
         }
 
         private void NotifySubscriptionFoldersDeleted(int[] ids)
         {
-            SubscriptionFoldersDeleted?.Invoke(this, ids);
+            ui.Post(() => SubscriptionFoldersDeleted?.Invoke(this, ids));
         }
 
         private void NotifyVideoUpdated(ApiVideo video)
         {
-            VideoUpdated?.Invoke(this, video);
+            video.Absolutize(appState.BackendBase);
+            ui.Post(() => VideoUpdated?.Invoke(this, video));
         }
 
         private void NotifyVideosChanged(int subscriptionId)
         {
-            VideosChanged?.Invoke(this, subscriptionId);
+            ui.Post(() => VideosChanged?.Invoke(this, subscriptionId));
+        }
+
+        private void NotifyJobUpdated(ApiJobInfo job)
+        {
+            ui.Post(() => JobUpdated?.Invoke(this, job));
+        }
+
+        private void NotifyJobRemoved(long jobId)
+        {
+            ui.Post(() => JobRemoved?.Invoke(this, jobId));
         }
 
         private void NotifyNotification(ApiNotification notification)
         {
-            NotificationReceived?.Invoke(this, notification);
+            ui.Post(() => NotificationReceived?.Invoke(this, notification));
         }
 
         private void NotifyNotificationRemoved(string key)
         {
-            NotificationRemoved?.Invoke(this, key);
+            ui.Post(() => NotificationRemoved?.Invoke(this, key));
         }
     }
 }

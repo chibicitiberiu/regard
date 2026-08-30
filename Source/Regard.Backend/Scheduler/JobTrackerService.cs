@@ -228,6 +228,10 @@ namespace Regard.Backend.Services
 
             job.State = JobState.Completed;
             job.Completed = DateTimeOffset.UtcNow;
+            // Update(): this fresh scope doesn't track `job`, so without it SaveChanges persisted
+            // nothing and a finished job stayed "Running" in the database (OnJobStarted got this right;
+            // the terminal handlers didn't).
+            dataContext.Jobs.Update(job);
             dataContext.SaveChanges();
             liveJobs.TryRemove(job.Id, out _);
 
@@ -257,6 +261,7 @@ namespace Regard.Backend.Services
 
             job.State = JobState.Cancelled;
             job.Completed = DateTimeOffset.UtcNow;
+            dataContext.Jobs.Update(job);
             dataContext.SaveChanges();
             liveJobs.TryRemove(job.Id, out _);
 
@@ -273,6 +278,7 @@ namespace Regard.Backend.Services
 
             job.State = JobState.Failed;
             job.Completed = DateTimeOffset.UtcNow;
+            dataContext.Jobs.Update(job);
             dataContext.SaveChanges();
             liveJobs.TryRemove(job.Id, out _);
 

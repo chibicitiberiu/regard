@@ -9,7 +9,8 @@ namespace Regard.Common
 {
     public interface IMessagingClient
     {
-        Task ShowToast(string toast);
+        // ShowToast was removed: nothing ever sent it, and the client handler only wrote to the console.
+        // User-facing toasts go through NotifyNotification / NotificationsService.
 
         Task NotifySubscriptionCreated(ApiSubscription subscription);
 
@@ -31,6 +32,12 @@ namespace Regard.Common
         /// order and paging) rather than trying to insert a tile in the right place itself.
         /// </summary>
         Task NotifyVideosChanged(int subscriptionId);
+
+        /// <summary>A job was created or changed state/progress (drives a live Job Log).</summary>
+        Task NotifyJobUpdated(ApiJobInfo job);
+
+        /// <summary>A job row was pruned/removed.</summary>
+        Task NotifyJobRemoved(long jobId);
 
         /// <summary>
         /// Pushed when a notification is created or updated in place (keyed by ApiNotification.Key).

@@ -12,87 +12,12 @@ using Regard.Backend.Thumbnails;
 
 namespace Regard.Backend.Services
 {
-    #region Events
+    // The domain events that used to live here (SubscriptionCreated/Updated/Deleted and the folder
+    // equivalents) were removed: their only subscriber was a bridge that was never instantiated, so they
+    // fired into nothing for years. Live updates now come from the EF change feed
+    // (Services/LiveUpdates/ChangeFeedInterceptor), which observes the SaveChanges calls below and so
+    // cannot be forgotten by a new code path.
 
-    public class SubscriptionCreatedEventArgs
-    {
-        /// <summary>
-        /// User account which initiated this operation
-        /// </summary>
-        public UserAccount User { get; set; }
-
-        /// <summary>
-        /// Subscription created
-        /// </summary>
-        public Subscription Subscription { get; set; }
-    }
-
-    public class SubscriptionUpdatedEventArgs
-    {
-        /// <summary>
-        /// User account which initiated this operation
-        /// </summary>
-        public UserAccount User { get; set; }
-
-        /// <summary>
-        /// Subscription added
-        /// </summary>
-        public Subscription Subscription { get; set; }
-    }
-
-    public class SubscriptionsDeletedEventArgs
-    {
-        /// <summary>
-        /// User account which initiated this operation
-        /// </summary>
-        public UserAccount User { get; set; }
-
-        /// <summary>
-        /// Subscription IDs that were deleted
-        /// </summary>
-        public int[] SubscriptionIds { get; set; }
-    }
-
-    public class SubscriptionFolderCreatedEventArgs
-    {
-        /// <summary>
-        /// User account which initiated this operation
-        /// </summary>
-        public UserAccount User { get; set; }
-
-        /// <summary>
-        /// Folder created
-        /// </summary>
-        public SubscriptionFolder Folder { get; set; }
-    }
-
-    public class SubscriptionFolderUpdatedEventArgs
-    {
-        /// <summary>
-        /// User account which initiated this operation
-        /// </summary>
-        public UserAccount User { get; set; }
-
-        /// <summary>
-        /// Folder updated
-        /// </summary>
-        public SubscriptionFolder Folder { get; set; }
-    }
-
-    public class SubscriptionFoldersDeletedEventArgs
-    {
-        /// <summary>
-        /// User account which initiated this operation
-        /// </summary>
-        public UserAccount User { get; set; }
-
-        /// <summary>
-        /// Subscription folder IDs that were deleted
-        /// </summary>
-        public int[] FolderIds { get; set; }
-    }
-
-    #endregion
 
     public class SubscriptionManager 
     {
@@ -101,13 +26,6 @@ namespace Regard.Backend.Services
         private readonly IProviderManager providerManager;
         private readonly RegardScheduler scheduler;
         private readonly IVideoStorageService videoStorageService;
-
-        public event EventHandler<SubscriptionCreatedEventArgs> SubscriptionCreated;
-        public event EventHandler<SubscriptionUpdatedEventArgs> SubscriptionUpdated;
-        public event EventHandler<SubscriptionsDeletedEventArgs> SubscriptionsDeleted;
-        public event EventHandler<SubscriptionFolderCreatedEventArgs> FolderCreated;
-        public event EventHandler<SubscriptionFolderUpdatedEventArgs> FolderUpdated;
-        public event EventHandler<SubscriptionFoldersDeletedEventArgs> FoldersDeleted;
 
         public SubscriptionManager(DataContext dataContext,
                                    IOptionManager optionManager,
@@ -197,7 +115,6 @@ namespace Regard.Backend.Services
             if (!autoDownload)
                 optionManager.SetForSubscription(Options.Subscriptions_AutoDownload, sub.Id, false);
 
-            SubscriptionCreated?.Invoke(this, new SubscriptionCreatedEventArgs() { User = userAccount, Subscription = sub });
 
             // Cache the channel avatar now so it's served locally within seconds (bulk imports do this
             // once at the end instead of per-subscription).
@@ -235,7 +152,6 @@ namespace Regard.Backend.Services
             dataContext.Subscriptions.Add(sub);
             dataContext.SaveChanges();
 
-            SubscriptionCreated?.Invoke(this, new SubscriptionCreatedEventArgs() { User = userAccount, Subscription = sub });
             return sub;
         }
 
@@ -270,7 +186,6 @@ namespace Regard.Backend.Services
 
             dataContext.SaveChanges();
 
-            SubscriptionUpdated?.Invoke(this, new SubscriptionUpdatedEventArgs() { User = user, Subscription = subscription });
         }
 
         /// <summary>
@@ -290,7 +205,6 @@ namespace Regard.Backend.Services
 
             dataContext.SaveChanges();
 
-            SubscriptionUpdated?.Invoke(this, new SubscriptionUpdatedEventArgs() { User = user, Subscription = subscription });
         }
 
         public async Task Delete(UserAccount userAccount,
@@ -321,7 +235,6 @@ namespace Regard.Backend.Services
             dataContext.Subscriptions.RemoveRange(subs);
             dataContext.SaveChanges();
             
-            SubscriptionsDeleted?.Invoke(this, new SubscriptionsDeletedEventArgs() { User = userAccount, SubscriptionIds = deletedIds });
         }
 
         public bool GetConfigAutoDownload(int subscriptionId)
@@ -358,7 +271,6 @@ namespace Regard.Backend.Services
                 dataContext.SubscriptionFolders.Add(newFolder);
                 dataContext.SaveChanges();
 
-                FolderCreated?.Invoke(this, new SubscriptionFolderCreatedEventArgs() { User = user, Folder = newFolder });
             }
         }
 
@@ -385,7 +297,6 @@ namespace Regard.Backend.Services
             dataContext.SubscriptionFolders.Add(folder);
             dataContext.SaveChanges();
 
-            FolderCreated?.Invoke(this, new SubscriptionFolderCreatedEventArgs() { User = user, Folder = folder });
             return folder;
         }
 
@@ -429,7 +340,6 @@ namespace Regard.Backend.Services
                         .ForEach(x => 
                         {
                             x.ParentId = folder.ParentId;
-                            FolderUpdated?.Invoke(this, new SubscriptionFolderUpdatedEventArgs() { User = userAccount, Folder = x });
                         });
 
                     dataContext.Subscriptions.AsQueryable()
@@ -437,7 +347,6 @@ namespace Regard.Backend.Services
                         .ForEach(x =>
                         {
                             x.ParentFolderId = folder.ParentId;
-                            SubscriptionUpdated?.Invoke(this, new SubscriptionUpdatedEventArgs() { User = userAccount, Subscription = x });
                         });
                 }
 
@@ -448,7 +357,6 @@ namespace Regard.Backend.Services
                 dataContext.SubscriptionFolders.RemoveRange(foldersToDelete);
                 dataContext.SaveChanges();
 
-                FoldersDeleted?.Invoke(this, new SubscriptionFoldersDeletedEventArgs() { User = userAccount, FolderIds = ids });
             }
         }
 
@@ -470,11 +378,6 @@ namespace Regard.Backend.Services
             dataContext.SubscriptionFolders.RemoveRange(foldersToDelete);
             dataContext.SaveChanges();
 
-            FoldersDeleted?.Invoke(this, new SubscriptionFoldersDeletedEventArgs() 
-            {
-                User = userAccount, 
-                FolderIds = foldersToDelete.Select(x => x.Id).ToArray() 
-            });
         }
 
         public void ValidateFolderName(string name, int? parentFolderId, int? folderId = null)
@@ -524,7 +427,6 @@ namespace Regard.Backend.Services
 
             dataContext.SaveChanges();
 
-            FolderUpdated?.Invoke(this, new SubscriptionFolderUpdatedEventArgs() { User = user, Folder = folder });
         }
 
         /// <summary>
@@ -555,7 +457,6 @@ namespace Regard.Backend.Services
 
             dataContext.SaveChanges();
 
-            FolderUpdated?.Invoke(this, new SubscriptionFolderUpdatedEventArgs() { User = user, Folder = folder });
         }
 
         public IQueryable<SubscriptionFolder> GetAllFolders(UserAccount userAccount)
