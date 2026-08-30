@@ -198,7 +198,7 @@ namespace Regard.Backend.Controllers
         public async Task<IActionResult> Download([FromBody] VideoDownloadRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            await videoManager.Download(user, request.VideoIds);
+            await videoManager.Download(user, request.VideoIds, request.Force);
             return Ok(responseFactory.Success());
         }
 

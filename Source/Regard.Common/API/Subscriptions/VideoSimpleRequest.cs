@@ -9,7 +9,16 @@ namespace Regard.Common.API.Subscriptions
         public int[] VideoIds { get; set; }
     }
 
-    public class VideoDownloadRequest : VideoSimpleRequest { }
+    public class VideoDownloadRequest : VideoSimpleRequest
+    {
+        /// <summary>
+        /// "Download again": re-fetch even when the video is already marked downloaded. Set only by an
+        /// explicit user action — automatic download and restart reconciliation rely on the
+        /// already-downloaded no-op to stay idempotent. The job deletes the video's existing files first,
+        /// so a missing or half-written download is genuinely replaced rather than skipped by yt-dlp.
+        /// </summary>
+        public bool Force { get; set; }
+    }
 
     public class VideoDeleteFilesRequest : VideoSimpleRequest { }
 

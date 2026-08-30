@@ -216,5 +216,46 @@ namespace Regard.Backend.Services
             return true;
         }
 
+        /// <summary>
+        /// Removes the pending trigger for a job that hasn't started yet — a download waiting on the host
+        /// throttle, or one waiting out its retry interval. Returns true if a trigger was actually removed.
+        ///
+        /// Triggers have to be found by scanning rather than addressed directly: every job of a type
+        /// shares one durable JobKey (the type name), and the deferred/retry triggers are built with
+        /// auto-generated names that are never persisted. What they *do* all carry is the JobId in their
+        /// data map, which is enough to pick out the right one.
+        ///
+        /// Removing the last trigger is safe: the jobs are registered with StoreDurably(true), so the job
+        /// itself survives and can be scheduled again later.
+        /// </summary>
+        public async Task<bool> TryUnschedule(JobInfo job)
+        {
+            // A legacy row with no Key can't be addressed — JobKey.Create(null) throws.
+            if (job == null || string.IsNullOrEmpty(job.Key))
+                return false;
+
+            await GetQuartz();
+
+            var jobKey = JobKey.Create(job.Key);
+            if (!await quartz.CheckExists(jobKey))
+                return false;
+
+            bool removed = false;
+            foreach (var trigger in await quartz.GetTriggersOfJob(jobKey))
+            {
+                if (!trigger.JobDataMap.ContainsKey("JobId"))
+                    continue;
+                if (trigger.JobDataMap.GetLong("JobId") != job.Id)
+                    continue;
+
+                if (await quartz.UnscheduleJob(trigger.Key))
+                {
+                    log.LogInformation("Unscheduled pending trigger for job {0}", job.Id);
+                    removed = true;
+                }
+            }
+
+            return removed;
+        }
     }
 }

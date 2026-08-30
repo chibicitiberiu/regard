@@ -418,6 +418,20 @@ namespace Regard.Frontend.Shared.Video
             await Backend.VideoDownload(new VideoDownloadRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
         }
 
+        /// <summary>
+        /// Re-fetch a video that's already marked downloaded — for when its files went missing or a
+        /// previous download finished half-written. Forced, because the plain download would no-op.
+        /// The existing files are deleted server-side before the new fetch starts.
+        /// </summary>
+        async Task OnVideoDownloadAgain(VideoViewModel videoVM)
+        {
+            await Backend.VideoDownload(new VideoDownloadRequest()
+            {
+                VideoIds = new[] { videoVM.ApiVideo.Id },
+                Force = true,
+            });
+        }
+
         async Task OnVideoDeleteFiles(VideoViewModel videoVM)
         {
             await Backend.VideoDeleteFiles(new VideoDeleteFilesRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });

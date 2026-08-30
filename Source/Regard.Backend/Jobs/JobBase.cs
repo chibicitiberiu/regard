@@ -42,12 +42,33 @@ namespace Regard.Backend.Jobs
             if (Job == null)
                 throw new ArgumentException("Invalid job ID");
 
+            // A cancelled job must stay cancelled. Unscheduling alone can't guarantee that: cancelling a
+            // throttle-deferred download races its own re-fire, and if the trigger has already fired,
+            // ShouldDefer -> RescheduleSelf would build a NEW trigger and flip the state back to
+            // Scheduled — silently resurrecting a job the user stopped. For a forced re-download that
+            // means files deleted and then fetched again after an explicit cancel.
+            if (Job.State == JobState.Cancelled)
+            {
+                log.LogInformation("{0} (job {1}) was cancelled; not running.", GetType().Name, Job.Id);
+                return;
+            }
+
             // Pre-flight: a job may defer itself (e.g. download throttling). Re-fire the SAME trigger later
             // and skip the lifecycle, so a deferred run posts no false start/complete notification and
             // frees the worker immediately (no busy waiting).
             var deferUntil = await ShouldDefer(context);
             if (deferUntil.HasValue)
             {
+                // Re-check: ShouldDefer can take seconds (it hits the DB and the throttle), and a cancel
+                // landing inside that window would otherwise be undone by the reschedule below.
+                dataContext.Entry(Job).Reload();
+                if (Job.State == JobState.Cancelled)
+                {
+                    log.LogInformation("{0} (job {1}) was cancelled while deferring; not rescheduling.",
+                                       GetType().Name, Job.Id);
+                    return;
+                }
+
                 await RescheduleSelf(context, deferUntil.Value);
                 jobTrackerService.OnJobScheduled(Job, deferUntil.Value);
                 return;

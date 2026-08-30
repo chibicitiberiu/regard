@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Regard.Backend.Common.Model;
+using Regard.Backend.Downloader;
 using Regard.Backend.Hubs;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
@@ -134,6 +135,12 @@ namespace Regard.Backend.Services.LiveUpdates
                 dto.Detail = live.Detail;
                 dto.Cancellable = cancellationRegistry.IsCancellable(job.Id);
             }
+
+            // A queued download hasn't started, so there's no live process in the registry — but its
+            // trigger can still be dropped, so let the UI offer Cancel. Restricted to downloads: the
+            // recurring/maintenance jobs have no cancel path.
+            if (job.State == JobState.Scheduled && job.Key == nameof(DownloadVideoJob))
+                dto.Cancellable = true;
 
             return dto;
         }

@@ -212,7 +212,14 @@ namespace Regard.Frontend.Pages
 
         private async Task OnDownloadNow()
         {
-            var (resp, http) = await Backend.VideoDownload(new VideoDownloadRequest { VideoIds = new[] { VideoId } });
+            // "Download again": force a real re-fetch when the video is already marked downloaded, or
+            // when the player couldn't load its file (streamFailed) — which is exactly the case where the
+            // DB says downloaded but the file is missing or half-written. Without this the job would
+            // no-op and the button would appear to work while doing nothing.
+            bool force = streamFailed || (video?.IsDownloaded ?? false);
+
+            var (resp, http) = await Backend.VideoDownload(
+                new VideoDownloadRequest { VideoIds = new[] { VideoId }, Force = force });
             if (http.IsSuccessStatusCode)
                 downloadQueued = true;
             else

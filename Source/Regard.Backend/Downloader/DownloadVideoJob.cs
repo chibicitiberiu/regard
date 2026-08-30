@@ -47,12 +47,23 @@ namespace Regard.Backend.Downloader
         // Host whose download slot this run reserved (released in OnAfterExecute); null when deferred.
         private string reservedHost = null;
 
-        private readonly Regex ProgressRegex = new Regex(@"([\d\.]+)% of\s+~?\s*([\d\.]+)([KMG]i?B)");
+        // Matches yt-dlp's progress line, e.g.
+        //   [download]  45.2% of ~  12.34MiB at    1.23MiB/s ETA 00:12 (frag 3/17)
+        // Groups 1-3 (percent, size, unit) are deliberately unchanged from the original pattern: the
+        // progress pie and the size-quota guard both read them, so widening must not disturb them. Speed
+        // and ETA are appended as OPTIONAL groups — yt-dlp omits them at the start of a download and
+        // prints "Unknown B/s" / "ETA Unknown" when it can't estimate, so they have to tolerate absence
+        // rather than make the whole line fail to match (which would kill the pie).
+        private readonly Regex ProgressRegex = new Regex(
+            @"([\d\.]+)% of\s+~?\s*([\d\.]+)([KMG]i?B)" +
+            @"(?:\s+at\s+(?:([\d\.]+\s*[KMG]?i?B/s)|Unknown\s*B/s))?" +
+            @"(?:\s+ETA\s+(?:([\d:]+)|Unknown))?");
         private readonly Regex MergingRegex = new Regex(@"Merging formats into ""([^""]+)""");
         private readonly Regex AlreadyDownloadedRegex = new Regex(@"\[download\] (.*) has already been downloaded");
         private readonly Regex DestinationRegex = new Regex(@"Destination: (.*)");
 
         private static readonly string Data_VideoId = nameof(VideoId);
+        private static readonly string Data_Forced = "Forced";
 
         private string outputPath = null;
         private Video video = null;
@@ -61,6 +72,49 @@ namespace Regard.Backend.Downloader
         private DownloadCancellationRegistry.CancelContext cancelContext;
         private bool limitsChecked = false;
         private int lastReportedPercent = -1;
+
+        /// <summary>
+        /// "Download again": ignore the already-downloaded no-op and re-fetch. Read from job data in
+        /// both ShouldDefer and ExecuteJob, and consumed (cleared from job data) once the old files are
+        /// gone — see PrepareForcedRedownload for why it must not stick around.
+        /// </summary>
+        private bool forced = false;
+
+        /// <summary>Set when this run took the already-downloaded no-op, to suppress the success card.</summary>
+        private bool noOpped = false;
+
+        // Latest figures scraped off yt-dlp's progress line, for the notification card and the Job Log.
+        private string lastSpeed = null;
+        private string lastEta = null;
+        private string lastTotalSize = null;
+        private DateTime lastProgressReport = DateTime.MinValue;
+        private static readonly TimeSpan ProgressReportInterval = TimeSpan.FromSeconds(1);
+
+        private string DescribeProgress() => FormatProgress(lastSpeed, lastEta, lastTotalSize);
+
+        /// <summary>
+        /// "1.23MiB/s · ETA 00:42 · 512.00MiB" — whatever yt-dlp actually gave us. Any of the three can be
+        /// missing: yt-dlp omits speed and ETA at the start of a download and prints "Unknown" when it
+        /// can't estimate, and the parser deliberately drops those rather than showing "at Unknown".
+        /// Falls back to plain "Downloading" so the card is never blank.
+        /// </summary>
+        public static string FormatProgress(string speed, string eta, string totalSize)
+        {
+            var parts = new List<string>(3);
+            if (!string.IsNullOrWhiteSpace(speed)) parts.Add(speed.Trim());
+            if (!string.IsNullOrWhiteSpace(eta)) parts.Add("ETA " + eta.Trim());
+            if (!string.IsNullOrWhiteSpace(totalSize)) parts.Add(totalSize.Trim());
+            return parts.Count > 0 ? string.Join(" · ", parts) : "Downloading";
+        }
+
+        /// <summary>The bell card's text: the video name, plus whatever progress figures we have.</summary>
+        public static string FormatCard(string videoName, string progress)
+        {
+            bool haveStats = progress != "Downloading";
+            if (string.IsNullOrEmpty(videoName))
+                return haveStats ? progress : null;
+            return haveStats ? $"{videoName} — {progress}" : videoName;
+        }
 
         public int VideoId { get; set; }
 
@@ -99,11 +153,15 @@ namespace Regard.Backend.Downloader
         {
             if (Job.JobData.TryGetValue(Data_VideoId, out object vidObj))
                 VideoId = Convert.ToInt32(vidObj);
+            forced = ReadForcedFlag();
 
             // Load into the `video` field (not a local) so the "Downloading" ongoing notification, posted
             // by OnJobStarted BEFORE ExecuteJob runs, already has the video's name.
             video = dataContext.Videos.Find(VideoId);
-            if (video == null || video.DownloadedPath != null)
+
+            // A forced re-download still has to reserve a throttle slot like any other: skipping the
+            // reservation here would let it bypass HostThrottle entirely and never release a slot.
+            if (video == null || (video.DownloadedPath != null && !forced))
                 return null;   // invalid / already downloaded — let ExecuteJob take its error/no-op path
 
             string host = UrlHostKey.Of(video.OriginalUrl);
@@ -125,7 +183,9 @@ namespace Regard.Backend.Downloader
                 "Queued for download", detail,
                 NotificationSeverity.Info, progress: null, ongoing: true,
                 videoDbId: VideoId, jobId: Job.Id,
-                primaryAction: NotificationPrimaryAction.None, cancellable: false);
+                // Cancellable even though nothing is running yet: the pending trigger can be dropped,
+                // and waiting out a long throttle queue is exactly when a user wants to call it off.
+                primaryAction: NotificationPrimaryAction.None, cancellable: true);
 
             return retryAt;
         }
@@ -142,14 +202,26 @@ namespace Regard.Backend.Downloader
             hostThrottle.ClearKnown(VideoId);
         }
 
-        public static Task Schedule(RegardScheduler scheduler, Video video)
+        /// <summary>
+        /// Queues a download. <paramref name="forced"/> is the user's "Download again": it makes the job
+        /// wipe the video's existing files and re-fetch instead of no-opping. Never pass it from
+        /// automatic download or restart reconciliation — the no-op is what makes those idempotent.
+        /// </summary>
+        public static Task Schedule(RegardScheduler scheduler, Video video, bool forced = false)
         {
+            var jobData = new Dictionary<string, object>()
+            {
+                { Data_VideoId, video.Id }
+            };
+
+            // Only written when true, so every pre-existing job row (and every non-forced schedule)
+            // reads back as false without needing a migration — JobDataJson is free-form.
+            if (forced)
+                jobData[Data_Forced] = true;
+
             return scheduler.Schedule<DownloadVideoJob>(
-                name: $"Download video {video}",
-                jobData: new Dictionary<string, object>()
-                {
-                    { Data_VideoId, video.Id }
-                },
+                name: forced ? $"Re-download video {video}" : $"Download video {video}",
+                jobData: jobData,
                 retryCount: 3,
                 retryIntervalSecs: 15 * 60);
         }
@@ -157,11 +229,22 @@ namespace Regard.Backend.Downloader
         // Live "in progress" notification. video is only loaded once ExecuteJob runs, so the very first
         // (pre-load) tick just says "Downloading"; every progress tick after that carries the title.
         protected override JobNotification GetOngoingNotification()
-            => new JobNotification { Title = "Downloading", Text = video?.Name, VideoDbId = VideoId };
+            => new JobNotification
+            {
+                Title = "Downloading",
+                // Speed/ETA/size ride in the card text: Notification has no spare column for them, and
+                // adding one would mean a migration in both contexts for something purely cosmetic.
+                Text = DescribeCard(),
+                VideoDbId = VideoId,
+            };
 
-        // "Download complete" — click opens the (now downloaded) video.
+        private string DescribeCard() => FormatCard(video?.Name, DescribeProgress());
+
+        // "Download complete" — click opens the (now downloaded) video. Suppressed when the run took the
+        // already-downloaded no-op: the job legitimately succeeds, but announcing a completed download
+        // that never happened is how "Download again" appeared to work while doing nothing.
         protected override JobNotification GetSuccessNotification()
-            => video == null ? null : new JobNotification
+            => (video == null || noOpped) ? null : new JobNotification
             {
                 Title = "Download complete",
                 Text = video.Name,
@@ -179,10 +262,101 @@ namespace Regard.Backend.Downloader
                 VideoDbId = video.Id,
             };
 
+        /// <summary>
+        /// Reads the "Download again" flag. Job data round-trips through JSON, so the value comes back as
+        /// a boxed long/JsonElement rather than a bool — hence Convert rather than a cast. A missing key
+        /// (every job row created before this feature, and every automatic download) reads as false.
+        /// </summary>
+        private bool ReadForcedFlag()
+        {
+            try
+            {
+                return Job.JobData.TryGetValue(Data_Forced, out var value)
+                    && value != null
+                    && Convert.ToBoolean(value);
+            }
+            catch (Exception ex)
+            {
+                // Never let a malformed flag break a download; the safe reading is "not forced".
+                log.LogWarning(ex, "videoId={0}: could not read the forced flag, treating as false", VideoId);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Clears the way for a genuine re-download: delete the old files, forget the download state, and
+        /// consume the flag.
+        ///
+        /// Two things here are load-bearing and easy to get wrong.
+        ///
+        /// The sweep covers TWO paths. Video.DownloadedPath is written only when a download *succeeds*,
+        /// so a download that died midway leaves a .part behind that VideoStorageService.GetFiles cannot
+        /// see. The freshly-resolved output path finds those. Missing this is precisely the reported bug:
+        /// the files were "missing or incomplete" and a re-download quietly resumed the stale fragment.
+        /// Deleting rather than passing --force-overwrites also handles the case where the output
+        /// template changed (a renamed subscription) and the old files sit at a different path.
+        ///
+        /// The flag is consumed. TryResume (restart reconciliation) and JobRetryService both re-fire the
+        /// SAME JobInfo row, so a flag left in job data would survive into later runs — and a crash right
+        /// after a completed forced download would then delete that finished file and fetch it again.
+        /// Clearing it makes "forced" a one-shot instruction.
+        /// </summary>
+        private async Task PrepareForcedRedownload()
+        {
+            JobLog($"Re-downloading video {VideoId}: removing any existing files first.");
+
+            int deleted = 0;
+            try
+            {
+                // Order matters: sweep before clearing DownloadedPath, because GetFiles keys off it and
+                // would find nothing afterwards.
+                if (video.DownloadedPath != null)
+                    deleted += await videoStorage.DeleteAt(video.DownloadedPath);
+
+                var resolved = ResolveOutputPath(video);
+                if (resolved != null && resolved != video.DownloadedPath)
+                    deleted += await videoStorage.DeleteAt(resolved);
+            }
+            catch (Exception ex)
+            {
+                // A failed sweep is not fatal — yt-dlp may still overwrite. Say so and carry on.
+                log.LogWarning(ex, "videoId={0}: could not fully clear previous download", VideoId);
+                JobLog("Could not fully remove the previous download; continuing anyway.",
+                       Regard.Backend.Common.Model.MessageSeverity.Warning);
+            }
+
+            JobLog(deleted > 0
+                ? $"Removed {deleted} existing file(s)."
+                : "No existing files found to remove.");
+
+            video.DownloadedPath = null;
+            video.DownloadedSize = null;
+
+            // A pending "mark for deletion" is dropped on purpose: the user just asked for this video
+            // back, and leaving the mark would let the deletion sweep remove the fresh download. Logged
+            // rather than silent, because DeleteScheduledAt is pushed live and the badge will visibly
+            // clear.
+            if (video.DeleteScheduledAt != null)
+            {
+                JobLog("Cleared this video's pending deletion — it's being downloaded again.");
+                video.DeleteScheduledAt = null;
+            }
+
+            // Consume the flag so retries and restart-resume behave as a plain download, and do it in
+            // the SAME save as the state clear. Two saves would leave a window where a kill -9 lands
+            // with the files gone but Forced still true on disk.
+            forced = false;
+            Job.JobData.Remove(Data_Forced);
+            dataContext.Jobs.Update(Job);
+
+            await dataContext.SaveChangesAsync();
+        }
+
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {
             if (Job.JobData.TryGetValue(Data_VideoId, out object videoId))
                 VideoId = Convert.ToInt32(videoId);
+            forced = ReadForcedFlag();
 
             video = dataContext.Videos.Find(VideoId);
 
@@ -192,10 +366,15 @@ namespace Regard.Backend.Downloader
                 throw new ArgumentException($"Download failed - invalid video id {VideoId}.");
             }
 
-            if (video.DownloadedPath != null)
+            if (forced)
+            {
+                await PrepareForcedRedownload();
+            }
+            else if (video.DownloadedPath != null)
             {
                 // Already downloaded (a duplicate schedule, or it got fetched between queueing and running).
                 // Nothing to do — succeed quietly instead of failing the job.
+                noOpped = true;
                 JobLog($"Video {VideoId} is already downloaded — nothing to do.");
                 log.LogInformation("videoId={0}: already downloaded, skipping (no-op)", VideoId);
                 return;
@@ -368,17 +547,27 @@ namespace Regard.Backend.Downloader
             }
             else if (ProgressRegex.TryMatch(message, out match))
             {
+                // Optional groups: absent early in a download and when yt-dlp prints "Unknown".
+                lastSpeed = match.Groups[4].Success ? match.Groups[4].Value.Trim() : null;
+                lastEta = match.Groups[5].Success ? match.Groups[5].Value.Trim() : null;
+                lastTotalSize = $"{match.Groups[2].Value}{match.Groups[3].Value}";
+
                 if (float.TryParse(match.Groups[1].Value, out float percent))
                 {
                     videoDownloader.OnVideoDownloading(VideoId, percent / 100f);
 
-                    // Throttle: yt-dlp emits many progress lines/sec; push to the bell only when the
-                    // whole percent changes. Progress ticks are deliberately kept out of the job log.
+                    // Throttle: yt-dlp emits many progress lines/sec, and every push writes a
+                    // notification row, so rate-limit by time rather than per line. One update a second
+                    // keeps the speed/ETA readable without turning a download into ~100 DB writes; the
+                    // whole-percent check keeps the pie moving on slow downloads that would otherwise sit
+                    // still between ticks.
                     int p = (int)percent;
-                    if (p != lastReportedPercent)
+                    var now = DateTime.UtcNow;
+                    if (p != lastReportedPercent || now - lastProgressReport >= ProgressReportInterval)
                     {
                         lastReportedPercent = p;
-                        ReportProgress(percent / 100f, "Downloading");
+                        lastProgressReport = now;
+                        ReportProgress(percent / 100f, DescribeProgress());
                     }
                 }
 
@@ -436,7 +625,7 @@ namespace Regard.Backend.Downloader
 
             // Network / anti-bot options (server-wide): cookies + inter-request sleep, and a randomized
             // per-download sleep so a batch doesn't hammer YouTube back-to-back.
-            foreach (var arg in YtdlAntibotArgs.Build(optionManager))
+            foreach (var arg in YtdlAntibotArgs.Build(optionManager, ytdlService.ImpersonateTargets, log))
                 yield return arg;
 
             if (optionManager.GetGlobal(Options.Server_Throttle_Enabled))

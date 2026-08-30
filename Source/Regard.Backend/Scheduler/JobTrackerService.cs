@@ -314,7 +314,11 @@ namespace Regard.Backend.Services
                     NotificationSeverity.Warning,
                     progress: null, ongoing: true,
                     videoDbId: failure?.VideoDbId, jobId: job.Id,
-                    primaryAction: NotificationPrimaryAction.OpenLogs, cancellable: false);
+                    // A download waiting out its retry interval can be cancelled the same way a
+                    // throttle-queued one can: by dropping its pending trigger. Other job types have no
+                    // cancel path, so they keep the button hidden.
+                    primaryAction: NotificationPrimaryAction.OpenLogs,
+                    cancellable: job.Key == nameof(Regard.Backend.Downloader.DownloadVideoJob));
             }
 
             JobFailed?.Invoke(this, new JobFailedEventArgs() { Job = job, Reason = reason, Details = details });

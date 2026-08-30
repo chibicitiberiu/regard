@@ -25,18 +25,21 @@ namespace Regard.Backend.Services
         private readonly IProviderManager providerManager;
         private readonly IOptionManager optionManager;
         private readonly ILogger<VideoManager> log;
+        private readonly HostThrottle hostThrottle;
 
         public VideoManager(DataContext dataContext,
                             RegardScheduler scheduler,
                             IProviderManager providerManager,
                             IOptionManager optionManager,
-                            ILogger<VideoManager> log)
+                            ILogger<VideoManager> log,
+                            HostThrottle hostThrottle)
         {
             this.dataContext = dataContext;
             this.scheduler = scheduler;
             this.providerManager = providerManager;
             this.optionManager = optionManager;
             this.log = log;
+            this.hostThrottle = hostThrottle;
         }
 
         public Video Get(int id)
@@ -178,7 +181,13 @@ namespace Regard.Backend.Services
             Update(user, videoIds, v => v.DeleteScheduledAt = null);
         }
 
-        public async Task Download(UserAccount user, int[] videoIds)
+        /// <summary>
+        /// Queues a manual download. <paramref name="force"/> is the "Download again" case: the job
+        /// re-fetches even when the video is already marked downloaded, deleting its files first. Only
+        /// user-initiated calls pass it — auto-download and restart reconciliation stay on the
+        /// already-downloaded no-op, which is what keeps them idempotent.
+        /// </summary>
+        public async Task Download(UserAccount user, int[] videoIds, bool force = false)
         {
             // This verifies that only user's videos are downloaded
             var videosToDownload = dataContext.Videos.AsQueryable()
@@ -200,7 +209,24 @@ namespace Regard.Backend.Services
             // Un-enriched (flat) videos are enriched in DownloadVideoJob before the download, so every
             // path (manual + auto) is covered there — no need to enrich here.
             foreach (var video in videosToDownload)
-                await DownloadVideoJob.Schedule(scheduler, video);
+            {
+                // A forced re-download deletes the video's files before fetching, so two of them racing
+                // would have the second wipe what the first just finished. The auto-download path already
+                // dedups on this registry (VideoDownloaderService.ProcessDownloadRules); borrow it here
+                // for the destructive case only, so an impatient double-click can't cost the user a file.
+                // The entry is released by DownloadVideoJob.OnAfterExecute.
+                if (force)
+                {
+                    if (hostThrottle.IsKnown(video.Id))
+                    {
+                        log.LogInformation("videoId={0}: re-download already queued, ignoring duplicate request", video.Id);
+                        continue;
+                    }
+                    hostThrottle.MarkKnown(video.Id);
+                }
+
+                await DownloadVideoJob.Schedule(scheduler, video, force);
+            }
         }
 
         /// <summary>

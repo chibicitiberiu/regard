@@ -33,20 +33,59 @@ namespace Regard.Backend.Services
         {
             if (video.DownloadedPath != null)
             {
-                var path = GetPath(video);
-                var dir = Path.GetDirectoryName(path);
-                var filePrefix = Path.GetFileName(path);
-
-                if (Directory.Exists(dir))
-                {
-                    foreach (var file in await Task.Run(() => Directory.GetFiles(dir)))
-                    {
-                        string fileName = Path.GetFileName(file);
-                        if (fileName.StartsWith(filePrefix))
-                            yield return file;
-                    }
-                }
+                await foreach (var file in GetFilesAt(video.DownloadedPath))
+                    yield return file;
             }
+        }
+
+        /// <summary>
+        /// Files whose name starts with the given extension-less path prefix, which is how a download's
+        /// outputs are grouped (media, .part, .info.json, thumbnail, subtitles, NFO).
+        ///
+        /// Exists separately from <see cref="GetFiles"/> because that one keys off
+        /// <see cref="Video.DownloadedPath"/>, which is written only when a download *succeeds*. A
+        /// download that died midway therefore leaves a .part behind that GetFiles cannot see — so
+        /// a forced re-download has to sweep the freshly-resolved output path as well.
+        /// </summary>
+        public async IAsyncEnumerable<string> GetFilesAt(string outputPathPrefix)
+        {
+            if (string.IsNullOrEmpty(outputPathPrefix))
+                yield break;
+
+            var path = Path.Combine(RootPath, outputPathPrefix);
+            var dir = Path.GetDirectoryName(path);
+            var filePrefix = Path.GetFileName(path);
+
+            if (string.IsNullOrEmpty(filePrefix) || !Directory.Exists(dir))
+                yield break;
+
+            foreach (var file in await Task.Run(() => Directory.GetFiles(dir)))
+            {
+                string fileName = Path.GetFileName(file);
+                if (BelongsTo(fileName, filePrefix))
+                    yield return file;
+            }
+        }
+
+        /// <summary>
+        /// Whether a filename is one of the outputs for an extension-less path prefix.
+        ///
+        /// The boundary matters: a bare StartsWith would make "Foo" match "Foo (Part 2).mp4", so
+        /// re-downloading or deleting one video would take a sibling's files with it.
+        ///
+        /// Nearly every output is the prefix followed by a dot ("<name>.mp4", "<name>.en.vtt",
+        /// "<name>.f315.webm.part", "<name>.info.json", "<name>.nfo"). The one exception is the Jellyfin
+        /// artwork, which DownloadVideoJob.WriteEpisodeMetadata renames to "<name>-thumb.jpg" with a dash
+        /// — miss that and every re-download orphans a thumbnail. The trailing dot in "-thumb." keeps it
+        /// precise, so a sibling actually named "<name>-thumbnail…" is still safe.
+        ///
+        /// Titles ending in a dot work unchanged: the prefix carries the dot and the file simply has two.
+        /// </summary>
+        private static bool BelongsTo(string fileName, string filePrefix)
+        {
+            return fileName.Equals(filePrefix, StringComparison.Ordinal)
+                || fileName.StartsWith(filePrefix + ".", StringComparison.Ordinal)
+                || fileName.StartsWith(filePrefix + "-thumb.", StringComparison.Ordinal);
         }
 
         public async Task<string> FindVideoFile(Video video)
@@ -64,6 +103,28 @@ namespace Regard.Backend.Services
         public async Task<bool> VerifyIsDownloaded(Video video)
         {
             return (await FindVideoFile(video)) != null;
+        }
+
+        /// <summary>Deletes every file sitting at the given output-path prefix. Returns how many went.</summary>
+        public async Task<int> DeleteAt(string outputPathPrefix)
+        {
+            int deleted = 0;
+            await foreach (var file in GetFilesAt(outputPathPrefix))
+            {
+                try
+                {
+                    await Task.Run(() => File.Delete(file));
+                    log.LogInformation("Deleted file at {0}: {1}", outputPathPrefix, file);
+                    deleted++;
+                }
+                catch (Exception ex)
+                {
+                    // Don't abort the sweep: one undeletable file (locked, permissions) shouldn't stop
+                    // the rest from going, and the caller decides what a partial sweep means.
+                    log.LogWarning(ex, "Could not delete {0}", file);
+                }
+            }
+            return deleted;
         }
 
         public async Task Delete(Video video)

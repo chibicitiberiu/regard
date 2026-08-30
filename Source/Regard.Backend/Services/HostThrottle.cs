@@ -105,6 +105,25 @@ namespace Regard.Backend.Services
         public void ClearKnown(int videoId) => known.TryRemove(videoId, out _);
 
         /// <summary>
+        /// Drops a video from the wait queue and the dedup set without it ever having run — for a
+        /// download cancelled while it was still queued.
+        ///
+        /// Needed because the usual cleanup path doesn't cover this: a deferred job returns from
+        /// ShouldDefer without reaching OnAfterExecute, so nothing releases the queue entry or the
+        /// "known" marker. Left behind, the entry inflates every later queue-position message and the
+        /// marker blocks the video from ever being auto-downloaded again.
+        /// </summary>
+        public void Dequeue(string host, int videoId)
+        {
+            var st = State(host);
+            lock (st.Sync)
+            {
+                st.Queued.Remove(videoId);
+            }
+            ClearKnown(videoId);
+        }
+
+        /// <summary>
         /// Try to claim a download slot for <paramref name="host"/>. Returns true (slot reserved — caller
         /// must call <see cref="ReleaseDownload"/> when done) or false with <paramref name="retryAt"/> set
         /// to when the caller should reschedule.

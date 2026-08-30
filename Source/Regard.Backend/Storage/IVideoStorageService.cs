@@ -11,6 +11,16 @@ namespace Regard.Backend.Services
 
         IAsyncEnumerable<string> GetFiles(Video video);
 
+        /// <summary>
+        /// Files at an explicit output-path prefix, for when <see cref="Video.DownloadedPath"/> can't be
+        /// trusted to point at them — notably a failed download, which leaves a .part behind without ever
+        /// setting that field.
+        /// </summary>
+        IAsyncEnumerable<string> GetFilesAt(string outputPathPrefix);
+
+        /// <summary>Deletes everything at an output-path prefix; returns the number removed.</summary>
+        Task<int> DeleteAt(string outputPathPrefix);
+
         Task<string> FindVideoFile(Video video);
 
         Task Delete(Video video);

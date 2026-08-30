@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Regard.Backend.Common.Model;
+using Regard.Backend.Common.Utils;
 using Regard.Backend.DB;
+using Regard.Backend.Downloader;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.API.Jobs;
@@ -22,18 +24,27 @@ namespace Regard.Backend.Controllers
         private readonly DataContext dataContext;
         private readonly DownloadCancellationRegistry cancellationRegistry;
         private readonly JobTrackerService jobTracker;
+        private readonly RegardScheduler scheduler;
+        private readonly HostThrottle hostThrottle;
+        private readonly NotificationService notificationService;
 
         public JobsController(UserManager<UserAccount> userManager,
                               ApiResponseFactory responseFactory,
                               DataContext dataContext,
                               DownloadCancellationRegistry cancellationRegistry,
-                              JobTrackerService jobTracker)
+                              JobTrackerService jobTracker,
+                              RegardScheduler scheduler,
+                              HostThrottle hostThrottle,
+                              NotificationService notificationService)
         {
             this.userManager = userManager;
             this.responseFactory = responseFactory;
             this.dataContext = dataContext;
             this.cancellationRegistry = cancellationRegistry;
             this.jobTracker = jobTracker;
+            this.scheduler = scheduler;
+            this.hostThrottle = hostThrottle;
+            this.notificationService = notificationService;
         }
 
         [HttpGet]
@@ -109,11 +120,69 @@ namespace Regard.Backend.Controllers
             if (job == null)
                 return NotFound(responseFactory.Error("Job not found."));
 
-            // Only live, cancellable jobs (running downloads) can be cancelled.
-            if (!cancellationRegistry.Cancel(id))
-                return BadRequest(responseFactory.Error("This job can't be cancelled (it isn't a running download)."));
+            // A running download has a live yt-dlp process to interrupt.
+            if (cancellationRegistry.Cancel(id))
+                return Ok(responseFactory.Success(message: "Cancelling…"));
 
-            return Ok(responseFactory.Success(message: "Cancelling…"));
+            // Otherwise it may be a download that hasn't started: waiting on the host throttle, or
+            // waiting out a retry interval. Both look identical here — State == Scheduled with a pending
+            // Quartz trigger — and both are worth being able to stop.
+            if (job.State == JobState.Scheduled && IsDownloadJob(job))
+            {
+                await CancelPendingDownload(job);
+                return Ok(responseFactory.Success(message: "Cancelled."));
+            }
+
+            return BadRequest(responseFactory.Error("This job can't be cancelled (it isn't a running or queued download)."));
+        }
+
+        private static bool IsDownloadJob(JobInfo job)
+            => job.Key == nameof(DownloadVideoJob);
+
+        /// <summary>
+        /// Cancels a download that never started. Beyond dropping the trigger this has to undo the
+        /// bookkeeping that a normal run would have cleaned up: a deferred job returns before
+        /// OnAfterExecute, so nothing releases its throttle queue entry or its "already known" marker, and
+        /// its "Queued for download" card is keyed by video (so it deliberately outlives the job).
+        /// </summary>
+        private async Task CancelPendingDownload(JobInfo job)
+        {
+            await scheduler.TryUnschedule(job);
+
+            int videoId = (int)ReadVideoId(job);
+            if (videoId > 0)
+            {
+                var video = dataContext.Videos.Find(videoId);
+                if (video != null)
+                {
+                    hostThrottle.Dequeue(UrlHostKey.Of(video.OriginalUrl), videoId);
+
+                    // Same meaning as cancelling a running download: excluded from auto-download so the
+                    // next-newest video takes its slot, but still downloadable by hand.
+                    video.DownloadSkipped = true;
+                    await dataContext.SaveChangesAsync();
+                }
+
+                await notificationService.Remove(null, $"download:{videoId}");
+            }
+
+            // Marks the row Cancelled, which JobBase.Execute now also checks — so if the trigger already
+            // fired and this unschedule was too late, the run still bails instead of resurrecting itself.
+            jobTracker.OnJobCancelled(job);
+        }
+
+        private long ReadVideoId(JobInfo job)
+        {
+            try
+            {
+                return job.JobData.TryGetValue("VideoId", out var v) && v != null
+                    ? System.Convert.ToInt64(v)
+                    : 0;
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         /// <summary>
@@ -150,6 +219,12 @@ namespace Regard.Backend.Controllers
                 dto.Detail = live.Detail;
                 dto.Cancellable = cancellationRegistry.IsCancellable(job.Id);
             }
+
+            // A queued download hasn't started, so there's no live process in the registry — but its
+            // trigger can still be dropped, so let the UI offer Cancel. Restricted to downloads: the
+            // recurring/maintenance jobs have no cancel path.
+            if (job.State == JobState.Scheduled && job.Key == nameof(DownloadVideoJob))
+                dto.Cancellable = true;
 
             return dto;
         }
