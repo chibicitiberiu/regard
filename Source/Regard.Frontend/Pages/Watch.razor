@@ -17,6 +17,7 @@
                     <Video @ref="playerRef"
                            ShowControls="true"
                            AutoPlay="true"
+                           CrossOrigin="@(HasSubtitles ? "anonymous" : null)"
                            WatchedThreshold="0.9"
                            WatchedThresholdReached="OnMarkWatchedFromPlayback"
                            Ended="OnMarkWatchedFromPlayback"
@@ -26,7 +27,51 @@
                            Error="e => OnStreamError()">
                         <source src="@videoStreamUri" type="@video.StreamMimeType"
                                 @onerror="e => OnStreamError()" />
+                        @* Every language is mounted up front so the browser puts its own CC control in
+                           the player's toolbar next to play/volume/fullscreen. Mounting them costs
+                           nothing: a track whose mode is "disabled" is never fetched, so the cues are
+                           still pulled only when one is actually turned on. *@
+                        @if (subtitleTrackUrls != null)
+                        {
+                            @foreach (var track in video.SubtitleTracks)
+                            {
+                                var t = track;
+                                if (subtitleTrackUrls.TryGetValue(t.Lang, out var trackUrl))
+                                {
+                                    <track @key="@($"{VideoId}:{t.Lang}")"
+                                           kind="subtitles"
+                                           src="@trackUrl"
+                                           srclang="@t.Lang"
+                                           label="@t.Label" />
+                                }
+                            }
+                        }
                     </Video>
+                    @* Our own CC control, inside the player rather than below it. Chrome files its
+                       captions control inside the "⋮" overflow menu (next to Download and
+                       Picture-in-picture) and offers no way to promote it inline, so a native-looking
+                       button has to be ours. It still drives the same text tracks, so the browser's own
+                       menu keeps working and the two stay in sync. *@
+                    @if (SubtitlesAvailable)
+                    {
+                        <button @ref="subtitleButton" type="button"
+                                class="watch-cc-overlay @(activeTrackLang != null ? "on" : "")"
+                                title="@(activeTrackLang != null ? ActiveTrackLabel : "Subtitles")"
+                                aria-label="Subtitles"
+                                @onclick="() => subtitleMenuVisible = !subtitleMenuVisible">
+                            <Icon Glyph="Icons.ClosedCaption" />
+                        </button>
+                        <Menu AttachTo="subtitleButton" @bind-IsVisible="subtitleMenuVisible">
+                            <CheckMenuItem IsChecked="@(activeTrackLang == null)"
+                                           Click="() => SelectSubtitleTrack(null)">Off</CheckMenuItem>
+                            @foreach (var track in video.SubtitleTracks)
+                            {
+                                var t = track;
+                                <CheckMenuItem IsChecked="@(activeTrackLang == t.Lang)"
+                                               Click="() => SelectSubtitleTrack(t.Lang)">@t.Label</CheckMenuItem>
+                            }
+                        </Menu>
+                    }
                     @if (video.SponsorSegments != null && video.SponsorSegments.Count > 0)
                     {
                         <p class="watch-sponsorblock text-muted">
@@ -204,7 +249,10 @@
                 </div>
 
                 <div class="watch-description">
-                    @FormattedDescription
+                    <DescriptionText Text="@video.Description"
+                                     LinkifyYouTube="@LinkifyYouTube"
+                                     TimestampsSeekable="@DescriptionSeekable"
+                                     OnSeek="OnDescriptionSeek" />
                 </div>
             </div>
         </div>

@@ -7,10 +7,15 @@ namespace Regard.Common.API.Model
         /// <paramref name="target"/>, leaving everything else untouched.
         ///
         /// A pushed ApiVideo is built by ApiModelFactory.ToApi, which projects the Video row and nothing
-        /// else. The playback fields — StreamMimeType, EmbedUrl, SponsorSegments, Chapters, Likes,
-        /// Dislikes — are filled in only by VideoController.List (some per row, some only when fetching a
-        /// single video), so replacing a DTO wholesale with a pushed one silently blanks them: on the
-        /// watch page that breaks the player outright. Merge instead of replace.
+        /// else. The playback fields — StreamMimeType, EmbedUrl, SponsorSegments, Chapters,
+        /// SubtitleTracks, Likes, Dislikes — are filled in only by VideoController.List (some per row,
+        /// some only when fetching a single video), so replacing a DTO wholesale with a pushed one
+        /// silently blanks them: on the watch page that breaks the player outright. Merge instead of
+        /// replace.
+        ///
+        /// Do NOT "fix" the omissions below by adding them here. Likes is present because it is a real
+        /// column that ToApi projects; SubtitleTracks and Chapters are absent because they are not, and
+        /// copying a null over a populated list is exactly the bug this method exists to prevent.
         /// </summary>
         public static ApiVideo MergeLiveFields(this ApiVideo target, ApiVideo pushed)
         {

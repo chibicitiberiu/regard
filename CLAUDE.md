@@ -59,6 +59,12 @@ Back up `.dev/data/Regard.db` (timestamped copy) before a migration or any bulk 
 - The notification row's timestamp column is **`Timestamp`**, not `DateTime`. A wrong column name makes
   `sqlite3` print to stderr and return empty stdout, which looks exactly like "no rows" — double-check
   the schema before concluding data is missing.
+- **The running backend does not see an external write to the live DB.** The reverse of the point above,
+  and it bit me on 2026-08-30: a test flipped `Videos.SponsorsRemoved` with the `sqlite3` CLI, asserted,
+  then flipped it back. The file was correct afterwards (CLI read 0, no `-wal` left), but the API kept
+  serving the old value on every request until the backend was restarted. So a test that mutates the DB
+  underneath a running app must **restart the backend before verifying the restore** — otherwise
+  "restored" is unproven, and you can't tell a stale cache from a failed write.
 - Disk near-full (~96%+) → SQLite **Error 10 (disk I/O)**. That's a real error and is correctly *not*
   retried, but it can wedge the connection until a backend restart even after you free space. `SQLITE_BUSY`
   (error 5/6) is the one we retry (`busy_timeout=30000` + a small retry loop in `SQLiteDataContext`).
@@ -125,6 +131,30 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
   yt-dlp version and `YtdlAntibotArgs.ResolveImpersonate` drops the flag (with a warning) unless the
   configured client is in that list. Availability comes from **curl_cffi in the Python running the
   zipapp**, not from yt-dlp itself, so it differs between the Docker image (has it) and a bare host.
+- **Subtitles** (Batch 4b). Sidecars land as `<prefix>.<lang>.vtt`, except when SponsorBlock *remove* is
+  on — `DownloadVideoJob` then forces `--convert-subs srt` so yt-dlp can re-time the cues to the cut
+  file. What follows from that:
+  - `MimeMapping` knows `text/vtt` but has **no `srt` entry**, so a naive `GetMimeMapping` would serve
+    SubRip as `application/octet-stream`. `VideoController.Subtitle` states `text/vtt` outright and
+    converts. It also strips per-cue `align`/`position` settings, because YouTube's ASR files pin every
+    cue to the left edge and CSS **cannot** fix that — alignment is a cue setting, not a style.
+  - A `<track>` sends no `Authorization` header, so `/api/video/subtitle` is in
+    `QueryStringAuthMiddleware.WhitelistedPaths` next to `/api/video/view`, and the `<video>` carries
+    `crossorigin="anonymous"` (a cross-origin text track is otherwise not exposed to the page, and in
+    dev the API is `:9585` while the UI is `:5000`). Adding `crossorigin` makes the *video stream* a CORS
+    request too — that was verified not to regress, and there's a test guarding it.
+  - Every language is mounted as a `<track>` up front. That is not a download: a track whose `mode` is
+    `disabled` is never fetched, so the cues load only when one is switched on.
+  - `TextTrack` exposes the `srclang` attribute as **`.language`**; matching on `.srclang` silently
+    matches nothing, and the symptom is a track that loads but never displays.
+  - **Chrome will not put a captions button in its control bar.** It files Captions inside the `⋮`
+    overflow menu with Download and Picture-in-picture, with no way to promote it. The CC control on the
+    watch page is therefore ours, overlaid on the player; it drives the same text tracks, and the
+    tracks' `change` event keeps it in step with the browser's own menu.
+- **`video.js` is loaded but deliberately not initialised.** Its `autoSetup` re-polls every 1 ms until
+  `window load` and wraps any element carrying `data-setup`, so that attribute was removed from
+  `Video.razor` — otherwise whether we get a native `<video>` or a video.js player depends on boot
+  timing. Everything in `RegardHelpers` drives the raw DOM element.
 - **Providers** are a separate project and can't touch options/`HostThrottle` directly — they go through
   `IYoutubeDlService` (`GetAntibotArgs`, `PaceExtractionAsync`).
 - **Options**: `OptionDefinition<T>(default, key, configKey, envKey, flags)`; `flags = 0` means

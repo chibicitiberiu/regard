@@ -359,6 +359,17 @@ namespace Regard.Services
             return new Uri(BaseUrl, $"/api/video/view?v={videoId}&access_token={token}");
         }
 
+        /// <summary>
+        /// URL for a subtitle track. The browser's own &lt;track&gt; loader fetches this and sends no
+        /// headers, hence the query-string token — the same arrangement the video stream uses, and the
+        /// path is whitelisted in QueryStringAuthMiddleware alongside it.
+        /// </summary>
+        public async Task<Uri> VideoSubtitleUrl(int videoId, string lang)
+        {
+            var token = await localStorage.GetItemAsync<string>(AuthenticationService.StorageAuthTokenKey);
+            return new Uri(BaseUrl, $"/api/video/subtitle?v={videoId}&lang={Uri.EscapeDataString(lang)}&access_token={token}");
+        }
+
         #endregion
     }
 }

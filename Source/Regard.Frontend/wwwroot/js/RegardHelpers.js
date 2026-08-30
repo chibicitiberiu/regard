@@ -259,6 +259,104 @@
         }
     },
 
+    // --- Subtitles -----------------------------------------------------------------------------
+    // The <track> elements are mounted by Blazor and driven by the browser's own CC control in the
+    // player toolbar. Two things still need JS.
+    //
+    // 1. A track inserted after the element was parsed starts out "disabled" whatever its `default`
+    //    attribute says, so the remembered language has to be switched on from here.
+    // 2. When the viewer picks a language from the native menu, nothing tells .NET — so a change
+    //    listener reports the new selection back so it can be remembered.
+    //
+    // Note the property is `language`; TextTrack has no `srclang` member, and matching on one silently
+    // matches nothing.
+
+    textTrackBindings: [],
+
+    bindTextTracks: function (videoElement, dotNetObjectRef, preferredLanguage) {
+        if (!(videoElement instanceof Node) || !videoElement.textTracks)
+            return false;
+
+        this.unbindTextTracks(videoElement);
+
+        var tracks = videoElement.textTracks;
+        var applied = false;
+
+        // "disabled" tracks are never fetched by the browser, so leaving the others disabled is what
+        // keeps mounting every language free.
+        for (var i = 0; i < tracks.length; i++) {
+            if (preferredLanguage && tracks[i].language === preferredLanguage) {
+                tracks[i].mode = "showing";
+                applied = true;
+            } else {
+                tracks[i].mode = "disabled";
+            }
+        }
+
+        var binding = { element: videoElement, tracks: tracks, listener: null, last: preferredLanguage || null };
+        binding.listener = function () {
+            var showing = null;
+            for (var j = 0; j < tracks.length; j++) {
+                if (tracks[j].mode === "showing") {
+                    showing = tracks[j].language;
+                    break;
+                }
+            }
+            if (showing === binding.last)
+                return;                       // the browser fires `change` liberally; only report moves
+            binding.last = showing;
+            var p = dotNetObjectRef.invokeMethodAsync("OnTextTrackChanged", showing);
+            if (p && typeof p.catch === "function")
+                p.catch(function () { });     // ref disposed mid-flight
+        };
+        tracks.addEventListener("change", binding.listener);
+        this.textTrackBindings.push(binding);
+
+        return applied;
+    },
+
+    // Switch tracks from our own CC menu. Deliberately does NOT report back directly — changing `mode`
+    // fires the tracks' `change` event, which the binding above already listens for, so both menus end
+    // up on the same code path.
+    setTextTrack: function (videoElement, language) {
+        if (!(videoElement instanceof Node) || !videoElement.textTracks)
+            return;
+        var tracks = videoElement.textTracks;
+        for (var i = 0; i < tracks.length; i++)
+            tracks[i].mode = (language && tracks[i].language === language) ? "showing" : "disabled";
+    },
+
+    unbindTextTracks: function (videoElement) {
+        if (!(videoElement instanceof Node))
+            return;
+        for (var i = this.textTrackBindings.length - 1; i >= 0; i--) {
+            var b = this.textTrackBindings[i];
+            if (b.element.isSameNode(videoElement)) {
+                if (b.listener)
+                    b.tracks.removeEventListener("change", b.listener);
+                this.textTrackBindings.splice(i, 1);
+            }
+        }
+    },
+
+    // Test/diagnostic helper: what the player currently believes about its text tracks.
+    describeTextTracks: function (videoElement) {
+        if (!(videoElement instanceof Node) || !videoElement.textTracks)
+            return [];
+        var out = [];
+        for (var i = 0; i < videoElement.textTracks.length; i++) {
+            var t = videoElement.textTracks[i];
+            out.push({
+                language: t.language,
+                label: t.label,
+                mode: t.mode,
+                cues: t.cues ? t.cues.length : 0,
+                activeCues: t.activeCues ? t.activeCues.length : 0
+            });
+        }
+        return out;
+    },
+
     // Resets the scroll position of the element matching the given selector (e.g. the video grid on
     // page/filter change). No-op if it isn't in the DOM.
     scrollToTop: function (selector) {

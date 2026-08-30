@@ -1,0 +1,158 @@
+@using Regard.Common.Utils
+
+@*
+    Renders a video description from DescriptionParser's node tree.
+
+    There is deliberately no MarkupString anywhere in this component. Every piece of creator-authored
+    text goes out through a Blazor text node or an attribute binding, so the framework escapes it and
+    nothing in a description can become markup — no hand-rolled escaping to get wrong. It is also what
+    lets a timestamp be a real <button> with an @onclick instead of needing a JS click-delegation layer.
+
+    The only URLs that can reach an href are http/https (and bare www., which the parser rewrites to
+    https) — that invariant lives in DescriptionParser and is what keeps "javascript:..." out.
+*@
+
+@foreach (var block in Blocks)
+{
+    switch (block.Kind)
+    {
+        case DescBlockKind.Heading:
+            @* Clamped to h3-h5: the page already owns the h1, and a description shouldn't outrank it. *@
+            switch (System.Math.Min(3 + block.Level - 1, 5))
+            {
+                case 3:
+                    <h3>@RenderLine(block.Lines[0])</h3>
+                    break;
+                case 4:
+                    <h4>@RenderLine(block.Lines[0])</h4>
+                    break;
+                default:
+                    <h5>@RenderLine(block.Lines[0])</h5>
+                    break;
+            }
+            break;
+
+        case DescBlockKind.UnorderedList:
+            <ul>
+                @foreach (var line in block.Lines)
+                {
+                    <li>@RenderLine(line)</li>
+                }
+            </ul>
+            break;
+
+        case DescBlockKind.OrderedList:
+            <ol>
+                @foreach (var line in block.Lines)
+                {
+                    <li>@RenderLine(line)</li>
+                }
+            </ol>
+            break;
+
+        default:
+            <p>@RenderLine(block.Lines[0])</p>
+            break;
+    }
+}
+
+@code {
+    [Parameter] public string Text { get; set; }
+
+    /// <summary>Link @@handles and #hashtags to YouTube. Off for other providers, where they mean nothing.</summary>
+    [Parameter] public bool LinkifyYouTube { get; set; }
+
+    /// <summary>When false, timestamps render as plain text instead of seek buttons.</summary>
+    [Parameter] public bool TimestampsSeekable { get; set; }
+
+    [Parameter] public EventCallback<double> OnSeek { get; set; }
+
+    private List<DescBlock> Blocks { get; set; } = new List<DescBlock>();
+
+    private string parsedText;
+    private bool parsedLinkify;
+
+    protected override void OnParametersSet()
+    {
+        // Reparse only when the input actually changed — this component re-renders on every live push to
+        // the watch page, and descriptions can be a few thousand characters.
+        if (parsedText != Text || parsedLinkify != LinkifyYouTube)
+        {
+            Blocks = DescriptionParser.Parse(Text, LinkifyYouTube);
+            parsedText = Text;
+            parsedLinkify = LinkifyYouTube;
+        }
+    }
+
+    private RenderFragment RenderLine(DescLine line) => builder =>
+    {
+        int seq = 0;
+
+        foreach (var inline in line.Inlines)
+        {
+            switch (inline.Kind)
+            {
+                case DescInlineKind.LineBreak:
+                    builder.OpenElement(seq++, "br");
+                    builder.CloseElement();
+                    break;
+
+                case DescInlineKind.Link:
+                    builder.OpenElement(seq++, "a");
+                    builder.AddAttribute(seq++, "href", inline.Url);
+                    builder.AddAttribute(seq++, "target", "_blank");
+                    builder.AddAttribute(seq++, "rel", "noopener noreferrer");
+                    AddEmphasised(builder, ref seq, inline);
+                    builder.CloseElement();
+                    break;
+
+                case DescInlineKind.Timestamp:
+                    if (TimestampsSeekable)
+                    {
+                        var seconds = inline.Seconds;
+                        builder.OpenElement(seq++, "button");
+                        builder.AddAttribute(seq++, "type", "button");
+                        builder.AddAttribute(seq++, "class", "watch-ts");
+                        builder.AddAttribute(seq++, "title", "Jump to this point");
+                        builder.AddAttribute(seq++, "onclick",
+                            EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
+                                this, () => OnSeek.InvokeAsync(seconds)));
+                        AddEmphasised(builder, ref seq, inline);
+                        builder.CloseElement();
+                    }
+                    else
+                    {
+                        AddEmphasised(builder, ref seq, inline);
+                    }
+                    break;
+
+                default:
+                    AddEmphasised(builder, ref seq, inline);
+                    break;
+            }
+        }
+    };
+
+    /// <summary>Writes the text, wrapped in strong/em when the node carries emphasis.</summary>
+    private static void AddEmphasised(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder,
+                                      ref int seq, DescInline inline)
+    {
+        int depth = 0;
+
+        if (inline.Bold)
+        {
+            builder.OpenElement(seq++, "strong");
+            depth++;
+        }
+        if (inline.Italic)
+        {
+            builder.OpenElement(seq++, "em");
+            depth++;
+        }
+
+        builder.AddContent(seq++, inline.Text);
+
+        for (int i = 0; i < depth; i++)
+            builder.CloseElement();
+    }
+}

@@ -92,6 +92,13 @@ namespace Regard.Common.API.Model
         public System.Collections.Generic.List<ApiChapter> Chapters { get; set; }
 
         /// <summary>
+        /// Selectable subtitle tracks, set only for the single-video watch fetch of a downloaded video.
+        /// Null/empty otherwise. Discovered from the sidecar files, so like <see cref="Chapters"/> it is
+        /// not a column, is not projected by ApiModelFactory, and must never be merged from a live push.
+        /// </summary>
+        public System.Collections.Generic.List<ApiSubtitleTrack> SubtitleTracks { get; set; }
+
+        /// <summary>
         /// Resume point in whole seconds, or null when the video is watched / not yet started. Present on
         /// list items too so thumbnails can draw a progress bar.
         /// </summary>

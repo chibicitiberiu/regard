@@ -15,11 +15,6 @@ namespace Regard.Frontend.Shared.Controls
         public string MimeType { get; set; }
     }
 
-    public struct VideoJsTrack
-    {
-
-    }
-
     public partial class Video : IAsyncDisposable
     {
         private ElementReference videoElement;
@@ -27,6 +22,7 @@ namespace Regard.Frontend.Shared.Controls
         private bool watchProgressRegistered;
         private bool skipSegmentsRegistered;
         private bool positionReportRegistered;
+        private bool textTracksBound;
 
         [Inject] protected IJSRuntime JS { get; set; }
 
@@ -41,6 +37,14 @@ namespace Regard.Frontend.Shared.Controls
         [Parameter] public int Height { get; set; } = 360;
 
         [Parameter] public string Poster { get; set; }
+
+        /// <summary>
+        /// The element's crossorigin mode. Needed for &lt;track&gt;: a text track is only exposed to the
+        /// page when its response is CORS-readable, and in development the API is a different origin
+        /// (:9585) from the dev server (:5000). In production the two are the same origin and the
+        /// attribute is inert. Null omits it entirely.
+        /// </summary>
+        [Parameter] public string CrossOrigin { get; set; }
 
         [Parameter] public EventCallback Ended { get; set; }
 
@@ -117,6 +121,42 @@ namespace Regard.Frontend.Shared.Controls
             catch (Exception) { /* player/JS not ready */ }
         }
 
+        /// <summary>
+        /// Turns on the track for <paramref name="preferredLanguage"/> (null for none) and starts
+        /// reporting changes made through the player's own CC menu back to
+        /// <c>OnTextTrackChanged</c> on <paramref name="owner"/>. Returns whether a track matched.
+        ///
+        /// A &lt;track&gt; added after the element was parsed defaults to "disabled" no matter what its
+        /// `default` attribute says, so this has to run once the elements have rendered.
+        /// </summary>
+        public async Task<bool> BindTextTracks(DotNetObjectReference<Pages.Watch> owner, string preferredLanguage)
+        {
+            try
+            {
+                textTracksBound = true;
+                return await JS.InvokeAsync<bool>("RegardHelpers.bindTextTracks", videoElement, owner, preferredLanguage);
+            }
+            catch (Exception) { return false; }
+        }
+
+        /// <summary>
+        /// Shows the track for this language and disables the rest; null turns subtitles off. The change
+        /// is reported back through the binding set up by <see cref="BindTextTracks"/>, so the caller
+        /// does not need to track state separately.
+        /// </summary>
+        public async Task SetTextTrack(string language)
+        {
+            try { await JS.InvokeVoidAsync("RegardHelpers.setTextTrack", videoElement, language); }
+            catch (Exception) { /* player/JS not ready */ }
+        }
+
+        /// <summary>Diagnostic view of the player's text tracks (used by the end-to-end tests).</summary>
+        public async Task<object> DescribeTextTracks()
+        {
+            try { return await JS.InvokeAsync<object>("RegardHelpers.describeTextTracks", videoElement); }
+            catch (Exception) { return null; }
+        }
+
         [JSInvokable]
         public async Task OnPositionReport(double seconds, double duration)
         {
@@ -158,6 +198,11 @@ namespace Regard.Frontend.Shared.Controls
             if (skipSegmentsRegistered)
             {
                 try { await JS.InvokeVoidAsync("RegardHelpers.removeSkipSegmentsHandler", videoElement); }
+                catch (Exception) { /* circuit/JS already gone during teardown */ }
+            }
+            if (textTracksBound)
+            {
+                try { await JS.InvokeVoidAsync("RegardHelpers.unbindTextTracks", videoElement); }
                 catch (Exception) { /* circuit/JS already gone during teardown */ }
             }
             selfRef?.Dispose();

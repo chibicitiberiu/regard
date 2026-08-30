@@ -43,6 +43,7 @@ namespace Regard.Frontend.Shared.Controls
         ThumbDown,
         Error,
         History,
+        ClosedCaption,
     }
 
     public partial class Icon
@@ -84,6 +85,7 @@ namespace Regard.Frontend.Shared.Controls
             { Icons.ThumbDown, "thumb_down" },
             { Icons.Error, "error_outline" },
             { Icons.History, "history" },
+            { Icons.ClosedCaption, "closed_caption" },
         };
 
         [Parameter(CaptureUnmatchedValues = true)]

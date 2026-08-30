@@ -13,7 +13,11 @@ namespace Regard.Backend.Middleware
 
         private readonly HashSet<string> WhitelistedPaths = new HashSet<string>()
         {
-            "/api/video/view"
+            "/api/video/view",
+            // Subtitles are fetched by the browser's own <track> loader, which sends no headers. The
+            // endpoint still authorizes normally and is owner-scoped; this only moves the bearer token
+            // from a header to the query string, as for the video stream above.
+            "/api/video/subtitle"
         };
 
         public QueryStringAuthMiddleware(RequestDelegate next)

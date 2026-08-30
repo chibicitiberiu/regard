@@ -21,6 +21,12 @@ namespace Regard.Backend.Services
         /// <summary>Deletes everything at an output-path prefix; returns the number removed.</summary>
         Task<int> DeleteAt(string outputPathPrefix);
 
+        /// <summary>
+        /// The sidecar subtitle files sitting next to the video, one per language, in the order the
+        /// directory yields them. Only browser-usable formats are returned (see <see cref="SubtitleFile"/>).
+        /// </summary>
+        Task<IReadOnlyList<SubtitleFile>> GetSubtitleFiles(Video video);
+
         Task<string> FindVideoFile(Video video);
 
         Task Delete(Video video);

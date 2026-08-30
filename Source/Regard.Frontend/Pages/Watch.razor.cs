@@ -1,5 +1,6 @@
 using Humanizer;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
 using Regard.Frontend.Utils;
@@ -12,9 +13,13 @@ using System.Threading.Tasks;
 
 namespace Regard.Frontend.Pages
 {
-    public partial class Watch : IDisposable
+    public partial class Watch : IDisposable, IAsyncDisposable
     {
         private const int UpNextTarget = 8;
+
+        /// <summary>Where the last picked subtitle language is remembered. "off" is a real stored value.</summary>
+        private const string SubtitleLangStorageKey = "regard.subtitleLang";
+        private const string SubtitleOff = "off";
 
         private ApiVideo video;
         private ApiSubscription subscription;
@@ -27,6 +32,28 @@ namespace Regard.Frontend.Pages
         private List<ApiVideo> upNext;
         private Regard.Frontend.Shared.Controls.Video playerRef;   // set when the downloaded <video> is shown
         private double currentPlaybackSeconds;                     // driven by playback, for chapter highlight
+
+        // --- Subtitles ---------------------------------------------------------------------------
+        // Track URLs by language, built once per video. The <track> elements are all mounted so the
+        // browser shows its native CC control in the player toolbar; it fetches a track's cues only when
+        // that track is switched on, so mounting them all is not a download.
+        private Dictionary<string, string> subtitleTrackUrls;
+        private DotNetObjectReference<Watch> subtitleSelfRef;
+        private bool subtitlePreferenceApplied;
+        private bool subtitleMenuVisible;
+        private ElementReference subtitleButton;
+        // The language currently showing, kept in step with the tracks themselves — it changes both from
+        // our own menu and from the browser's built-in captions menu, and OnTextTrackChanged is what
+        // keeps the two in agreement.
+        private string activeTrackLang;
+
+        private string ActiveTrackLabel =>
+            video?.SubtitleTracks?.FirstOrDefault(t => t.Lang == activeTrackLang)?.Label ?? "Subtitles";
+
+        private bool HasSubtitles => video?.SubtitleTracks != null && video.SubtitleTracks.Count > 0;
+
+        // Only meaningful for the local player; the YouTube embed brings its own captions.
+        private bool SubtitlesAvailable => HasSubtitles && video.IsDownloaded && !streamFailed;
 
         /// <summary>
         /// The dislike count to show. Prefers the exact number Return YouTube Dislike returned on this
@@ -92,9 +119,19 @@ namespace Regard.Frontend.Pages
 
         [Inject] protected Regard.Frontend.Services.NotificationsService Notifications { get; set; }
 
+        [Inject] protected Microsoft.JSInterop.IJSRuntime JS { get; set; }
+
+        [Inject] protected Blazored.LocalStorage.ILocalStorageService LocalStorage { get; set; }
+
         [Parameter] public int VideoId { get; set; }
 
-        public MarkupString FormattedDescription { get; set; }
+        /// <summary>
+        /// @handles and #hashtags only mean something on YouTube, so they're linkified only there. The
+        /// description itself is rendered by DescriptionText straight from video.Description, which is why
+        /// a live description update now repaints (it merges, and Text is a parameter).
+        /// </summary>
+        private bool LinkifyYouTube =>
+            watchOnHost != null && watchOnHost.Contains("youtu", StringComparison.OrdinalIgnoreCase);
 
         protected override void OnInitialized()
         {
@@ -112,6 +149,103 @@ namespace Regard.Frontend.Pages
             Messaging.VideoUpdated -= Messaging_VideoUpdated;
             Messaging.VideosChanged -= Messaging_VideosChanged;
             Notifications.ActivityChanged -= OnNotificationsActivityChanged;
+        }
+
+        /// <summary>
+        /// Releases the subtitle blob. Blazor calls both Dispose and DisposeAsync when a component
+        /// implements both; revoking needs JS interop, which a synchronous Dispose can't await.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            subtitleSelfRef?.Dispose();
+            subtitleSelfRef = null;
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Builds the &lt;track&gt; URLs for this video. Called once per video load; the browser decides
+        /// when (and whether) to fetch each one.
+        /// </summary>
+        private async Task BuildSubtitleTrackUrls()
+        {
+            subtitleTrackUrls = null;
+            subtitlePreferenceApplied = false;
+            activeTrackLang = null;
+            subtitleMenuVisible = false;
+
+            if (!SubtitlesAvailable)
+                return;
+
+            var urls = new Dictionary<string, string>();
+            foreach (var track in video.SubtitleTracks)
+                urls[track.Lang] = (await Backend.VideoSubtitleUrl(VideoId, track.Lang)).ToString();
+
+            subtitleTrackUrls = urls;
+        }
+
+        /// <summary>
+        /// Turns the remembered language on once the track elements exist, and starts listening for the
+        /// viewer changing it from the player's own CC menu so the choice is remembered either way.
+        /// </summary>
+        private async Task ApplyStoredSubtitlePreference()
+        {
+            string stored = null;
+            try { stored = await LocalStorage.GetItemAsync<string>(SubtitleLangStorageKey); }
+            catch (Exception) { /* storage unavailable (private mode) — just leave subtitles off */ }
+
+            if (stored == SubtitleOff)
+                stored = null;
+
+            subtitleSelfRef ??= DotNetObjectReference.Create(this);
+
+            try
+            {
+                if (await playerRef.BindTextTracks(subtitleSelfRef, stored))
+                    activeTrackLang = stored;
+                subtitlePreferenceApplied = true;
+            }
+            catch (Exception)
+            {
+                // Player torn down mid-flight; the next render will try again.
+            }
+        }
+
+        /// <summary>
+        /// The viewer switched tracks in the player's native CC menu. Remember it, so the next video that
+        /// has the language starts with it on. "off" is stored as a real value rather than as an absence,
+        /// so turning subtitles off actually sticks.
+        /// </summary>
+        [JSInvokable]
+        public async Task OnTextTrackChanged(string language)
+        {
+            activeTrackLang = language;
+            StateHasChanged();          // keeps our CC button in step with the browser's own menu
+
+            try { await LocalStorage.SetItemAsync(SubtitleLangStorageKey, language ?? SubtitleOff); }
+            catch (Exception) { /* not fatal — the choice just won't be remembered */ }
+        }
+
+        /// <summary>Switches the showing track from our CC menu. Null turns subtitles off.</summary>
+        private async Task SelectSubtitleTrack(string lang)
+        {
+            subtitleMenuVisible = false;
+            if (playerRef == null)
+                return;
+
+            // Setting the mode fires the tracks' `change` event, which comes back through
+            // OnTextTrackChanged — so state and persistence are handled in exactly one place regardless
+            // of which menu the viewer used.
+            await playerRef.SetTextTrack(lang);
+        }
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            await base.OnAfterRenderAsync(firstRender);
+
+            // Tracks Blazor inserts start out "disabled" whatever their `default` attribute says, so the
+            // stored preference has to be applied once the elements actually exist.
+            if (!subtitlePreferenceApplied && subtitleTrackUrls != null && playerRef != null)
+                await ApplyStoredSubtitlePreference();
         }
 
         private void OnNotificationsActivityChanged(object sender, EventArgs e) => InvokeAsync(StateHasChanged);
@@ -162,8 +296,11 @@ namespace Regard.Frontend.Pages
         /// <summary>
         /// Re-reads the single video after its download completes, so the fields that only
         /// VideoController.List produces (StreamMimeType above all) are present before the player
-        /// renders. Deliberately does not touch videoStreamUri or FormattedDescription —
-        /// OnParametersSetAsync owns those and they don't change when a file lands.
+        /// renders. Deliberately does not touch videoStreamUri — OnParametersSetAsync owns it and it
+        /// doesn't change when a file lands.
+        ///
+        /// Subtitle tracks are in the same category and DO appear for the first time here (the sidecars
+        /// only exist once the download finishes), so the remembered language is applied again.
         /// </summary>
         private async Task RefreshAfterDownload()
         {
@@ -178,6 +315,11 @@ namespace Regard.Frontend.Pages
             {
                 // Keep the merged copy; the player may still work once the user reloads.
             }
+
+            // Sidecars only exist once the download finishes, so this is where a video's tracks first
+            // appear. RefreshAfterDownload deliberately leaves videoStreamUri alone, but the track URLs
+            // are not in that category — they have to be built now or the picker never shows up.
+            await BuildSubtitleTrackUrls();
 
             StateHasChanged();
         }
@@ -201,6 +343,11 @@ namespace Regard.Frontend.Pages
             downloadQueued = false;
             streamFailed = false;
 
+            // Navigating between watch pages reuses this component (only the route parameter changes),
+            // so the previous video's tracks have to be cleared here — Dispose won't run.
+            subtitleTrackUrls = null;
+            subtitlePreferenceApplied = false;
+
             var (resp, httpResp) = await Backend.VideoList(new VideoListRequest() { Ids = new[] { VideoId } });
             if (!httpResp.IsSuccessStatusCode)
             {
@@ -215,9 +362,9 @@ namespace Regard.Frontend.Pages
                 return;
             }
 
-            FormattedDescription = new MarkupString((video.Description ?? "").FormatAsHtml());
             watchOnHost = HostOf(video.OriginalUrl);
             videoStreamUri = await Backend.VideoViewUrl(VideoId);
+            await BuildSubtitleTrackUrls();
 
             // Effective embedding preference (default off) — only used to tailor the placeholder text.
             var settings = await Backend.GetSettings();
@@ -410,6 +557,25 @@ namespace Regard.Frontend.Pages
             {
                 await playerRef.SeekTo(chapter.Start);
                 currentPlaybackSeconds = chapter.Start;
+            }
+        }
+
+        /// <summary>
+        /// Whether a "12:34" in the description can seek. Same condition as chapters and for the same
+        /// reason: those times describe the original timeline, so on a file SponsorBlock trimmed they
+        /// would land in the wrong place. Unlike subtitles, which yt-dlp re-times when it cuts.
+        /// </summary>
+        private bool DescriptionSeekable =>
+            video != null && video.IsDownloaded && !streamFailed && !video.SponsorsRemoved;
+
+        private async Task OnDescriptionSeek(double seconds)
+        {
+            // streamFailed can flip between render and click, so re-check rather than trusting the
+            // rendered state.
+            if (DescriptionSeekable && playerRef != null)
+            {
+                await playerRef.SeekTo(seconds);
+                currentPlaybackSeconds = seconds;
             }
         }
 

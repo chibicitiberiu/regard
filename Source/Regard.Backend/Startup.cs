@@ -59,7 +59,9 @@ namespace Regard.Backend
             services.AddSignalR();
             services.AddResponseCompression(opts =>
             {
-                opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/octet-stream" });
+                // text/vtt isn't in the defaults, and subtitle sidecars are large and highly compressible
+                // — the biggest track in a modest library is 600 KB of repetitive timecodes.
+                opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/octet-stream", "text/vtt" });
             });
             // Live updates: an EF SaveChanges interceptor broadcasts entity changes to the owning user,
             // so liveness is a property of persisting a change rather than something each mutation site

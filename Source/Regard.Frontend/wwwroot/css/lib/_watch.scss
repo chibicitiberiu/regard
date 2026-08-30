@@ -227,6 +227,118 @@
     &:hover { text-decoration: underline; }
 }
 
+/* Light markdown from the description. Headings are clamped to h3-h5 by the renderer (the page owns the
+   h1), so they're sized down from the surrounding body text rather than up. */
+.watch-description {
+    h3, h4, h5 {
+        margin: 1.1rem 0 0.5rem;
+        color: var(--color-fg-primary);
+        line-height: 1.3;
+
+        &:first-child { margin-top: 0; }
+    }
+
+    h3 { font-size: 1.05rem; }
+    h4 { font-size: 1rem; }
+    h5 { font-size: 0.95rem; }
+
+    ul, ol {
+        margin: 0 0 0.85rem;
+        padding-left: 1.35rem;
+
+        &:last-child { margin-bottom: 0; }
+    }
+
+    li { margin: 0 0 0.2rem; }
+
+    strong { color: var(--color-fg-primary); }
+}
+
+/* A seekable "12:34" in the description. Reset like .watch-chapter-btn, styled like a description link,
+   so it reads as a link rather than a form control. */
+.watch-ts {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: var(--color-fg-info);
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+}
+
+/* CC control, overlaid on the player.
+   Chrome files its own captions control inside the "⋮" overflow menu and gives no way to promote it
+   into the control bar, so this is ours. Sits above the native bar in the bottom-right corner, styled
+   to read as a player control rather than a page button: translucent, no border, revealed on hover the
+   way the native controls are. Kept reachable for keyboard and touch, where there is no hover. */
+.watch-cc-overlay {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 3.6rem;
+    z-index: 2;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    padding: 0;
+
+    border: none;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    cursor: pointer;
+
+    opacity: 0;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+
+    .material-icons { font-size: 1.35rem; }
+
+    &:hover { background: rgba(0, 0, 0, 0.8); }
+
+    /* On while a track is showing, so the state is readable at a glance. */
+    &.on {
+        opacity: 1;
+        color: var(--color-fg-info);
+    }
+
+    &:focus-visible {
+        opacity: 1;
+        outline: 2px solid var(--color-fg-info);
+        outline-offset: 2px;
+    }
+}
+
+.watch-player:hover .watch-cc-overlay,
+.watch-cc-overlay:focus-within { opacity: 1; }
+
+@media (hover: none) {
+    /* No hover to reveal it on a touch screen. */
+    .watch-cc-overlay { opacity: 1; }
+}
+
+/* Subtitle cues.
+   The default UA style is white text on an opaque black box, which sits heavily over the picture. This
+   drops the box and carries the text on a soft outline instead, the way every video service renders
+   captions now. ::cue only accepts a small set of properties — text-shadow is in it, -webkit-text-stroke
+   is not — so the outline is four offset shadows plus a wider soft one for contrast over bright frames.
+   Cues are centred by the server stripping per-cue placement (SubtitleConverter.NormalizeCuePlacement);
+   CSS cannot reposition them, since alignment is a cue setting rather than a style. */
+video::cue {
+    background: transparent;
+    color: #fff;
+    font-size: 1.05rem;
+    line-height: 1.35;
+    text-shadow:
+        -1px -1px 0 rgba(0, 0, 0, 0.92),
+        1px -1px 0 rgba(0, 0, 0, 0.92),
+        -1px 1px 0 rgba(0, 0, 0, 0.92),
+        1px 1px 0 rgba(0, 0, 0, 0.92),
+        0 0 6px rgba(0, 0, 0, 0.75);
+}
+
 /* Up next list. */
 .watch-upnext h3 {
     margin: 0 0 0.75rem;
