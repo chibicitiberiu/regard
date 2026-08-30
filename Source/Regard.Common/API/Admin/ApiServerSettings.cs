@@ -35,6 +35,18 @@ namespace Regard.Common.API.Admin
         /// <summary>Global default download bandwidth cap (yt-dlp --limit-rate, e.g. "2M"); empty = none.</summary>
         public string LimitRate { get; set; }
 
+        /// <summary>
+        /// Browser TLS-fingerprint impersonation target (yt-dlp --impersonate): empty = off, "auto" = any
+        /// available target, otherwise a client name such as "chrome".
+        /// </summary>
+        public string Impersonate { get; set; }
+
+        /// <summary>
+        /// Read-only: impersonation targets the server's yt-dlp can actually use. Empty means curl_cffi is
+        /// not installed, and any target set here would be ignored.
+        /// </summary>
+        public string[] ImpersonateTargets { get; set; }
+
         /// <summary>Per-host jittered pacing between downloads (seconds).</summary>
         public int DownloadMinSeconds { get; set; }
         public int DownloadMaxSeconds { get; set; }

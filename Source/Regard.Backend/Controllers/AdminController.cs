@@ -29,6 +29,7 @@ namespace Regard.Backend.Controllers
         private readonly RegardScheduler scheduler;
         private readonly ApiResponseFactory responseFactory;
         private readonly Microsoft.Extensions.Configuration.IConfiguration configuration;
+        private readonly Regard.Backend.Common.Services.IYoutubeDlService ytdlService;
 
         public AdminController(UserManager<UserAccount> userManager,
                                RoleManager<IdentityRole> roleManager,
@@ -36,7 +37,8 @@ namespace Regard.Backend.Controllers
                                UserQuotaService quotaService,
                                RegardScheduler scheduler,
                                ApiResponseFactory responseFactory,
-                               Microsoft.Extensions.Configuration.IConfiguration configuration)
+                               Microsoft.Extensions.Configuration.IConfiguration configuration,
+                               Regard.Backend.Common.Services.IYoutubeDlService ytdlService)
         {
             this.userManager = userManager;
             this.roleManager = roleManager;
@@ -45,6 +47,7 @@ namespace Regard.Backend.Controllers
             this.scheduler = scheduler;
             this.responseFactory = responseFactory;
             this.configuration = configuration;
+            this.ytdlService = ytdlService;
         }
 
         /// <summary>Fixed on-disk location of the uploaded yt-dlp cookies.txt (null if DataDirectory unset).</summary>
@@ -74,6 +77,8 @@ namespace Regard.Backend.Controllers
                 SleepInterval = optionManager.GetGlobal(Options.Server_Ytdl_SleepInterval),
                 MaxSleepInterval = optionManager.GetGlobal(Options.Server_Ytdl_MaxSleepInterval),
                 LimitRate = optionManager.GetGlobal(Options.Server_Ytdl_LimitRate),
+                Impersonate = optionManager.GetGlobal(Options.Server_Ytdl_Impersonate),
+                ImpersonateTargets = ytdlService.ImpersonateTargets.ToArray(),
                 CookiesConfigured = CookiesPath() is string cp && System.IO.File.Exists(cp),
                 DownloadMinSeconds = optionManager.GetGlobal(Options.Server_Throttle_DownloadMinSeconds),
                 DownloadMaxSeconds = optionManager.GetGlobal(Options.Server_Throttle_DownloadMaxSeconds),
@@ -102,6 +107,7 @@ namespace Regard.Backend.Controllers
             optionManager.SetGlobal(Options.Server_Ytdl_SleepInterval, request.SleepInterval);
             optionManager.SetGlobal(Options.Server_Ytdl_MaxSleepInterval, request.MaxSleepInterval);
             optionManager.SetGlobal(Options.Server_Ytdl_LimitRate, request.LimitRate ?? "");
+            optionManager.SetGlobal(Options.Server_Ytdl_Impersonate, request.Impersonate ?? "");
             optionManager.SetGlobal(Options.Server_Throttle_DownloadMinSeconds, request.DownloadMinSeconds);
             optionManager.SetGlobal(Options.Server_Throttle_DownloadMaxSeconds, request.DownloadMaxSeconds);
             optionManager.SetGlobal(Options.Server_Throttle_ExtractMinSeconds, request.ExtractMinSeconds);

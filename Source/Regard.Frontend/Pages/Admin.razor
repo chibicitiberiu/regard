@@ -91,6 +91,41 @@
                             </div>
                         </div>
                         <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Impersonate a browser:</label>
+                            <div class="col-xs-8">
+                                <select class="form-control" @bind="Impersonate" disabled="@(ImpersonateTargets.Length == 0)">
+                                    <option value="">Off</option>
+                                    @if (ImpersonateTargets.Length > 0)
+                                    {
+                                        <option value="auto">Automatic (any available)</option>
+                                        @foreach (var target in ImpersonateTargets)
+                                        {
+                                            <option value="@target">@target</option>
+                                        }
+                                    }
+                                    else if (!string.IsNullOrEmpty(Impersonate))
+                                    {
+                                        <option value="@Impersonate">@Impersonate (unavailable)</option>
+                                    }
+                                </select>
+                                @if (ImpersonateTargets.Length == 0)
+                                {
+                                    <small class="fg-error">
+                                        Unavailable &mdash; curl_cffi is not installed for the Python that runs
+                                        yt-dlp. The Docker image ships it; on a bare-metal install run
+                                        <code>pip install curl_cffi</code>.
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small>
+                                        Makes yt-dlp's TLS fingerprint look like a real browser, which helps with
+                                        the bot gate. Restart is not needed.
+                                    </small>
+                                }
+                            </div>
+                        </div>
+                        <div class="form-group row">
                             <label class="col-xs-4 col-form-label">Per-host download pacing min / max (s):</label>
                             <div class="col-xs-8" style="display:flex; gap:.5rem;">
                                 <input class="form-control" type="number" min="0" @bind="DownloadMinSeconds" />

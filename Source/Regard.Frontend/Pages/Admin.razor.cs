@@ -32,6 +32,8 @@ namespace Regard.Frontend.Pages
         protected int SleepInterval { get; set; }
         protected int MaxSleepInterval { get; set; }
         protected string LimitRate { get; set; } = string.Empty;
+        protected string Impersonate { get; set; } = string.Empty;
+        protected string[] ImpersonateTargets { get; set; } = System.Array.Empty<string>();
         protected int DownloadMinSeconds { get; set; }
         protected int DownloadMaxSeconds { get; set; }
         protected int ExtractMinSeconds { get; set; }
@@ -81,6 +83,8 @@ namespace Regard.Frontend.Pages
                 SleepInterval = s.SleepInterval;
                 MaxSleepInterval = s.MaxSleepInterval;
                 LimitRate = s.LimitRate ?? string.Empty;
+                Impersonate = s.Impersonate ?? string.Empty;
+                ImpersonateTargets = s.ImpersonateTargets ?? System.Array.Empty<string>();
                 DownloadMinSeconds = s.DownloadMinSeconds;
                 DownloadMaxSeconds = s.DownloadMaxSeconds;
                 ExtractMinSeconds = s.ExtractMinSeconds;
@@ -122,6 +126,7 @@ namespace Regard.Frontend.Pages
                 SleepInterval = SleepInterval,
                 MaxSleepInterval = MaxSleepInterval,
                 LimitRate = LimitRate,
+                Impersonate = Impersonate,
                 DownloadMinSeconds = DownloadMinSeconds,
                 DownloadMaxSeconds = DownloadMaxSeconds,
                 ExtractMinSeconds = ExtractMinSeconds,

@@ -290,6 +290,21 @@ namespace Regard.Backend.Configuration
             0
         );
 
+        /// <summary>
+        /// yt-dlp browser TLS-fingerprint impersonation target (--impersonate), e.g. "chrome",
+        /// "chrome-110", "chrome:windows-10". Empty/null disables it; "auto" means "any available target"
+        /// (yt-dlp's <c>--impersonate=</c>). Requires curl_cffi in the Python running yt-dlp — the flag is
+        /// only passed when a matching target actually resolves, because yt-dlp hard-fails at startup on
+        /// an unavailable one. Global/server option.
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_Ytdl_Impersonate = new OptionDefinition<string>(
+            "",
+            "server.ytdl.impersonate",
+            "Server:Ytdl:Impersonate",
+            "REGARD_YTDL_IMPERSONATE",
+            0
+        );
+
         /// <summary>Seconds yt-dlp sleeps between HTTP requests during extraction (--sleep-requests). Global/server.</summary>
         public static readonly OptionDefinition<int> Server_Ytdl_SleepRequests = new OptionDefinition<int>(
             2,

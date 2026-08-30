@@ -25,6 +25,14 @@ namespace Regard.Backend.Common.Services
         /// </summary>
         IReadOnlyList<string> GetAntibotArgs();
 
+        /// <summary>
+        /// Impersonation targets the current yt-dlp can actually use (client names, lowercased, e.g.
+        /// "chrome"), probed once per yt-dlp version via --list-impersonate-targets. Empty when curl_cffi
+        /// is missing. Passing --impersonate with a target that isn't in here makes yt-dlp abort before it
+        /// does any work, so every caller must check first.
+        /// </summary>
+        IReadOnlyList<string> ImpersonateTargets { get; }
+
         /// <summary>Short per-host pace before a metadata extraction (download throttling). No-op when disabled.</summary>
         Task PaceExtractionAsync(string host);
     }
