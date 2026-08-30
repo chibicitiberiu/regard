@@ -25,5 +25,13 @@ namespace Regard.Backend.Services
         IAsyncEnumerable<IVideoProvider> FindForVideo(Video uri);
 
         IAsyncEnumerable<ISubscriptionProvider> FindFromSubscriptionUrl(Uri uri);
+
+        /// <summary>
+        /// The id of the provider that obviously handles this URL, judged purely on the string — no
+        /// network, no yt-dlp. Null when no provider claims it, which just means the caller has to do
+        /// the real (slow) probe. Lets subscription creation record a provider without blocking on an
+        /// extraction.
+        /// </summary>
+        string HintProviderFor(Uri uri);
     }
 }

@@ -106,7 +106,10 @@ namespace Regard.Backend.Controllers
                 var url = new Uri(request.Url);
                 var user = await userManager.GetUserAsync(User);
 
-                var result = await subscriptionManager.Create(user, url, request.ParentFolderId, request.AllowDuplicate, request.AutoDownload);
+                // Deferred: this returns as soon as the row exists. Provider resolution, metadata and the
+                // first sync all happen in ResolveSubscriptionJob, and reach the client over the live
+                // change feed — the dialog used to sit for minutes waiting on yt-dlp.
+                var result = await subscriptionManager.CreateDeferred(user, url, request.ParentFolderId, request.AllowDuplicate, request.AutoDownload);
                 return Ok(responseFactory.Success(modelFactory.ToApi(result)));
             }
             catch (UriFormatException)

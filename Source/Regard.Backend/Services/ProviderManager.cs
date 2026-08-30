@@ -80,6 +80,14 @@ namespace Regard.Backend.Services
             return config;
         }
 
+        public string HintProviderFor(Uri uri)
+        {
+            return providers.Values
+                .OfType<ISubscriptionProvider>()
+                .FirstOrDefault(sp => sp.CanHandleSubscriptionUrlHint(uri))
+                ?.Id;
+        }
+
         public async IAsyncEnumerable<ISubscriptionProvider> FindFromSubscriptionUrl(Uri uri)
         {
             // Probe providers that claim the URL via a cheap hint first (e.g. yt-dlp for

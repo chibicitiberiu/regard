@@ -126,6 +126,110 @@ namespace Regard.Backend.Services
             return sub;
         }
 
+        /// <summary>
+        /// Creates a subscription without contacting the network, and defers everything that does to
+        /// <see cref="ResolveSubscriptionJob"/>: provider resolution, the real name/description/artwork,
+        /// and the first sync.
+        ///
+        /// Why this exists as a separate method rather than a change to <see cref="Create"/>: the
+        /// synchronous path runs two full yt-dlp extractions of the same URL plus a blocking HTML scrape,
+        /// each preceded by throttle pacing that is shared with background syncs — which is how "Create"
+        /// came to block the UI for ~3 minutes. <see cref="ImportSubscriptionsJob"/> still wants the
+        /// synchronous contract (it reports per-feed progress and catches duplicates per feed), so
+        /// <see cref="Create"/> stays as it is.
+        ///
+        /// The row is inserted with a placeholder name because Subscription.Name is [Required]; the live
+        /// change feed pushes the real name the moment the job resolves it, and the tree re-sorts itself.
+        /// </summary>
+        public async Task<Subscription> CreateDeferred(UserAccount userAccount,
+                                                       Uri uri,
+                                                       int? parentFolderId,
+                                                       bool allowDuplicate = false,
+                                                       bool autoDownload = true)
+        {
+            SubscriptionFolder parent = null;
+            if (parentFolderId.HasValue)
+            {
+                parent = dataContext.SubscriptionFolders.Find(parentFolderId.Value);
+                if (parent == null)
+                    throw new Exception("Parent folder not found!");
+            }
+
+            // Normalize the way the providers do, so the stored OriginalUrl matches what a later sync
+            // will actually fetch, and so the duplicate check below compares like with like.
+            var normalized = NormalizeSubscriptionUrl(uri);
+
+            // Cheap duplicate check: catches re-pasting a link you already subscribed to, which is the
+            // common case and the only one that can be answered synchronously. The authoritative check
+            // keys on the provider's own id and can only run after extraction, so the job repeats it.
+            if (!allowDuplicate)
+            {
+                var url = normalized.ToString();
+                var existing = dataContext.Subscriptions.AsQueryable()
+                    .Where(x => x.UserId == userAccount.Id)
+                    .Where(x => x.OriginalUrl == url)
+                    .FirstOrDefault();
+                if (existing != null)
+                    throw new DuplicateSubscriptionException(existing.Name);
+            }
+
+            // Free, string-only provider hint (no network). When it can't tell — anything that isn't
+            // YouTube — the job resolves the provider itself.
+            var hinted = providerManager.HintProviderFor(normalized);
+
+            var sub = new Subscription()
+            {
+                Name = PlaceholderName(normalized),
+                OriginalUrl = normalized.ToString(),
+                SubscriptionProviderId = hinted,
+                User = userAccount,
+                ParentFolder = parent,
+            };
+
+            dataContext.Subscriptions.Add(sub);
+            dataContext.SaveChanges();
+
+            if (!autoDownload)
+                optionManager.SetForSubscription(Options.Subscriptions_AutoDownload, sub.Id, false);
+
+            await ResolveSubscriptionJob.Schedule(scheduler, sub, allowDuplicate);
+            return sub;
+        }
+
+        /// <summary>
+        /// A stand-in name until the provider tells us the real one. Derived from the URL (a @handle or
+        /// the last meaningful path segment) so the tree row lands near its eventual alphabetical
+        /// position rather than jumping from "https://…".
+        /// </summary>
+        public static string PlaceholderName(Uri uri)
+        {
+            var segments = uri.Segments
+                .Select(s => s.Trim('/'))
+                .Where(s => s.Length > 0 && !s.Equals("videos", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var handle = segments.LastOrDefault(s => s.StartsWith("@", StringComparison.Ordinal));
+            var candidate = handle ?? segments.LastOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(candidate))
+                return Uri.UnescapeDataString(candidate).TrimStart('@');
+
+            return uri.Host;
+        }
+
+        /// <summary>Applies the provider's own URL fixups so stored URLs and comparisons are consistent.</summary>
+        private static Uri NormalizeSubscriptionUrl(Uri uri)
+        {
+            try
+            {
+                return Regard.Backend.Providers.YouTubeDL.YouTubeUrlHelper.FixYouTubeChannelUri(uri);
+            }
+            catch
+            {
+                return uri;   // non-YouTube or unparseable: keep as pasted
+            }
+        }
+
         public Subscription CreateEmpty(UserAccount userAccount,
                                         string name,
                                         int? parentFolderId)

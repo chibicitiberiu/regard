@@ -109,10 +109,12 @@ namespace Regard.Backend.Providers.YouTubeDL
                 throw new Exception("Invalid or unsupported URL format!");
             }
 
-            // Fetch thumbnail, real channel title
-            var metadata = new List<KeyValuePair<string, string>>();
+            // Fetch thumbnail, real channel title. Best-effort and time-boxed: this is a plain page
+            // fetch that YouTube may answer slowly or with a consent interstitial, and everything it
+            // supplies has a yt-dlp fallback below, so it must never hold up subscription creation.
+            IReadOnlyList<KeyValuePair<string, string>> metadata = Array.Empty<KeyValuePair<string, string>>();
             if (uri.Host.EndsWith("youtube.com"))
-                metadata = MetadataScraper.ScrapeMetadata(uri).ToList();
+                metadata = await MetadataScraper.ScrapeMetadataAsync(uri, diagnostic: m => logger.LogInformation(m));
 
             return new Subscription()
             {
