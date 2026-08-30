@@ -1,3 +1,4 @@
+using Humanizer;
 using Microsoft.AspNetCore.Components;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
@@ -27,6 +28,42 @@ namespace Regard.Frontend.Pages
         private Regard.Frontend.Shared.Controls.Video playerRef;   // set when the downloaded <video> is shown
         private double currentPlaybackSeconds;                     // driven by playback, for chapter highlight
 
+        /// <summary>
+        /// The dislike count to show. Prefers the exact number Return YouTube Dislike returned on this
+        /// fetch, and falls back to deriving it from the like count and the stored ratio.
+        ///
+        /// The fallback is what keeps the two numbers consistent: a live push carries Likes (a persisted
+        /// column) but not Dislikes (a single-fetch enrichment), so after any unrelated update — marking
+        /// watched, a download finishing — the served Dislikes goes null while Likes may have moved.
+        /// Re-deriving means the pair always describes the same moment rather than pinning a fresh like
+        /// count next to a stale dislike count.
+        ///
+        /// From rating = likes / (likes + dislikes): dislikes = likes * (1 - rating) / rating. Computed
+        /// in double; Video.Rating is a float, so a ratio above ~0.9999 rounds to 1 and yields zero.
+        /// </summary>
+        private long? DislikeEstimate
+        {
+            get
+            {
+                if (video == null)
+                    return null;
+                if (video.Dislikes.HasValue)
+                    return video.Dislikes;
+                if (!video.Likes.HasValue || !video.Rating.HasValue)
+                    return null;
+
+                double rating = video.Rating.Value;
+                if (rating <= 0d || rating >= 1d)
+                    return null;
+
+                return (long)System.Math.Round(video.Likes.Value * (1d - rating) / rating);
+            }
+        }
+
+        /// <summary>The liked share as a percentage, e.g. "97% liked".</summary>
+        private string LikedPercent =>
+            video?.Rating is float r ? $"{(r * 100d).ToString("0.#")}% liked" : null;
+
         // Chapters exist to show at all.
         private bool HasChapters => video?.Chapters != null && video.Chapters.Count > 0;
 
@@ -53,6 +90,8 @@ namespace Regard.Frontend.Pages
 
         [Inject] protected Regard.Frontend.Services.MessagingService Messaging { get; set; }
 
+        [Inject] protected Regard.Frontend.Services.NotificationsService Notifications { get; set; }
+
         [Parameter] public int VideoId { get; set; }
 
         public MarkupString FormattedDescription { get; set; }
@@ -64,13 +103,26 @@ namespace Regard.Frontend.Pages
             // video being deleted) while you sat here was invisible until you navigated away.
             Messaging.VideoUpdated += Messaging_VideoUpdated;
             Messaging.VideosChanged += Messaging_VideosChanged;
+            // Download progress arrives as notifications, which fire neither of the two events above.
+            Notifications.ActivityChanged += OnNotificationsActivityChanged;
         }
 
         public void Dispose()
         {
             Messaging.VideoUpdated -= Messaging_VideoUpdated;
             Messaging.VideosChanged -= Messaging_VideosChanged;
+            Notifications.ActivityChanged -= OnNotificationsActivityChanged;
         }
+
+        private void OnNotificationsActivityChanged(object sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+        /// <summary>
+        /// The in-flight download card for this video, or null. Looked up per render rather than held:
+        /// a progress tick REPLACES the object in the collection, so a cached reference would freeze at
+        /// the first value.
+        /// </summary>
+        private ApiNotification DownloadNotification =>
+            Notifications?.Notifications?.FirstOrDefault(n => n.Ongoing && n.VideoId == VideoId);
 
         private void Messaging_VideoUpdated(object sender, ApiVideo e)
         {
@@ -78,7 +130,20 @@ namespace Regard.Frontend.Pages
             // so assigning it wholesale would tear those out from under the running player.
             if (video != null && e.Id == video.Id)
             {
+                bool wasDownloaded = video.IsDownloaded;
                 video.MergeLiveFields(e);
+
+                // A download just finished while we were sitting here. The merge deliberately doesn't
+                // carry StreamMimeType (it's filled only by VideoList), so rendering the player now would
+                // emit <source type=""> and it wouldn't play — the exact moment this feature exists for.
+                // Re-fetch to fill it in. Strictly on the false->true EDGE: a level check would keep
+                // firing against the pushes this page's own RYD write produces.
+                if (!wasDownloaded && video.IsDownloaded)
+                {
+                    _ = InvokeAsync(RefreshAfterDownload);
+                    return;
+                }
+
                 StateHasChanged();
                 return;
             }
@@ -92,6 +157,29 @@ namespace Regard.Frontend.Pages
                     StateHasChanged();
                 }
             }
+        }
+
+        /// <summary>
+        /// Re-reads the single video after its download completes, so the fields that only
+        /// VideoController.List produces (StreamMimeType above all) are present before the player
+        /// renders. Deliberately does not touch videoStreamUri or FormattedDescription —
+        /// OnParametersSetAsync owns those and they don't change when a file lands.
+        /// </summary>
+        private async Task RefreshAfterDownload()
+        {
+            try
+            {
+                var (resp, http) = await Backend.VideoList(new VideoListRequest() { Ids = new[] { VideoId } });
+                var fresh = http.IsSuccessStatusCode ? resp?.Data?.Videos?.FirstOrDefault() : null;
+                if (fresh != null)
+                    video = fresh;
+            }
+            catch (Exception)
+            {
+                // Keep the merged copy; the player may still work once the user reloads.
+            }
+
+            StateHasChanged();
         }
 
         private void Messaging_VideosChanged(object sender, int subscriptionId)
@@ -207,7 +295,10 @@ namespace Regard.Frontend.Pages
                     AddFrom(aResp.Data.Videos);
             }
 
-            upNext = result;
+            // Downloaded first — they play instantly, the rest need a fetch. Applied AFTER the cascade,
+            // never inside it: OrderBy is stable, so same-subscription items still precede folder and
+            // global ones within each group, and the "next episode" ordering of tier 1 survives.
+            upNext = result.OrderBy(v => !v.IsDownloaded).ToList();
         }
 
         private async Task OnDownloadNow()
@@ -238,6 +329,30 @@ namespace Regard.Frontend.Pages
             var (_, http) = await Backend.VideoMarkNotWatched(new VideoMarkNotWatchedRequest { VideoIds = new[] { VideoId } });
             if (http.IsSuccessStatusCode)
                 video.IsWatched = false;
+        }
+
+        // No local state flip here, unlike the watched buttons above: DeleteScheduledAt is carried by the
+        // live change feed and merged by MergeLiveFields, so the button repaints itself. With a grace
+        // period of 0 the files are deleted outright and IsDownloaded flips instead — also pushed, which
+        // is why this doesn't look like nothing happened.
+        private async Task OnMarkForDeletion()
+            => await Backend.VideoMarkForDeletion(new VideoMarkForDeletionRequest { VideoIds = new[] { VideoId } });
+
+        private async Task OnUnmarkForDeletion()
+            => await Backend.VideoUnmarkForDeletion(new VideoUnmarkForDeletionRequest { VideoIds = new[] { VideoId } });
+
+        /// <summary>Countdown for the "marked for deletion" state, matching the grid's badge tooltip.</summary>
+        private string DeletionTooltip
+        {
+            get
+            {
+                if (video?.DeleteScheduledAt == null)
+                    return null;
+                var remaining = video.DeleteScheduledAt.Value - DateTimeOffset.Now;
+                return remaining > TimeSpan.Zero
+                    ? $"Files will be deleted in {remaining.Humanize()}"
+                    : "Files are queued for deletion";
+            }
         }
 
         // Fired once the playhead crosses ~90% of the downloaded video (and again on end as a fallback):

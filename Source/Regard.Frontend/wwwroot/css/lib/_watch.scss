@@ -139,25 +139,39 @@
     margin: 0 0.4rem;
 }
 
-.watch-rating {
+// The like/dislike row. These rules were missing entirely — only .watch-vote-icon existed — so the
+// row rendered as an unstyled run-together line on the rare occasion the data arrived.
+.watch-votes {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.9rem;
     margin: 0.5rem 0;
+    font-size: 0.95rem;
 }
 
-.watch-rating .star {
-    font-size: 1.1rem;
+.watch-vote {
+    display: inline-flex;
+    align-items: baseline;
+    white-space: nowrap;
 }
 
-.watch-rating .star-full {
-    color: #f5b301;
-}
-
-.watch-rating .star-empty {
-    color: #b9b9b9;
-}
-
+// The liked share, e.g. "97% liked". Replaces the old five-star block: a like ratio is 0.95-0.99 for
+// almost every video, so stars read 5/5 everywhere and distinguished nothing.
 .watch-rating-value {
-    margin-left: 0.4rem;
     font-size: 0.85rem;
+    color: var(--color-fg-secondary);
+}
+
+.watch-votes-credit {
+    font-size: 0.8rem;
+
+    a {
+        color: var(--color-fg-info);
+        text-decoration: none;
+
+        &:hover { text-decoration: underline; }
+    }
 }
 
 .watch-actions {
@@ -351,4 +365,31 @@
     .watch-upnext {
         max-width: none;
     }
+}
+
+// In-flight download shown in the player placeholder, so "watch it the moment it lands" is visible
+// rather than a button stuck on "Queued…".
+.watch-download-progress {
+    margin: 0.75rem 0;
+    max-width: 26rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.watch-download-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-bg-tertiary, rgba(255, 255, 255, .15));
+    overflow: hidden;
+}
+
+.watch-download-fill {
+    height: 100%;
+    background: var(--color-fg-info);
+    transition: width .3s ease;
+}
+
+.watch-download-progress small {
+    display: block;
+    margin-top: .35rem;
 }

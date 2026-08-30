@@ -64,9 +64,22 @@
                                     <span>This site can't be embedded here. Download it, or watch it on the original site.</span>
                                 }
                             </p>
+                            @* A download in flight for this video: show what it's actually doing rather
+                               than a button stuck on "Queued…" until the file appears. Everything here
+                               already streams over SignalR — this page just wasn't listening. *@
+                            @if (DownloadNotification is ApiNotification dl)
+                            {
+                                <div class="watch-download-progress">
+                                    <div class="watch-download-bar">
+                                        <div class="watch-download-fill"
+                                             style="width:@(((dl.Progress ?? 0f) * 100).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                    </div>
+                                    <small class="text-muted">@(dl.Text ?? dl.Title)</small>
+                                </div>
+                            }
                             <div class="watch-unavailable-actions">
-                                <button class="primary" @onclick="OnDownloadNow" disabled="@downloadQueued">
-                                    @(downloadQueued ? "Queued…" : (streamFailed ? "Download again" : "Download now"))
+                                <button class="primary" @onclick="OnDownloadNow" disabled="@(downloadQueued || DownloadNotification != null)">
+                                    @(DownloadNotification != null ? "Downloading…" : (downloadQueued ? "Queued…" : (streamFailed ? "Download again" : "Download now")))
                                 </button>
                                 @if (watchOnHost != null)
                                 {
@@ -89,7 +102,19 @@
                         {
                             <img class="channel-icon" src="@subscription.ThumbnailUrl" alt="@video.UploaderName">
                         }
-                        <span class="watch-uploader">@video.UploaderName</span>
+                        @* A plain link, deliberately: writing AppState.SelectedSubscription would ALSO
+                           navigate (AppController listens for it), so doing both would navigate twice —
+                           and it wouldn't highlight the tree anyway, since the highlight is the tree's
+                           own SelectedItem. Falls back to plain text when the subscription fetch failed. *@
+                        @if (subscription != null)
+                        {
+                            <a class="watch-uploader" href="@($"/subscription/{video.SubscriptionId}")"
+                               title="@($"Go to {subscription.Name}")">@video.UploaderName</a>
+                        }
+                        else
+                        {
+                            <span class="watch-uploader">@video.UploaderName</span>
+                        }
                     </div>
                     <div class="watch-meta-right text-muted">
                         @if (video.Views.HasValue)
@@ -109,28 +134,31 @@
                     </div>
                 </div>
 
-                @if (video.Rating.HasValue)
-                {
-                    // Rating is stored as a 0..1 ratio; the stars are a 0..5 scale (this was previously
-                    // rendered unscaled, so every rated video showed 0-1 stars).
-                    var stars = video.Rating.Value * 5;
-                    <div class="watch-rating" title="@($"{stars.ToString("0.0")} / 5")">
-                        @for (int i = 1; i <= 5; i++)
-                        {
-                            <span class="star @(i <= System.Math.Round(stars) ? "star-full" : "star-empty")">&#x2605;</span>
-                        }
-                        <span class="watch-rating-value text-muted">@stars.ToString("0.0")/5</span>
-                    </div>
-                }
-
-                @if (video.Likes.HasValue && video.Dislikes.HasValue)
+                @* Three independent gates. The like count comes from yt-dlp and stands on its own; the
+                   dislike estimate and the RYD credit only appear when RYD actually supplied data. A
+                   single combined gate would either hide the like count or credit RYD for a yt-dlp
+                   number. *@
+                @if (video.Likes.HasValue || DislikeEstimate.HasValue)
                 {
                     <div class="watch-votes">
-                        <span class="watch-vote" title="Likes"><Icon Glyph="Icons.ThumbUp" Class="watch-vote-icon" /> @(((double)video.Likes.Value).ToMetric(decimals: 1))</span>
-                        <span class="watch-vote" title="Dislikes (estimated)"><Icon Glyph="Icons.ThumbDown" Class="watch-vote-icon" /> @(((double)video.Dislikes.Value).ToMetric(decimals: 1))</span>
-                        <span class="watch-votes-credit text-muted">
-                            via <a href="https://returnyoutubedislike.com" target="_blank" rel="noopener noreferrer">Return YouTube Dislike</a>
-                        </span>
+                        @if (video.Likes.HasValue)
+                        {
+                            <span class="watch-vote" title="Likes"><Icon Glyph="Icons.ThumbUp" Class="watch-vote-icon" /> @(((double)video.Likes.Value).ToMetric(decimals: 1))</span>
+                        }
+                        @if (DislikeEstimate.HasValue)
+                        {
+                            <span class="watch-vote" title="Dislikes (estimated)"><Icon Glyph="Icons.ThumbDown" Class="watch-vote-icon" /> @(((double)DislikeEstimate.Value).ToMetric(decimals: 1))</span>
+                        }
+                        @if (video.Rating.HasValue)
+                        {
+                            @* A liked ratio sits at 0.95-0.99 for almost every video, so rendering it as
+                               five stars would read 5/5 everywhere and say nothing. A percentage is how
+                               YouTube itself framed it and actually distinguishes videos. *@
+                            <span class="watch-rating-value" title="Share of votes that are likes">@LikedPercent</span>
+                            <span class="watch-votes-credit text-muted">
+                                via <a href="https://returnyoutubedislike.com" target="_blank" rel="noopener noreferrer">Return YouTube Dislike</a>
+                            </span>
+                        }
                     </div>
                 }
 
@@ -148,6 +176,26 @@
                     else
                     {
                         <button class="watch-btn" @onclick="OnMarkWatched">Mark watched</button>
+                    }
+                    @* Same gating as the grid's context menu: only for a downloaded video, with
+                       DeleteScheduledAt choosing which of the pair to offer. No local state flip — the
+                       change feed carries DeleteScheduledAt, so the button repaints itself. *@
+                    @if (video.IsDownloaded)
+                    {
+                        @if (video.DeleteScheduledAt.HasValue)
+                        {
+                            <button class="watch-btn" @onclick="OnUnmarkForDeletion" title="@DeletionTooltip">Unmark for deletion</button>
+                        }
+                        else
+                        {
+                            @* The label doesn't promise a countdown: the effective grace period isn't
+                               known here (it's inherited, and the page doesn't request subscription
+                               config), and with a grace of 0 the files go immediately. *@
+                            <button class="watch-btn" @onclick="OnMarkForDeletion"
+                                    title="Delete the downloaded files after the configured grace period — immediately if that's set to 0.">
+                                Mark for deletion
+                            </button>
+                        }
                     }
                     @if (watchOnHost != null)
                     {
@@ -209,6 +257,19 @@
                     <NavLink class="upnext-item" href="@($"/watch/{v.Id}")" @key="v.Id">
                         <div class="upnext-thumb">
                             <img src="@ThumbUrl(v)" alt="" />
+                            @* Same badge vocabulary as the grid, so "already downloaded" reads the same
+                               in both places. Wrapped in .video-badges because the sizing rules are
+                               scoped as ".video-badges .video-badge". *@
+                            <div class="video-badges">
+                                @if (v.DeleteScheduledAt.HasValue)
+                                {
+                                    <Icon Glyph="Icons.PendingDelete" Class="video-badge" title="Marked for deletion" />
+                                }
+                                else if (v.IsDownloaded)
+                                {
+                                    <Icon Glyph="Icons.Downloaded" Class="video-badge" title="Downloaded" />
+                                }
+                            </div>
                             @if (v.Duration.HasValue)
                             {
                                 <span class="upnext-duration">@v.Duration.Value.ToDurationString()</span>
