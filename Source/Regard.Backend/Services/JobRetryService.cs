@@ -56,11 +56,20 @@ namespace Regard.Backend.Services
                 using var scope = scopeFactory.CreateScope();
                 var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
 
-                var job = dataContext.Jobs.Find(e.Job.Id);
-                if (job == null || job.RetryCount <= 0 || string.IsNullOrEmpty(job.Key))
+                // Work on the SAME JobInfo instance the running job holds, not a fresh copy.
+                //
+                // This handler is invoked synchronously from JobBase's catch block, and JobBase then
+                // persists its own instance in the finally that follows. A copy loaded here would be
+                // committed first and immediately overwritten by that stale instance — leaving
+                // RetryCount pinned at its initial value, so a permanently failing job retried every
+                // RetryInterval forever and the card always read "Retrying (1/3)". Mutating the shared
+                // instance means JobBase's persist writes these values through instead of over them.
+                var job = e.Job;
+                if (job.RetryCount <= 0 || string.IsNullOrEmpty(job.Key))
                     return;
 
                 job.RetryCount--;
+                dataContext.Jobs.Update(job);
                 dataContext.SaveChanges();
 
                 var scheduler = await schedulerFactory.GetScheduler();
