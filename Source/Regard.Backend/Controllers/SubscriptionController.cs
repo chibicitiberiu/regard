@@ -14,6 +14,7 @@ using Regard.Backend.Configuration;
 using Regard.Backend.DB;
 using Regard.Backend.Downloader;
 using Regard.Backend.Jobs;
+using Regard.Backend.Thumbnails;
 
 namespace Regard.Backend.Controllers
 {
@@ -29,6 +30,7 @@ namespace Regard.Backend.Controllers
         private readonly DataContext dataContext;
         private readonly IVideoDownloaderService videoDownloader;
         private readonly RegardScheduler scheduler;
+        private readonly ThumbnailService thumbnailService;
 
         public SubscriptionController(UserManager<UserAccount> userManager,
                                       SubscriptionManager subscriptionManager,
@@ -37,7 +39,8 @@ namespace Regard.Backend.Controllers
                                       IOptionManager optionManager,
                                       DataContext dataContext,
                                       IVideoDownloaderService videoDownloader,
-                                      RegardScheduler scheduler)
+                                      RegardScheduler scheduler,
+                                      ThumbnailService thumbnailService)
         {
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
@@ -47,6 +50,7 @@ namespace Regard.Backend.Controllers
             this.dataContext = dataContext;
             this.videoDownloader = videoDownloader;
             this.scheduler = scheduler;
+            this.thumbnailService = thumbnailService;
         }
 
         [HttpPost]
@@ -192,6 +196,52 @@ namespace Regard.Backend.Controllers
             {
                 Subscriptions = subscriptions
             }));
+        }
+
+        [HttpPost]
+        [Route("set_icon")]
+        [Authorize]
+        public async Task<IActionResult> SetIcon([FromBody] ApiSetSubscriptionIconRequest request)
+        {
+            const int MaxBytes = 5 * 1024 * 1024;
+
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(responseFactory.Error("Not authenticated."));
+
+            var sub = subscriptionManager.Get(user, request.Id);
+            if (sub == null)
+                return BadRequest(responseFactory.Error("Subscription not found."));
+
+            if (string.IsNullOrEmpty(request.IconBase64))
+                return BadRequest(responseFactory.Error("No image provided."));
+
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(request.IconBase64); }
+            catch (FormatException) { return BadRequest(responseFactory.Error("Invalid image data.")); }
+
+            if (bytes.Length == 0 || bytes.Length > MaxBytes)
+                return BadRequest(responseFactory.Error("Image must be between 1 byte and 5 MB."));
+
+            try
+            {
+                // subscriptionManager.Get returned a tracked entity from the same scoped DataContext, so
+                // setting the path + SaveChanges persists it.
+                sub.ThumbnailPath = thumbnailService.SetCustom(sub, bytes, request.FileName);
+
+                // The stored path is stable (s{id}/thumb.ext), so replacing a PNG with another PNG leaves
+                // the string identical and EF would record no change — meaning the live change feed would
+                // stay silent and clients would keep showing the old icon (the file content and its
+                // cache-busting mtime did change). Force the property dirty so the update is broadcast.
+                dataContext.Entry(sub).Property(x => x.ThumbnailPath).IsModified = true;
+                dataContext.SaveChanges();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(responseFactory.Error(ex.Message));
+            }
+
+            return Ok(responseFactory.Success(modelFactory.ToApi(sub)));
         }
 
         // Resolve an option from a subscription's PARENT scope (parent folder → user → global → default),

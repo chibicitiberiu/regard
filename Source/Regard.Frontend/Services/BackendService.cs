@@ -8,9 +8,11 @@ using Regard.Api;
 using Regard.Common.API;
 using Regard.Common.API.Admin;
 using Regard.Common.API.Auth;
+using Regard.Common.API.Model;
 using Regard.Common.API.Response;
 using Regard.Common.API.Settings;
 using Regard.Common.API.Subscriptions;
+using Regard.Frontend.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -206,6 +208,13 @@ namespace Regard.Services
 
         public Task<(ApiResponse<SubscriptionFilterPreviewResponse>, HttpResponseMessage)> SubscriptionFilterPreview(SubscriptionFilterPreviewRequest data)
             => Post<SubscriptionFilterPreviewRequest, SubscriptionFilterPreviewResponse>("api/subscription/filter_preview", data);
+
+        public async Task<(ApiResponse<ApiSubscription>, HttpResponseMessage)> SubscriptionSetIcon(ApiSetSubscriptionIconRequest data)
+        {
+            var result = await Post<ApiSetSubscriptionIconRequest, ApiSubscription>("api/subscription/set_icon", data);
+            result.Item1?.Data?.Absolutize(BaseUrl);
+            return result;
+        }
 
         #endregion
 

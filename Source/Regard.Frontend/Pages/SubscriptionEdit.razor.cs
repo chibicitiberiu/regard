@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Regard.Common.API.Model;
 using Regard.Common.API.Subscriptions;
 using Regard.Frontend.Shared.Controls;
@@ -6,6 +7,7 @@ using Regard.Model;
 using Regard.Services;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,6 +16,8 @@ namespace Regard.Frontend.Pages
     public partial class SubscriptionEdit
     {
         [Inject] protected BackendService Backend { get; set; }
+
+        [Inject] protected AppState AppState { get; set; }
 
         [Parameter] public int SubscriptionId { get; set; }
 
@@ -100,6 +104,53 @@ namespace Regard.Frontend.Pages
         }
 
         protected string PatternPreview => Shared.PatternPreviewHelper.Render(Request.DownloadPath);
+
+        // The subscription's icon URL, absolutized against the backend origin (relative in dev → :5000 → 404
+        // otherwise). Mirrors Watch.razor.cs / SubscriptionTree.FixRelativeUrl (no shared helper exists).
+        protected string IconPreviewUrl
+        {
+            get
+            {
+                var url = Subscription?.ThumbnailUrl;
+                if (url == null) return null;
+                return url.IsAbsoluteUri ? url.ToString() : new Uri(AppState.BackendBase, url).ToString();
+            }
+        }
+
+        private async Task OnIconFile(InputFileChangeEventArgs e)
+        {
+            var file = e.File;
+            if (file == null || Subscription == null)
+                return;
+
+            try
+            {
+                using var ms = new MemoryStream();
+                await file.OpenReadStream(5 * 1024 * 1024).CopyToAsync(ms);   // raise the 512 KB default cap
+                var (resp, httpResp) = await Backend.SubscriptionSetIcon(new ApiSetSubscriptionIconRequest
+                {
+                    Id = SubscriptionId,
+                    IconBase64 = Convert.ToBase64String(ms.ToArray()),
+                    FileName = file.Name,
+                });
+
+                if (httpResp.IsSuccessStatusCode && resp.Data != null)
+                {
+                    // Update only the icon; keep Subscription.Config (the returned ToApi has none), so the
+                    // "Default (…)" inherit hints stay intact. The nav tree refreshes via the live push.
+                    Subscription.ThumbnailUrl = resp.Data.ThumbnailUrl;
+                    ValidationMessage = "Icon updated.";
+                }
+                else
+                {
+                    ValidationMessage = "Icon upload failed: " + resp?.Message;
+                }
+            }
+            catch (Exception ex)
+            {
+                ValidationMessage = "Icon upload failed: " + ex.Message;
+            }
+        }
 
         // Friendly text for the inherited default shown on the "Default (…)" inherit option. Null until
         // the config loads, in which case the control falls back to plain "(unset)".

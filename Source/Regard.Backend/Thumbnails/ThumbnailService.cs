@@ -3,6 +3,7 @@ using Regard.Backend.Common.Utils;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -18,6 +19,11 @@ namespace Regard.Backend.Thumbnails
 
         // TODO
         static readonly Uri SubscriptionDefault = new("img/thumb_default_video.png", UriKind.Relative);
+
+        // Allowed extensions for a user-uploaded icon. Raster only — an SVG served same-origin from
+        // /thumbs could carry <script> (stored XSS), so it's deliberately excluded.
+        static readonly HashSet<string> AllowedIconExtensions =
+            new(StringComparer.OrdinalIgnoreCase) { "png", "jpg", "jpeg", "gif", "webp" };
 
         public ThumbnailService(StorageManager storageManager)
         {
@@ -63,8 +69,12 @@ namespace Regard.Backend.Thumbnails
             if (subscription.ThumbnailPath == null || subscription.ThumbnailPath.StartsWith("http"))
                 return SubscriptionDefault;
 
-            if (File.Exists(GetThumbnailPath(subscription)))
-                return storageManager.ThumbnailsBaseUrl.Join(subscription.ThumbnailPath);
+            // Cache-buster: a replaced icon reuses the same s{id}/thumb.ext filename, so append the file's
+            // mtime as ?v= so the browser refetches. Only here (the file exists) — never on the placeholder.
+            var fi = new FileInfo(GetThumbnailPath(subscription));
+            if (fi.Exists)
+                return new Uri(storageManager.ThumbnailsBaseUrl.Join(subscription.ThumbnailPath)
+                    + "?v=" + fi.LastWriteTimeUtc.Ticks, UriKind.Relative);
 
             return SubscriptionDefault;
         }
@@ -83,6 +93,34 @@ namespace Regard.Backend.Thumbnails
         private string GeneratePath(Subscription subscription)
         {
             return $"s{subscription.Id}/thumb";
+        }
+
+        /// <summary>
+        /// Stores a user-uploaded custom icon for a subscription and returns the relative path to save on
+        /// <see cref="Subscription.ThumbnailPath"/>. Validates the extension against a raster allowlist
+        /// (rejecting SVG etc.), removes any prior <c>thumb.*</c> so an extension change leaves no orphan,
+        /// and writes atomically. Throws <see cref="ArgumentException"/> for a disallowed/empty extension.
+        /// </summary>
+        public string SetCustom(Subscription subscription, byte[] bytes, string fileName)
+        {
+            string ext = Path.GetExtension(fileName ?? string.Empty).TrimStart('.').ToLowerInvariant();
+            if (!AllowedIconExtensions.Contains(ext))
+                throw new ArgumentException($"Unsupported image type '{ext}'. Allowed: png, jpg, gif, webp.");
+
+            string relPath = GeneratePath(subscription) + "." + ext;
+            string absPath = Path.Combine(storageManager.ThumbnailsDirectory, relPath);
+            string dir = Path.GetDirectoryName(absPath);
+            Directory.CreateDirectory(dir);
+
+            // Drop any previous thumb.* (e.g. a .png being replaced by a .jpg) to avoid a stale orphan.
+            foreach (var old in Directory.GetFiles(dir, "thumb.*"))
+                File.Delete(old);
+
+            string tmp = absPath + ".tmp";
+            File.WriteAllBytes(tmp, bytes);
+            File.Move(tmp, absPath, overwrite: true);
+
+            return relPath;
         }
 
         private string GeneratePath(Video video)

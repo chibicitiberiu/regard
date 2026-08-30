@@ -147,6 +147,22 @@ small.text-muted,
     color: var(--color-fg-secondary);
 }
 
+// Subscription icon upload (SubscriptionEdit): preview thumbnail next to the file picker.
+.sub-icon-field {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sub-icon-preview {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--color-bg-secondary);
+    flex: 0 0 auto;
+}
+
 // Storage & quota summary (moved here from _admin.scss so all settings styling lives together).
 .quota-summary {
     display: flex;

@@ -14,6 +14,16 @@
                  autocapitalize="none"
                  autofocus />
 
+    <RgFieldWrapper Id="subscription_icon" Label="Icon:" Required="false">
+        <Field>
+            <div class="sub-icon-field">
+                <img class="sub-icon-preview" src="@IconPreviewUrl" alt="" />
+                <InputFile OnChange="OnIconFile" accept="image/png,image/jpeg,image/gif,image/webp" />
+            </div>
+        </Field>
+        <HelpText>PNG, JPG, GIF or WebP, up to 5 MB. Replaces the channel/provider icon.</HelpText>
+    </RgFieldWrapper>
+
     <RgInputTextArea Id="subscription_desc"
                      @bind-Value="Request.Description"
                      Label="Description:"
