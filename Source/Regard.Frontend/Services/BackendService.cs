@@ -329,6 +329,12 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> VideoDownload(VideoDownloadRequest data)
             => Post("api/video/download", data);
 
+        public Task<(ApiResponse, HttpResponseMessage)> VideoReprocess(VideoReprocessRequest data)
+            => Post("api/video/reprocess", data);
+
+        public Task<(ApiResponse<SubscriptionReprocessResponse>, HttpResponseMessage)> SubscriptionReprocess(SubscriptionReprocessRequest data)
+            => Post<SubscriptionReprocessRequest, SubscriptionReprocessResponse>("api/subscription/reprocess", data);
+
         public Task<(ApiResponse, HttpResponseMessage)> VideoDeleteFiles(VideoDeleteFilesRequest data)
             => Post("api/video/delete_files", data);
 

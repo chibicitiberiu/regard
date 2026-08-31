@@ -99,6 +99,21 @@ namespace Regard.Frontend.Services
             await backend.SubscriptionSynchronize(new SubscriptionSynchronizeRequest() { Id = subscription.Id });
         }
 
+        /// <summary>
+        /// Queue a subtitle refetch for every downloaded video in this subscription that is missing one.
+        /// Returns what the server queued so the caller can say something concrete.
+        /// </summary>
+        public async Task<SubscriptionReprocessResponse> FetchMissingSubtitles(ApiSubscription subscription)
+        {
+            using var scope = serviceProvider.CreateScope();
+            var backend = scope.ServiceProvider.GetRequiredService<BackendService>();
+
+            var (resp, http) = await backend.SubscriptionReprocess(
+                new SubscriptionReprocessRequest() { SubscriptionId = subscription.Id });
+
+            return http.IsSuccessStatusCode ? resp?.Data : null;
+        }
+
         public async Task Synchronize(ApiSubscriptionFolder folder)
         {
             using var scope = serviceProvider.CreateScope();

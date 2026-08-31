@@ -77,10 +77,16 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
   → return). Fix: a **forced** flag on the user-initiated job that bypasses that check (and
   cleans up any partial file first). The restart-reconciliation path stays on the no-op —
   the two must not share the same unconditional short-circuit._
-- `[ ]` **[M] Reprocess downloaded videos** — e.g. fetch missing subtitles without a full
-  re-download. _A lighter job variant that runs yt-dlp for subs/metadata only._
-- `[ ]` **[L] Periodically refresh metadata** (view counts, likes/dislikes, title changes)
-  for existing videos. _Recurring job; respects the throttle plan's pacing._
+- `[x]` **[M] Reprocess downloaded videos** — e.g. fetch missing subtitles without a full
+  re-download. **Done (Batch 5b).** `ReprocessVideoJob` runs yt-dlp with `--skip-download`, so the media
+  file is never touched, and reads back the info-json the same run writes — one extraction yields both
+  the subtitles and a metadata refresh. Available per-video (grid menu + watch page), per-subscription
+  (tree menu, "Fetch missing subtitles"), and as an unattended sweep.
+- `[x]` **[L] Periodically refresh metadata** (view counts, likes/dislikes, title changes)
+  for existing videos. **Done (Batch 5b)** as `RefreshMetadataJob`, the lowest-priority thing in the
+  system: it stands down entirely while a download or sync is active, and each video gets its own
+  refresh interval from its age. It also backfills `Video.Rating` from Return YouTube Dislike, which
+  fixes the "Highest rated" sort.
 
 ## E. Settings — structure & polish
 
@@ -225,9 +231,23 @@ Notes worth keeping:
 - Bounds are `yyyy-MM-dd` strings, not `DateTimeOffset?`: that's what `<input type="date">` produces,
   what the option store's existing string overloads persist, and it makes `""` mean "no bound" free.
 
-**Batch 5b — Reprocess & refresh**
-- D: reprocess downloaded (missing subtitles)
-- D: periodic metadata refresh
+**Batch 5b — Reprocess & refresh (2026-08-31, done)** — a sidecar-only reprocess job and a
+low-priority background refresh. No migration: `Video.LastUpdated` already meant "when metadata was last
+fetched", so it doubles as the staleness clock. Notes worth keeping:
+- **`--ignore-errors` is load-bearing on the reprocess run.** YouTube rate-limits the caption endpoint
+  readily, and yt-dlp writes subtitles *before* the info-json — so without it, one language 429ing raises
+  and abandons the video, losing both the metadata and the languages that had already succeeded. Seen
+  live on the very first run: `ro` 429'd, `en` landed, metadata still refreshed.
+- **Only the file on disk is trusted.** The job ignores yt-dlp's exit code and re-reads the sidecars,
+  because a partial success is the normal case. `SubtitleNeeds` then treats a half-fetched video as still
+  needing work, so a retry picks up the rest rather than declaring it complete.
+- **`--sub-format` is forced to `vtt/srt/best`.** The stored default is `best`, which can resolve to
+  `json3` — a file `SubtitleFile` cannot see, so the sweep would re-fetch it forever.
+- **Priority is enforced, not hoped for.** `HostThrottle.HasDownloadPressure` gates the refresh in
+  `ShouldDefer` and again between videos. Verified live:
+  *"Metadata refresh deferred: youtube.com has 1 download(s) in flight and 2 queued"*.
+- **The refresh interval comes from the video's age** (1 day under a week old, out to 90 days past a
+  year). Most of a 500-video library is old, so daily demand is a handful of videos rather than 500.
 
 **Batch 6 — Ops & maintenance**
 - H: server log page

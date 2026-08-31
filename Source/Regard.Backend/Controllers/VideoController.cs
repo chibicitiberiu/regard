@@ -233,6 +233,22 @@ namespace Regard.Backend.Controllers
             return Ok(responseFactory.Success());
         }
 
+        /// <summary>
+        /// Fetch the sidecars an already-downloaded video is missing (subtitles), refreshing its
+        /// metadata from the same extraction. The media file is not touched.
+        /// </summary>
+        [HttpPost]
+        [Route("reprocess")]
+        [Authorize]
+        public async Task<IActionResult> Reprocess([FromBody] VideoReprocessRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            int queued = await videoManager.Reprocess(user, request.VideoIds);
+            return Ok(responseFactory.Success(message: queued == 1
+                ? "Fetching subtitles…"
+                : $"Fetching subtitles for {queued} video(s)…"));
+        }
+
         [HttpPost]
         [Route("delete_files")]
         [Authorize]

@@ -28,6 +28,7 @@ namespace Regard.Frontend.Pages
         private string watchOnHost;      // null when OriginalUrl isn't a usable http(s) link
         private bool embeddingAllowed;   // effective user setting, for the placeholder message
         private bool downloadQueued;
+        private bool subtitleFetchQueued;
         private bool streamFailed;        // the downloaded file wouldn't load (missing/unreadable) -> show the fallback
         private List<ApiVideo> upNext;
         private Regard.Frontend.Shared.Controls.Video playerRef;   // set when the downloaded <video> is shown
@@ -462,6 +463,20 @@ namespace Regard.Frontend.Pages
                 downloadQueued = true;
             else
                 errorMessage = "Failed to queue download: " + resp?.Message;
+        }
+
+        /// <summary>
+        /// Fetch the subtitles this video is missing without re-downloading it. Once the job finishes,
+        /// the tracks arrive with the next video refresh and the CC control appears on its own.
+        /// </summary>
+        private async Task OnFetchSubtitles()
+        {
+            var (resp, http) = await Backend.VideoReprocess(
+                new VideoReprocessRequest { VideoIds = new[] { VideoId } });
+            if (http.IsSuccessStatusCode)
+                subtitleFetchQueued = true;
+            else
+                errorMessage = "Failed to queue subtitle fetch: " + resp?.Message;
         }
 
         private async Task OnMarkWatched()

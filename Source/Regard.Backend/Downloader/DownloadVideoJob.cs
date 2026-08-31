@@ -687,21 +687,8 @@ namespace Regard.Backend.Downloader
                                                       subscriptionId: video.SubscriptionId))
                 yield return arg;
 
-            if (optionManager.GetGlobal(Options.Server_Throttle_Enabled))
-            {
-                int sleepMin = optionManager.GetGlobal(Options.Server_Ytdl_SleepInterval);
-                int sleepMax = optionManager.GetGlobal(Options.Server_Ytdl_MaxSleepInterval);
-                if (sleepMin > 0)
-                {
-                    yield return "--sleep-interval";
-                    yield return sleepMin.ToString();
-                    if (sleepMax > sleepMin)
-                    {
-                        yield return "--max-sleep-interval";
-                        yield return sleepMax.ToString();
-                    }
-                }
-            }
+            foreach (var arg in YtdlCommonArgs.ServerSleep(optionManager))
+                yield return arg;
             // TODO: Geo Restriction
 
             #region Download Options
@@ -825,43 +812,13 @@ namespace Regard.Backend.Downloader
 
             #region Subtitle Options
 
+            // Shared with ReprocessVideoJob — see YtdlCommonArgs.Subtitles for why language and format
+            // are only emitted when something is actually being written.
             bool writeSubs = optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId);
             bool writeAutoSubs = optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId);
 
-            if (writeSubs)
-                yield return "--write-subs";
-
-            if (writeAutoSubs)
-                yield return "--write-auto-subs";
-
-            // Language + format only make sense when we're actually writing subtitles. Emitting them
-            // unconditionally (the options have non-null defaults) sent yt-dlp noise on every download,
-            // and "all languages" was silently overridden by the default --sub-langs en that followed
-            // it. Gate on enabled, and keep "all" mutually exclusive with a specific language list.
-            if (writeSubs || writeAutoSubs)
-            {
-                if (optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId))
-                {
-                    yield return "--sub-langs";
-                    yield return "all";
-                }
-                else
-                {
-                    string subLang = optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId);
-                    if (!string.IsNullOrWhiteSpace(subLang))
-                    {
-                        yield return "--sub-langs";
-                        yield return subLang;
-                    }
-                }
-
-                string subFormat = optionManager.GetForSubscription(Options.Ytdl_SubFormat, video.SubscriptionId);
-                if (!string.IsNullOrWhiteSpace(subFormat))
-                {
-                    yield return "--sub-format";
-                    yield return subFormat;
-                }
-            }
+            foreach (var arg in YtdlCommonArgs.Subtitles(optionManager, video.SubscriptionId))
+                yield return arg;
 
             #endregion
 

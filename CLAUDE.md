@@ -68,6 +68,17 @@ Back up `.dev/data/Regard.db` (timestamped copy) before a migration or any bulk 
 - Disk near-full (~96%+) → SQLite **Error 10 (disk I/O)**. That's a real error and is correctly *not*
   retried, but it can wedge the connection until a backend restart even after you free space. `SQLITE_BUSY`
   (error 5/6) is the one we retry (`busy_timeout=30000` + a small retry loop in `SQLiteDataContext`).
+  **A full disk is not the only trigger, and it does not always wedge.** Seen twice on 2026-08-31 at 92%
+  used with 19 GB free, both times during heavy concurrent job activity (several jobs plus yt-dlp
+  processes), after a session of repeated `pkill -9` and `sqlite3` writes against the live file:
+  - **Wedged:** every query failed afterwards, `POST /api/auth/login` included, so unrelated endpoints
+    returned a bare 500 that looked exactly like a bug in the code just written. Only a restart cleared it.
+  - **Self-healed:** a burst of ~12 errors across a couple of minutes, then normal service — a sync
+    completed and writes succeeded with no restart.
+
+  So: check the log for `SQLite Error 10` before debugging your own 500, and don't assume a restart is
+  required — verify with an actual write first. `pragma integrity_check` returned `ok` both times and no
+  rows were lost.
 
 ## Frontend / styling
 
@@ -166,6 +177,38 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
     overflow menu with Download and Picture-in-picture, with no way to promote it. The CC control on the
     watch page is therefore ours, overlaid on the player; it drives the same text tracks, and the
     tracks' `change` event keeps it in step with the browser's own menu.
+- **Sidecar-only reprocess** (Batch 5b). `ReprocessVideoJob` fetches subtitles for an already-downloaded
+  video with `--skip-download`, and reads back the info-json the same run writes so one extraction also
+  refreshes the metadata. Four things about it are load-bearing:
+  - **`--ignore-errors` is not optional.** yt-dlp writes subtitles *before* the info-json
+    (`YoutubeDL.process_info`), and its `_write_subtitles` raises `DownloadError` on a per-language
+    failure unless errors are ignored — so a single 429 on the caption endpoint (common) aborts the
+    video and loses both the metadata and the languages that had already been written.
+  - **The exit code is ignored; the files on disk are the answer.** A partial fetch is the normal case,
+    and `SubtitleNeeds` treats it as still-incomplete so a retry gets the rest.
+  - **Never reuse `DownloadVideoJob.ProcessStdout`.** yt-dlp prints `[download] Destination: …en.vtt`
+    for every subtitle, and that handler treats a `Destination:` line as the media file — it would
+    rewrite `Video.DownloadedPath` to `<title>.en`. Confirmed against live output.
+  - **`-o` gets `Video.DownloadedPath` verbatim**, never a freshly-resolved output path: if the
+    subscription was renamed, the template renders a different prefix and the sidecars land where
+    subtitle discovery will never look.
+  - Also: `--sub-format` is forced to `vtt/srt/best`, because the stored default `best` can resolve to
+    `json3`, which `SubtitleFile` doesn't recognise — the file would exist but be invisible, and the
+    sweep would re-fetch it forever. And `SponsorsRemoved` videos are refused outright: the media is
+    already cut, so fresh cues would never line up.
+- **Background metadata refresh is the lowest-priority thing in the system** (Batch 5b).
+  `RefreshMetadataJob` stands down whenever `HostThrottle.HasDownloadPressure` reports a download in
+  flight or queued, or a `SynchronizeJob` row is `Running` — checked in `ShouldDefer` and again between
+  videos. That matters because extractions and downloads share the per-host `NextAllowedUtc`, so an
+  unchecked refresh pass pushes waiting downloads out indefinitely, and the hour/day caps would never
+  notice: **they count downloads only** (`TryReserveDownload` is the sole writer to `DownloadTimes`).
+  - Each video gets its own interval from its age (`RefreshSchedule`): 1 day under a week, out to 90
+    days past a year. Un-enriched videos are excluded — their `Published` is a `MinValue` sort
+    placeholder, so the curve says nothing about them.
+  - `Video.Rating` is backfilled from Return YouTube Dislike, which is a different host on a different
+    budget (100/min) and outside `HostThrottle` entirely. Store
+    `ProviderHelpers.CalculateRating(likes, dislikes)`, **never** `votes.Rating` — that one is YouTube's
+    legacy 1..5 star average, while `Video.Rating` is a 0..1 ratio the watch page multiplies by 5.
 - **`video.js` is loaded but deliberately not initialised.** Its `autoSetup` re-polls every 1 ms until
   `window load` and wraps any element carrying `data-setup`, so that attribute was removed from
   `Video.razor` — otherwise whether we get a native `<video>` or a video.js player depends on boot
@@ -173,6 +216,13 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
 - **Providers** are a separate project and can't touch options/`HostThrottle` directly — they go through
   `IYoutubeDlService` (`GetAntibotArgs`, `PaceExtractionAsync`). That's why the content-scope filters
   live in `SynchronizeJob` rather than in `YouTubeDLProvider`.
+- **`IProviderManager.FindForVideo` costs a full yt-dlp extraction per call.** It probes every provider
+  with `IVideoProvider.CanHandleVideo`, and `YouTubeDLProvider` answers that by actually running
+  `--dump-single-json` (paced). In a loop that silently doubles the request count — measured as two
+  identical invocations per video before it was spotted. Use
+  `providerManager.Get<IVideoProvider>(video.VideoProviderId)`, a dictionary lookup; every video carries
+  a provider id (`"YtDL"`). `VideoManager.EnsureEnriched` still takes the expensive path, which is
+  tolerable for one video but would not be for a batch.
 - **Content scope** (Batch 5a). "Include Shorts" / "include members-only" are decided during sync, before
   the row is created, so an excluded video is never stored and an already-stored one is never touched.
   - **A channel subscription never sees a Short on its own.** `YouTubeUrlHelper.FixYouTubeChannelUri`

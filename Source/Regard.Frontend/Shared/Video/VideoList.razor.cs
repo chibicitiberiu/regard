@@ -432,6 +432,16 @@ namespace Regard.Frontend.Shared.Video
             });
         }
 
+        /// <summary>
+        /// Fetch the subtitles a downloaded video is missing, without re-downloading the media. Useful
+        /// for anything downloaded before subtitles were switched on. The server no-ops when the video
+        /// already has every configured language.
+        /// </summary>
+        async Task OnVideoFetchSubtitles(VideoViewModel videoVM)
+        {
+            await Backend.VideoReprocess(new VideoReprocessRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
+        }
+
         async Task OnVideoDeleteFiles(VideoViewModel videoVM)
         {
             await Backend.VideoDeleteFiles(new VideoDeleteFilesRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });

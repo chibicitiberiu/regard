@@ -31,6 +31,7 @@ namespace Regard.Backend.Controllers
         private readonly IVideoDownloaderService videoDownloader;
         private readonly RegardScheduler scheduler;
         private readonly ThumbnailService thumbnailService;
+        private readonly VideoManager videoManager;
 
         public SubscriptionController(UserManager<UserAccount> userManager,
                                       SubscriptionManager subscriptionManager,
@@ -40,8 +41,10 @@ namespace Regard.Backend.Controllers
                                       DataContext dataContext,
                                       IVideoDownloaderService videoDownloader,
                                       RegardScheduler scheduler,
-                                      ThumbnailService thumbnailService)
+                                      ThumbnailService thumbnailService,
+                                      VideoManager videoManager)
         {
+            this.videoManager = videoManager;
             this.userManager = userManager;
             this.subscriptionManager = subscriptionManager;
             this.responseFactory = responseFactory;
@@ -520,6 +523,28 @@ namespace Regard.Backend.Controllers
             }
 
             return Ok(responseFactory.Success());
+        }
+
+        /// <summary>
+        /// Queue a subtitle refetch for every downloaded video in this subscription that is missing one.
+        /// Reports what it queued so the UI can say "3 queued, 8 already complete" rather than nothing.
+        /// </summary>
+        [HttpPost]
+        [Route("reprocess")]
+        [Authorize]
+        public async Task<IActionResult> Reprocess([FromBody] SubscriptionReprocessRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            var sub = subscriptionManager.Get(user, request.SubscriptionId);
+            if (sub == null)
+                return BadRequest(responseFactory.Error("Invalid subscription ID."));
+
+            var (queued, complete) = await videoManager.ReprocessSubscription(user, request.SubscriptionId);
+            return Ok(responseFactory.Success(new SubscriptionReprocessResponse
+            {
+                Queued = queued,
+                AlreadyComplete = complete,
+            }));
         }
 
         [HttpPost]

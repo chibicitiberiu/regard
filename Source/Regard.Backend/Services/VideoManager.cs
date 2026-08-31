@@ -26,13 +26,15 @@ namespace Regard.Backend.Services
         private readonly IOptionManager optionManager;
         private readonly ILogger<VideoManager> log;
         private readonly HostThrottle hostThrottle;
+        private readonly IVideoStorageService videoStorage;
 
         public VideoManager(DataContext dataContext,
                             RegardScheduler scheduler,
                             IProviderManager providerManager,
                             IOptionManager optionManager,
                             ILogger<VideoManager> log,
-                            HostThrottle hostThrottle)
+                            HostThrottle hostThrottle,
+                            IVideoStorageService videoStorage)
         {
             this.dataContext = dataContext;
             this.scheduler = scheduler;
@@ -40,6 +42,7 @@ namespace Regard.Backend.Services
             this.optionManager = optionManager;
             this.log = log;
             this.hostThrottle = hostThrottle;
+            this.videoStorage = videoStorage;
         }
 
         public Video Get(int id)
@@ -259,6 +262,69 @@ namespace Regard.Backend.Services
 
                 await DownloadVideoJob.Schedule(scheduler, video, force);
             }
+        }
+
+        /// <summary>
+        /// Queues a sidecar refetch (subtitles + a metadata refresh from the same extraction) for videos
+        /// the user owns. Videos that aren't downloaded are dropped here rather than queued to no-op.
+        /// </summary>
+        public async Task<int> Reprocess(UserAccount user, int[] videoIds, bool auto = false)
+        {
+            var videos = dataContext.Videos.AsQueryable()
+                .Where(v => videoIds.Contains(v.Id))
+                .Where(v => v.Subscription.UserId == user.Id)
+                .Where(v => v.DownloadedPath != null)
+                .ToList();
+
+            foreach (var video in videos)
+                await ReprocessVideoJob.Schedule(scheduler, video, auto);
+
+            return videos.Count;
+        }
+
+        /// <summary>
+        /// Queues a subtitle refetch for every downloaded video in a subscription that is actually
+        /// missing one. Returns (queued, alreadyComplete).
+        ///
+        /// The "is anything missing?" test reads the disk rather than the database — subtitles are
+        /// discovered from sidecar files, not stored as a column — so this is O(downloaded videos) file
+        /// enumerations, not O(library).
+        /// </summary>
+        public async Task<(int Queued, int AlreadyComplete)> ReprocessSubscription(
+            UserAccount user, int subscriptionId, bool auto = false, int? limit = null)
+        {
+            var downloaded = dataContext.Videos.AsQueryable()
+                .Where(v => v.SubscriptionId == subscriptionId)
+                .Where(v => v.Subscription.UserId == user.Id)
+                .Where(v => v.DownloadedPath != null)
+                .Where(v => !v.SponsorsRemoved)   // freshly-fetched cues wouldn't line up with a cut file
+                .ToList();
+
+            int queued = 0, complete = 0;
+            foreach (var video in downloaded)
+            {
+                var present = (await videoStorage.GetSubtitleFiles(video)).Select(s => s.Lang).ToList();
+                bool needs = SubtitleNeeds.NeedsSubtitles(
+                    present,
+                    optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId),
+                    optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId),
+                    optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId),
+                    optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId));
+
+                if (!needs)
+                {
+                    complete++;
+                    continue;
+                }
+
+                if (limit.HasValue && queued >= limit.Value)
+                    break;
+
+                await ReprocessVideoJob.Schedule(scheduler, video, auto);
+                queued++;
+            }
+
+            return (queued, complete);
         }
 
         /// <summary>

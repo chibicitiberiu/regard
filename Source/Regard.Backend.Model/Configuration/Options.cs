@@ -435,6 +435,44 @@ namespace Regard.Backend.Configuration
         public static readonly OptionDefinition<int> Server_Throttle_PerHostConcurrency = new OptionDefinition<int>(
             1, "server.throttle.per_host_concurrency", "Server:Throttle:PerHostConcurrency", "REGARD_THROTTLE_PER_HOST_CONCURRENCY", 0);
 
+        // --- Background metadata refresh -----------------------------------------------------------
+        // A deliberately small, low-priority trickle. yt-dlp extractions are paced 5-20 s apart per host
+        // and are NOT covered by the throttle's hour/day caps (those count downloads only), so batch size
+        // is the only real control over how much of the budget this spends. It also yields to downloads
+        // and syncs outright — see RefreshMetadataJob. Global/server options.
+
+        /// <summary>Master switch for the periodic metadata refresh. Global/server option.</summary>
+        public static readonly OptionDefinition<bool> Server_MetadataRefresh_Enabled = new OptionDefinition<bool>(
+            true, "server.metadata_refresh.enabled", "Server:MetadataRefresh:Enabled", "REGARD_METADATA_REFRESH_ENABLED", 0);
+
+        /// <summary>How often the refresh job wakes up, in minutes. Global/server option.</summary>
+        public static readonly OptionDefinition<int> Server_MetadataRefresh_IntervalMinutes = new OptionDefinition<int>(
+            60, "server.metadata_refresh.interval_minutes", "Server:MetadataRefresh:IntervalMinutes", "REGARD_METADATA_REFRESH_INTERVAL_MINUTES", 0);
+
+        /// <summary>
+        /// yt-dlp extractions per run. Each costs one paced round-trip and pushes the shared pacing floor
+        /// forward, so keep it small: at 5 a badly-timed run delays a download by under two minutes.
+        /// Global/server option.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_MetadataRefresh_BatchSize = new OptionDefinition<int>(
+            5, "server.metadata_refresh.batch_size", "Server:MetadataRefresh:BatchSize", "REGARD_METADATA_REFRESH_BATCH_SIZE", 0);
+
+        /// <summary>
+        /// Return YouTube Dislike lookups per run. Far cheaper than a yt-dlp extraction (a plain HTTP GET
+        /// against a different host, 100/min allowed), so this can be an order of magnitude larger.
+        /// Global/server option.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_MetadataRefresh_RydBatchSize = new OptionDefinition<int>(
+            50, "server.metadata_refresh.ryd_batch_size", "Server:MetadataRefresh:RydBatchSize", "REGARD_METADATA_REFRESH_RYD_BATCH_SIZE", 0);
+
+        /// <summary>
+        /// Downloaded videos per run to queue a subtitle refetch for. Each becomes a ReprocessVideoJob,
+        /// which competes for the same 3 Quartz workers, so keep it low. 0 disables the sweep.
+        /// Global/server option.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_MetadataRefresh_SubtitleSweepSize = new OptionDefinition<int>(
+            2, "server.metadata_refresh.subtitle_sweep_size", "Server:MetadataRefresh:SubtitleSweepSize", "REGARD_METADATA_REFRESH_SUBTITLE_SWEEP_SIZE", 0);
+
         /// <summary>
         /// Write video description to a .description file.
         /// </summary>

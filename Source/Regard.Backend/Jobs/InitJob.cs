@@ -139,6 +139,15 @@ namespace Regard.Backend.Jobs
             await FetchThumbnailsJob.Schedule(scheduler, DateTimeOffset.Now.AddSeconds(30), TimeSpan.FromMinutes(30));
             await ProcessScheduledDeletionsJob.Schedule(scheduler, DateTimeOffset.Now.AddMinutes(1), TimeSpan.FromMinutes(5));
 
+            // Background metadata refresh. Started well after boot so it never competes with the
+            // restart sweep re-queueing interrupted downloads, and it defers itself whenever a download
+            // or sync is active. The master switch is checked in the job, not here, so toggling the
+            // option takes effect without a restart.
+            int refreshMinutes = Math.Max(5, optionManager.GetGlobal(Configuration.Options.Server_MetadataRefresh_IntervalMinutes));
+            await RefreshMetadataJob.Schedule(scheduler,
+                                              DateTimeOffset.Now.AddMinutes(2),
+                                              TimeSpan.FromMinutes(refreshMinutes));
+
             // Jellyfin watched-sync (opt-in). Guard + validate the cron: RegardScheduler.Schedule
             // re-throws on an invalid/empty cron, which would fail the whole init.
             var jellyfinCron = configuration["Jellyfin:PollSchedule"];

@@ -163,6 +163,7 @@ else
                         @if (item.ApiVideo.IsDownloaded)
                         {
                             <MenuItem Click="() => OnVideoDownloadAgain(item)">Download again</MenuItem>
+                            <MenuItem Click="() => OnVideoFetchSubtitles(item)">Fetch subtitles</MenuItem>
                             <MenuItem Click="() => OnVideoDeleteFiles(item)">Delete downloaded files</MenuItem>
                             @if (item.ApiVideo.DeleteScheduledAt.HasValue)
                             {

@@ -22,6 +22,30 @@ namespace Regard.Common.API.Subscriptions
 
     public class VideoDeleteFilesRequest : VideoSimpleRequest { }
 
+    /// <summary>
+    /// Re-run yt-dlp for an already-downloaded video's missing sidecars (subtitles), without touching
+    /// the media file. Videos that aren't downloaded, or that already have every wanted language, are
+    /// skipped server-side rather than rejected.
+    /// </summary>
+    public class VideoReprocessRequest : VideoSimpleRequest { }
+
+    /// <summary>
+    /// Queue a subtitle refetch for every downloaded video in a subscription that is missing one.
+    /// The server decides which videos qualify; the response reports how many were queued.
+    /// </summary>
+    public class SubscriptionReprocessRequest
+    {
+        public int SubscriptionId { get; set; }
+    }
+
+    public class SubscriptionReprocessResponse
+    {
+        public int Queued { get; set; }
+
+        /// <summary>Downloaded videos that were checked but already had everything they needed.</summary>
+        public int AlreadyComplete { get; set; }
+    }
+
     public class VideoMarkWatchedRequest : VideoSimpleRequest { }
 
     public class VideoMarkNotWatchedRequest : VideoSimpleRequest { }

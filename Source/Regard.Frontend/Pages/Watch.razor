@@ -222,6 +222,15 @@
                     {
                         <button class="watch-btn" @onclick="OnMarkWatched">Mark watched</button>
                     }
+                    @* Offered only when the video is downloaded and has no tracks: with subtitles already
+                       present there is nothing to fetch, and the CC control in the player is the answer. *@
+                    @if (video.IsDownloaded && !HasSubtitles)
+                    {
+                        <button class="watch-btn" @onclick="OnFetchSubtitles" disabled="@subtitleFetchQueued"
+                                title="Download subtitles for this video without re-downloading the video itself">
+                            @(subtitleFetchQueued ? "Fetching…" : "Fetch subtitles")
+                        </button>
+                    }
                     @* Same gating as the grid's context menu: only for a downloaded video, with
                        DeleteScheduledAt choosing which of the pair to offer. No local state flip — the
                        change feed carries DeleteScheduledAt, so the button repaints itself. *@

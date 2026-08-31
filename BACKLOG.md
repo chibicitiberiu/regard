@@ -58,6 +58,41 @@ own stale instance back over it, so failed jobs retried forever and the card alw
 after the fix has RetryCount 2 and state Scheduled, while every pre-fix failure still sits at 3.
 
 
+### The subtitle sweep re-queues a video that has no subtitles at all, forever
+Found by letting Batch 5b's `RefreshMetadataJob` run on shipped defaults: every hourly pass logs
+`queued 2 subtitle fetch(es)` and one of the two is always video 464 (*Yamaha Reface Review - Part 2*),
+whose job completes with `yt-dlp returned no subtitles for this video`.
+
+`SubtitleNeeds.NeedsSubtitles` answers "does this video have the configured languages on disk?", and for
+a video YouTube has no captions for the answer is permanently no. So the sweep spends one throttled
+extraction on it every hour and can never succeed. The other re-queued video (135, still missing `ro`
+after a 429) is the *correct* case — that one should retry, and 136 completed on its own exactly that way.
+
+The distinction to encode is "we asked and there was nothing" versus "we asked and it failed". Options:
+record the last attempt on the video (a column, or reuse the sidecar convention with an empty marker
+file) and apply a backoff; or have `ReprocessVideoJob` write a `.nosubs` sentinel next to the media that
+`NeedsSubtitles` treats as satisfied. Either way the manual action should ignore the marker, so a user
+click still re-checks.
+
+### A members-only video fails its download three times before giving up
+Noticed while testing Batch 5b: videos 187 and 193 (CGP Grey footnote/TL;DW bonus clips) are among the
+45 members-only videos below, and asking to download one produces
+`ERROR: [youtube] …: This video is available to this channel's members on level: … Join this channel…`
+— then retries twice more on the standard 15-minute schedule before failing for good.
+
+yt-dlp says exactly what is wrong, and it is not a transient condition, so the retry is pure waste (and
+three extra requests against the bot gate). `DownloadVideoJob` already sets `Job.RetryCount = 0` for
+other permanent failures such as an invalid video id; recognising the members-only message and doing the
+same would fail it once, clearly. Related: `Video.ProviderAvailability` already carries
+`subscriber_only` during sync, so the download job could refuse before spending a request at all.
+
+**It gets worse across restarts.** `DownloadVideoJob` is `[ResumeAfterRestart]`, so a still-scheduled
+attempt is re-queued on every boot — and with Batch 5b that queued download now legitimately holds the
+throttle's download pressure, which makes `RefreshMetadataJob` stand down. Observed: *"Metadata refresh
+deferred: youtube.com has 0 download(s) in flight and 2 queued"* on a fresh boot, where both queued
+downloads were members-only videos that could never succeed. A permanently-failing download therefore
+starves background maintenance indefinitely. Failing these fast fixes both symptoms at once.
+
 ### 45 of the CGP Grey videos in the library are members-only and can never be downloaded
 Found while testing Batch 5a. CGP Grey's `/videos` tab has 194 entries, **45** of which report
 `availability: subscriber_only`; the library holds all 194, because they were ingested before the

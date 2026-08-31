@@ -219,6 +219,24 @@ namespace Regard.Backend.Services
             }
         }
 
+        /// <summary>
+        /// True when a download on <paramref name="host"/> is running or waiting for a slot.
+        ///
+        /// This is how background maintenance yields to real work. Extractions and downloads share
+        /// <c>NextAllowedUtc</c>, so every extraction pushes the pacing floor forward and makes a queued
+        /// download defer again — a long extraction pass can starve downloads indefinitely without ever
+        /// tripping the hour/day caps, which only count downloads. A low-priority job checks this before
+        /// it starts and between items, and steps aside.
+        /// </summary>
+        public bool HasDownloadPressure(string host)
+        {
+            var st = State(host);
+            lock (st.Sync)
+            {
+                return st.InFlight > 0 || st.Queued.Count > 0;
+            }
+        }
+
         /// <summary>Short in-line pace before a metadata extraction on <paramref name="host"/>.</summary>
         public async Task PaceExtractionAsync(string host, CancellationToken ct = default)
         {

@@ -26,6 +26,9 @@ namespace Regard.Frontend.Shared.Subscription
         private bool loaded = false;
 
         private Dialog moveDialog;
+
+        private Dialog subtitleDialog;
+        private string subtitleResultMessage;
         private string moveItemName = "";
         private int? moveTargetFolderId = null;
         private int? moveExcludeSubtreeRootId = null;
@@ -406,6 +409,29 @@ namespace Regard.Frontend.Shared.Subscription
 
             if (item.Data is SubscriptionViewModel subVm)
                 await SubscriptionManager.Synchronize(subVm.Subscription);
+        }
+
+        /// <summary>
+        /// Queue a subtitle refetch for every downloaded video in this subscription that's missing one.
+        /// The work happens in background jobs, so report the counts — otherwise the action looks inert.
+        /// </summary>
+        protected virtual async Task OnFetchSubtitlesItem(TreeViewNode<SubscriptionItemViewModelBase> item)
+        {
+            if (item.Data is not SubscriptionViewModel subVm)
+                return;
+
+            var result = await SubscriptionManager.FetchMissingSubtitles(subVm.Subscription);
+
+            subtitleResultMessage = result == null
+                ? "Could not queue the subtitle fetch."
+                : result.Queued == 0
+                    ? (result.AlreadyComplete == 0
+                        ? "No downloaded videos in this subscription yet."
+                        : $"All {result.AlreadyComplete} downloaded video(s) already have their subtitles.")
+                    : $"Queued {result.Queued} video(s) for subtitle download"
+                      + (result.AlreadyComplete > 0 ? $"; {result.AlreadyComplete} already had theirs." : ".");
+
+            await subtitleDialog.ShowDialog(_ => Task.CompletedTask);
         }
 
         // --- Move to folder (menu action) ---------------------------------------------------------

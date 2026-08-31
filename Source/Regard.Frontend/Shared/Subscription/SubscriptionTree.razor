@@ -45,6 +45,10 @@
             <MenuItem Click="() => OnEditItem(item)">Edit</MenuItem>
             <MenuItem Click="() => OnMoveItem(item)">Move to folder…</MenuItem>
             <MenuItem Click="() => OnSynchronizeItem(item)">Synchronize</MenuItem>
+            @if (item.Data is SubscriptionViewModel)
+            {
+                <MenuItem Click="() => OnFetchSubtitlesItem(item)">Fetch missing subtitles</MenuItem>
+            }
             <MenuItem Click="() => OnDeleteItem(item)">Delete</MenuItem>
         </Menu>
     </ItemTemplate>
@@ -57,6 +61,16 @@
         <p>Use <Icon Glyph="Icons.Add" /> above to add your first one.</p>
     </div>
 }
+
+@* Reports what the bulk subtitle fetch actually queued. Without it the action looks like it did
+   nothing, since the work happens in background jobs. *@
+<Dialog @ref="subtitleDialog"
+        PrimaryButtonCaption="OK"
+        Caption="Fetch missing subtitles">
+    <div class="form-group">
+        @subtitleResultMessage
+    </div>
+</Dialog>
 
 <Dialog @ref="deleteDialog"
         PrimaryButtonCaption="Delete"
