@@ -2,28 +2,53 @@
 
 @* Per-category SponsorBlock action table. Two-way binds a "category:action" CSV string (the
    Sponsorblock_Actions option). YouTube-only feature. Keep = ignore, Chapter = mark (non-destructive),
-   Remove = cut from the file (destructive; yt-dlp re-times subtitles). *@
+   Remove = cut from the file (destructive; yt-dlp re-times subtitles), Skip = jump it in the player.
+
+   The option ships with a non-empty default ("sponsor:skip"), which makes empty mean "unset, use the
+   default" rather than "off". So an all-Keep table serializes to the literal "none" sentinel, and
+   AllowInherit adds the extra control the subscription page needs to get back to a genuinely unset
+   value. *@
 
 <div class="sponsorblock-editor">
-    @foreach (var cat in SponsorBlockActions.Categories)
+    @if (AllowInherit)
     {
-        <div class="form-group row sb-row" @key="cat">
-            <label class="col-xs-6 col-form-label">@SponsorBlockActions.Labels[cat]</label>
+        <div class="form-group row sb-row">
+            <label class="col-xs-6 col-form-label">Settings:</label>
             <div class="col-xs-6">
-                <select class="form-control" @onchange="e => SetAction(cat, e.Value?.ToString())">
-                    <option value="Keep" selected="@(GetAction(cat) == "Keep")">Keep</option>
-                    <option value="Chapter" selected="@(GetAction(cat) == "Chapter")">Chapter</option>
-                    <option value="Remove" selected="@(GetAction(cat) == "Remove")">Remove</option>
-                    <option value="Skip" selected="@(GetAction(cat) == "Skip")">Skip in player</option>
+                <select class="form-control" @onchange="OnInheritChanged">
+                    <option value="inherit" selected="@IsInherited">Inherit</option>
+                    <option value="custom" selected="@(!IsInherited)">Custom</option>
                 </select>
             </div>
         </div>
     }
-    <p class="text-muted sb-help">
-        <strong>Chapter</strong> marks the segment (non-destructive). <strong>Remove</strong> cuts it from
-        the downloaded file (subtitles are re-timed to match). <strong>Skip in player</strong> jumps past it
-        during playback, leaving the file untouched. YouTube only.
-    </p>
+    @if (!AllowInherit || !IsInherited)
+    {
+        @foreach (var cat in SponsorBlockActions.Categories)
+        {
+            <div class="form-group row sb-row" @key="cat">
+                <label class="col-xs-6 col-form-label">@SponsorBlockActions.Labels[cat]</label>
+                <div class="col-xs-6">
+                    <select class="form-control" @onchange="e => SetAction(cat, e.Value?.ToString())">
+                        <option value="Keep" selected="@(GetAction(cat) == "Keep")">Keep</option>
+                        <option value="Chapter" selected="@(GetAction(cat) == "Chapter")">Chapter</option>
+                        <option value="Remove" selected="@(GetAction(cat) == "Remove")">Remove</option>
+                        <option value="Skip" selected="@(GetAction(cat) == "Skip")">Skip in player</option>
+                    </select>
+                </div>
+            </div>
+        }
+        <p class="text-muted sb-help">
+            <strong>Chapter</strong> marks the segment (non-destructive). <strong>Remove</strong> cuts it from
+            the downloaded file (subtitles are re-timed to match). <strong>Skip in player</strong> jumps past it
+            during playback, leaving the file untouched. YouTube only.
+        </p>
+        <p class="text-muted sb-help">
+            Ships as <strong>Sponsor: Skip in player</strong>, which is SponsorBlock's own default.
+            Whatever you set here is the starting state on the watch page, where any segment can be
+            turned on or off for a single video.
+        </p>
+    }
     @if (SponsorBlockActions.HasRemoveSkipConflict(Value ?? ""))
     {
         <p class="fg-error sb-conflict">
@@ -37,7 +62,16 @@
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
+    /// <summary>
+    /// Offers an "Inherit" state that stores nothing, so the value falls through to the level above
+    /// (subscription -> folder -> user -> shipped default). Used on the subscription page; the user
+    /// settings page has nothing above it to inherit from.
+    /// </summary>
+    [Parameter] public bool AllowInherit { get; set; }
+
     private Dictionary<string, SbAction> map = new();
+
+    private bool IsInherited => string.IsNullOrWhiteSpace(Value);
 
     protected override void OnParametersSet()
     {
@@ -54,6 +88,24 @@
             map.Remove(cat);
 
         Value = SponsorBlockActions.Serialize(map);
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    // Switching to Custom seeds the table with whatever is currently in effect rather than a blank
+    // all-Keep grid, so "Custom" starts from what you were already getting.
+    private async Task OnInheritChanged(ChangeEventArgs e)
+    {
+        if (e.Value?.ToString() == "inherit")
+        {
+            map.Clear();
+            Value = null;
+        }
+        else
+        {
+            map = SponsorBlockActions.Parse(SponsorBlockActions.DefaultActions);
+            Value = SponsorBlockActions.Serialize(map);
+        }
+
         await ValueChanged.InvokeAsync(Value);
     }
 }

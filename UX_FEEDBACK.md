@@ -119,6 +119,9 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
   radius both improve. Affects the Phase-A cookies design._
 - `[x]` **[M] SponsorBlock: skip by default in the player.** Use SponsorBlock's own default
   categories to skip, not "keep everything". _Player-side skipping using stored segments._
+  **Done (Batch 5d).** Their real default turned out to be narrower than it looks: of the eight
+  categories Regard models, only `sponsor` auto-skips. So `Sponsorblock_Actions` ships as
+  `sponsor:skip`, and everything else is one checkbox away on the watch page.
 - `[x]` **[L] Include Shorts / include member-only videos** — user default + per-subscription
   override, both **off** by default. Member videos need login cookies. **Done (Batch 5a).** Both are
   decided during sync, so an excluded video is never stored; turning an option back on picks the
@@ -265,6 +268,37 @@ fetched", so it doubles as the staleness clock. Notes worth keeping:
   labels — they come from the `<track label>` attribute — and the language is still remembered, because
   that hangs off the tracks' `change` event rather than the button. Note this varies by browser build:
   Playwright's Chromium still files captions in the `⋮` menu at every width tested.
+
+**Batch 5d — SponsorBlock defaults and the player panel (2026-08-31, done)**
+- **The shipped default is `sponsor:skip`.** SponsorBlock's own `categorySelections` default is
+  `sponsor` AutoSkip, `poi_highlight` ManualSkip, `exclusive_access`/`chapter` ShowOverlay — everything
+  else (self-promo, interaction, intro, outro, preview, filler, non-music) is off. Regard models
+  neither the manual-jump nor the overlay action, so only `sponsor` carries over.
+- **A non-empty default needs a "none" sentinel.** Empty means "unset, inherit" in the option store, so
+  the moment the default stopped being empty, an all-Keep table could no longer express "off" — it
+  unset the row and the default came straight back. `SponsorBlockActions.Serialize` now emits the
+  literal `none` for an empty map; `Parse` reads it as nothing enabled. This also cost the subscription
+  page its old implicit "all Keep = inherit", so `SponsorBlockEditor` gained an `AllowInherit`
+  Inherit/Custom control (Custom seeds from what was already in effect, not a blank grid).
+- **The watch fetch now asks for every modelled category**, not just the configured ones, and stamps
+  each segment with `Skip`. Same single request, and it is what makes the panel's unticked rows
+  possible. Still gated on at least one configured skip category, so with SponsorBlock off the server
+  never contacts sponsor.ajay.app — the privacy behaviour it had before.
+- **The panel sits under Chapters and reuses its markup**: `<timestamp> <category> <length> [x]`.
+  Clicking a row seeks to the segment start, and unticks it first if it was armed — otherwise the seek
+  lands inside an armed segment and is instantly undone. Ticks are per-playback; a reload is back to
+  the configured defaults.
+- **Undo is a toast over the player**, 5 s, accumulating (a run of adjacent skips is one interruption
+  and one Undo). The ordering matters: disarm the segments, re-arm the player, *then* seek. Seeking
+  first bounces the playhead straight back out.
+- **Fullscreen needed a hand-off.** A plain `<video controls>` fullscreens the video element, and a
+  fullscreened element hides its siblings — so the toast would disappear exactly when it is most
+  wanted. `RegardHelpers.addFullscreenPromotion` catches that and moves fullscreen to `.watch-player`.
+  Verified: the wrapper is the fullscreen element, the video still fills it, and Undo works from
+  fullscreen. Note Escape can't be tested — exiting on Escape is browser chrome, not a DOM event.
+- **Timing gotcha for tests:** the stream is served over range requests, so a seek's `seeked` (and the
+  `timeupdate` the skip rides on) can be several seconds late. Assert on the toast appearing, never on
+  a fixed sleep.
 
 **Batch 6 — Ops & maintenance**
 - H: server log page

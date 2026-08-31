@@ -148,8 +148,17 @@ namespace Regard.Backend.Controllers
             }
 
             // SponsorBlock in-player skip: only for the single-video watch fetch, only for a YouTube video
-            // whose subscription has a "skip" category and whose file wasn't cut at download time (else the
-            // original-timeline segments wouldn't align). Fetched live so it reflects the current config.
+            // whose file wasn't cut at download time (else the original-timeline segments wouldn't align).
+            // Fetched live so it reflects the current config.
+            //
+            // We ask for every category Regard models, not just the configured ones, so the watch page can
+            // list an intro or an outro the viewer can tick on for this video alone. It costs the same one
+            // request either way. The configured "skip" categories come back with Skip=true and are the
+            // only ones the player acts on by itself.
+            //
+            // Still gated on at least one configured skip category: with SponsorBlock turned off entirely
+            // the server makes no request to sponsor.ajay.app at all, which is the privacy behaviour this
+            // had before the segment list existed.
             if (request.Ids?.Length == 1 && apiVideos.Count == 1 && !apiVideos[0].SponsorsRemoved
                 && VideoEmbedHelper.IsYouTube(videos[0]))
             {
@@ -157,7 +166,13 @@ namespace Regard.Backend.Controllers
                     optionManager.GetForSubscription(Options.Sponsorblock_Actions, videos[0].SubscriptionId),
                     SbAction.Skip);
                 if (skipCats.Count > 0)
-                    apiVideos[0].SponsorSegments = await sponsorBlockClient.GetSkipSegments(videos[0].VideoId, skipCats);
+                {
+                    var segments = await sponsorBlockClient.GetSkipSegments(
+                        videos[0].VideoId, SponsorBlockActions.Categories);
+                    foreach (var segment in segments)
+                        segment.Skip = skipCats.Contains(segment.Category);
+                    apiVideos[0].SponsorSegments = segments.OrderBy(s => s.Start).ToList();
+                }
             }
 
             // Chapters: original-timeline chapters for the single-video watch fetch, deserialized from the

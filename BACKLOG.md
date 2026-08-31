@@ -128,6 +128,22 @@ from every extraction. Fixing it means installing deno (host: the user's call; i
 line), and it should land alongside the `--impersonate` work since both are anti-bot/extraction
 quality. Verified on 2026-08-30 with yt-dlp 2026.8.19.
 
+### SponsorBlock settings are missing from the folder page (2026-08-31)
+
+`Options.Sponsorblock_Actions` carries `OptionFlags.SubscriptionFolder`, and the resolver walks the
+folder level, but `Pages/FolderEdit.razor` has no SponsorBlock field — so the middle level of the
+inheritance chain can only be set through the DB. Same shape as the user/subscription pages: drop in
+`<SponsorBlockEditor AllowInherit="true" />` plus the DTO field and the controller set/unset pair. Worth
+checking whether other folder-capable options have the same gap before doing it one at a time.
+
+### The watch page re-fetches SponsorBlock on every load (2026-08-31)
+
+`VideoController.List` calls sponsor.ajay.app on each single-video fetch, with no caching, so opening
+the same video five times is five requests. Fine at personal scale and deliberately live (the config
+can change between loads), but a short in-memory cache keyed on video id would be cheap if it ever
+matters. Note the segments must **not** be persisted on `Video`: the whole point of the
+`SponsorSegmentsRemoved` snapshot is that this data legitimately moves.
+
 ## Known issues found during the live-update rework (2026-08-30), deliberately out of scope
 
 - **DbContexts don't take `DbContextOptions`.** `DataContext(IConfiguration)` chains to the parameterless

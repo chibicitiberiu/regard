@@ -35,6 +35,77 @@
     margin: 0;
 }
 
+/* Fullscreen is handed to this wrapper rather than the <video> (RegardHelpers.addFullscreenPromotion),
+   so the video has to be told to fill it — a 16:9 box in a 16:10 screen would otherwise letterbox
+   itself twice. Overlays inside then position against the whole screen. */
+.watch-player:fullscreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0;
+
+    .video-js {
+        width: 100% !important;
+        height: 100% !important;
+        aspect-ratio: auto;
+        object-fit: contain;
+    }
+}
+
+/* "Skipped N sections · Undo", over the bottom-left of the player. Clear of the native control bar so
+   it doesn't cover the scrubber, and out of the way of the centre of the picture. */
+.watch-skip-toast {
+    position: absolute;
+    left: 1rem;
+    bottom: 4rem;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: calc(100% - 2rem);
+    padding: 0.5rem 0.6rem 0.5rem 0.85rem;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.82);
+    color: #fff;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.watch-skip-toast-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    .text-muted {
+        color: rgba(255, 255, 255, 0.65);
+    }
+}
+
+/* Nested under .watch-skip-toast on purpose: the base `button:hover` in _controls.scss is
+   `button:hover:not(:disabled)`, whose specificity beats a lone `.watch-skip-undo:hover`, so a
+   flat rule here would be overridden and the button would take the base's inverted chip styling
+   over a dark toast. The descendant selector outweighs it. */
+.watch-skip-toast .watch-skip-undo {
+    flex: 0 0 auto;
+    background: none;
+    border: none;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        box-shadow: none;
+    }
+}
+
 .watch-embed {
     position: relative;
     width: 100%;
@@ -389,8 +460,15 @@ video::cue {
     cursor: pointer;
     font-size: 0.85rem;
 
+    // The base `button:hover` in _controls.scss repaints the whole button — it sets
+    // `color: var(--color-bg-secondary)` and a glow, on the assumption of a solid chip-shaped
+    // button. This is a flat list row, and it tints its background with that same variable, so
+    // inheriting that colour rule made the label exactly the colour of its own background and the
+    // row's text vanished on hover. Both properties have to be restated, not just the background.
     &:hover:not([disabled]) {
         background: var(--color-bg-secondary);
+        color: inherit;
+        box-shadow: none;
     }
 
     &[disabled] {
@@ -398,7 +476,8 @@ video::cue {
     }
 }
 
-.watch-chapter.active .watch-chapter-btn {
+.watch-chapter.active .watch-chapter-btn,
+.watch-chapter.active .watch-chapter-btn:hover:not([disabled]) {
     background: var(--color-bg-primary);
     color: #fff;
 }
@@ -419,6 +498,51 @@ video::cue {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* SponsorBlock panel — the chapter list with a checkbox column, so the row keeps its own click-to-seek
+   button and the tick stays a separate target. */
+.watch-segments {
+    .watch-segment {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .watch-chapter-btn {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+}
+
+.watch-segment-length {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    color: var(--color-fg-secondary);
+}
+
+.watch-segment.active .watch-segment-length {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.watch-segment-toggle {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0 0.2rem;
+    cursor: pointer;
+
+    input {
+        cursor: pointer;
+        margin: 0;
+    }
+}
+
+.watch-sponsorblock {
+    font-size: 0.75rem;
+    margin: 0.5rem 0 0;
 }
 
 @media (max-width: 60rem) {

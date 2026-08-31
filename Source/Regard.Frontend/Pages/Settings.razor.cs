@@ -226,7 +226,10 @@ namespace Regard.Frontend.Pages
             SubFormatStr = s.SubFormat ?? string.Empty;
 
             DownloadPath = s.DownloadPath ?? string.Empty;
-            SponsorblockActions = s.SponsorblockActions ?? string.Empty;
+            // Nothing stored means the shipped default is in force, so show that rather than an all-Keep
+            // table claiming SponsorBlock is off when it isn't.
+            SponsorblockActions = s.SponsorblockActions
+                ?? Regard.Common.SponsorBlock.SponsorBlockActions.DefaultActions;
             CookiesConfigured = s.CookiesConfigured;
             cookiesFileContent = null;
             cookiesNote = string.Empty;

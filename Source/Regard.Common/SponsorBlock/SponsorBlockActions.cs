@@ -26,6 +26,26 @@ namespace Regard.Common.SponsorBlock
             "sponsor", "selfpromo", "interaction", "intro", "outro", "preview", "filler", "music_offtopic",
         };
 
+        /// <summary>
+        /// What Regard ships with. This is SponsorBlock's own shipped default, which is narrower than
+        /// people tend to assume: of the categories Regard models, only "sponsor" auto-skips. The rest
+        /// (self-promo, interaction reminders, intro, outro, preview, filler, non-music) are off in the
+        /// extension too, and stay one checkbox away on the watch page.
+        ///
+        /// The extension additionally defaults poi_highlight to a manual jump and exclusive_access to an
+        /// overlay; Regard models neither action, so neither category appears here.
+        /// </summary>
+        public const string DefaultActions = "sponsor:skip";
+
+        /// <summary>
+        /// Stored value meaning "explicitly nothing", as opposed to unset. Needed because the option now
+        /// has a non-empty default: an empty/null value unsets the row and falls back to
+        /// <see cref="DefaultActions"/>, so without this sentinel a user could never turn SponsorBlock
+        /// off. <see cref="Parse"/> reads it as an empty map (no ':' in it, so it simply parses to
+        /// nothing) and <see cref="Serialize"/> emits it for an all-Keep map.
+        /// </summary>
+        public const string None = "none";
+
         /// <summary>Human labels for the UI, keyed by category.</summary>
         public static readonly IReadOnlyDictionary<string, string> Labels = new Dictionary<string, string>
         {
@@ -64,9 +84,11 @@ namespace Regard.Common.SponsorBlock
             if (map == null)
                 return "";
             // Emit in canonical category order, skipping Keep, so the stored string is stable.
-            return string.Join(",", Categories
+            var csv = string.Join(",", Categories
                 .Where(c => map.TryGetValue(c, out var a) && a != SbAction.Keep)
                 .Select(c => $"{c}:{map[c].ToString().ToLowerInvariant()}"));
+            // An all-Keep map is a deliberate "off", not "unset" — see None.
+            return csv.Length == 0 ? None : csv;
         }
 
         public static List<string> CategoriesWith(string csv, SbAction action)

@@ -128,14 +128,19 @@
     },
 
     // --- SponsorBlock in-player skip ---------------------------------------------------------
-    // Jumps the playhead past any SponsorBlock segment it enters (segments are [{start,end}] seconds
-    // on the original timeline). Only wired for files that were NOT cut at download time.
+    // Jumps the playhead past any SponsorBlock segment it enters. Segments are
+    // [{index,start,end,category}] seconds on the original timeline, and the list holds only the ones
+    // currently enabled — the watch page re-sends it whenever a checkbox moves, so turning a segment
+    // off here is just a shorter array. Only wired for files that were NOT cut at download time.
+    //
+    // "index" is the segment's position in the full list the page rendered, which is what comes back on
+    // the skip callback so the page knows which row to point the "Undo" at.
 
     skipSegmentHandlers: [],
 
-    addSkipSegmentsHandler: function (videoElement, segments) {
+    addSkipSegmentsHandler: function (videoElement, segments, dotNetObjectRef) {
         this.removeSkipSegmentsHandler(videoElement);
-        if (!segments || !segments.length)
+        if (!(videoElement instanceof Node) || !segments || !segments.length)
             return;
 
         var handler = { element: videoElement, segments: segments, listener: null };
@@ -146,6 +151,13 @@
                 // epsilon so we don't re-trigger right at the end / fight a manual seek to the start
                 if (t >= s.start && t < s.end - 0.3) {
                     videoElement.currentTime = s.end;
+                    if (dotNetObjectRef) {
+                        // Best-effort: the ref is dead once the page navigates away mid-skip.
+                        try {
+                            dotNetObjectRef.invokeMethodAsync(
+                                "OnSegmentSkipped", s.index, s.start, s.end, s.category || "");
+                        } catch (e) { /* disposed */ }
+                    }
                     break;
                 }
             }
@@ -164,6 +176,63 @@
                 if (h.listener)
                     h.element.removeEventListener("timeupdate", h.listener);
                 this.skipSegmentHandlers.splice(i, 1);
+            }
+        }
+    },
+
+    // --- Fullscreen promotion -----------------------------------------------------------------
+    // A plain <video controls> fullscreens the video ELEMENT, and a fullscreened element hides every
+    // sibling in the document — including the skip toast, which is the one moment you most want an
+    // "Undo" button. So when the browser puts the <video> itself fullscreen, hand fullscreen straight
+    // over to its wrapper: the video still fills the screen, and anything positioned over the wrapper
+    // now comes with it.
+    //
+    // requestFullscreen needs transient user activation. The click that opened fullscreen a few
+    // milliseconds ago still counts, so the hand-off normally goes through; if it doesn't, the browser
+    // simply stays as it was and the only loss is the toast while fullscreen.
+
+    fullscreenPromotions: [],
+
+    addFullscreenPromotion: function (videoSelector, wrapperSelector) {
+        this.removeFullscreenPromotion(wrapperSelector);
+
+        var entry = { wrapperSelector: wrapperSelector, listener: null };
+        var busy = false;
+
+        entry.listener = function () {
+            var current = document.fullscreenElement || document.webkitFullscreenElement;
+            var video = document.querySelector(videoSelector);
+            var wrapper = document.querySelector(wrapperSelector);
+            if (busy || !video || !wrapper || current !== video)
+                return;
+
+            busy = true;
+            var done = function () { busy = false; };
+            try {
+                var exit = document.exitFullscreen();
+                if (exit && exit.then) {
+                    exit.then(function () {
+                        var req = wrapper.requestFullscreen();
+                        if (req && req.then) req.then(done, done); else done();
+                    }, done);
+                } else {
+                    done();
+                }
+            } catch (e) {
+                done();
+            }
+        };
+
+        document.addEventListener("fullscreenchange", entry.listener);
+        this.fullscreenPromotions.push(entry);
+    },
+
+    removeFullscreenPromotion: function (wrapperSelector) {
+        for (var i = this.fullscreenPromotions.length - 1; i >= 0; i--) {
+            var e = this.fullscreenPromotions[i];
+            if (e.wrapperSelector === wrapperSelector) {
+                document.removeEventListener("fullscreenchange", e.listener);
+                this.fullscreenPromotions.splice(i, 1);
             }
         }
     },

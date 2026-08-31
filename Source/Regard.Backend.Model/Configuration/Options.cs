@@ -682,9 +682,13 @@ namespace Regard.Backend.Configuration
         /// "remove" are applied by yt-dlp at download time; "skip" is applied non-destructively in the
         /// player. Remove and Skip are mutually exclusive (Remove cuts the file, which would misalign the
         /// player-side Skip timestamps). See Regard.Common.SponsorBlock.SponsorBlockActions.
+        ///
+        /// Defaults to SponsorBlockActions.DefaultActions ("sponsor:skip"), matching the extension's own
+        /// shipped default. Because that default is non-empty, an empty/null value means "unset, inherit
+        /// the default" — "off" has to be stored as the literal "none" sentinel instead.
         /// </summary>
         public static readonly OptionDefinition<string> Sponsorblock_Actions = new OptionDefinition<string>(
-            "",
+            Regard.Common.SponsorBlock.SponsorBlockActions.DefaultActions,
             "sponsorblock.actions",
             "Sponsorblock:Actions",
             null,

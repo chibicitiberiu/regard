@@ -60,8 +60,22 @@ namespace Regard.Frontend.Shared.Controls
 
         [Parameter] public EventCallback WatchedThresholdReached { get; set; }
 
-        /// <summary>SponsorBlock segments to skip during playback (original-timeline seconds). Null = none.</summary>
+        /// <summary>
+        /// Every SponsorBlock segment known for this video (original-timeline seconds), not only the ones
+        /// being skipped — the player acts on the entries whose <c>Skip</c> is true and ignores the rest.
+        /// Null = none.
+        ///
+        /// The caller may flip <c>Skip</c> on a segment mid-playback (the watch page's per-segment
+        /// checkboxes do) and then call <see cref="RefreshSkipSegments"/>; positions in this list are the
+        /// indices reported back by <see cref="SegmentSkipped"/>, so the list itself must stay stable.
+        /// </summary>
         [Parameter] public IReadOnlyList<Regard.Common.API.Model.ApiSponsorSegment> SkipSegments { get; set; }
+
+        /// <summary>
+        /// Raised each time the player jumps over a segment, with its index in <see cref="SkipSegments"/>.
+        /// The watch page uses it to offer an undo.
+        /// </summary>
+        [Parameter] public EventCallback<int> SegmentSkipped { get; set; }
 
         /// <summary>Raised (throttled, ~5 s) with the current playback position in seconds, plus once on
         /// pause/ended and on dispose. Setting a delegate enables position reporting.</summary>
@@ -82,7 +96,7 @@ namespace Regard.Frontend.Shared.Controls
 
             // One DotNetObjectReference shared by every JS handler that calls back into this component,
             // so position reporting works even when the watched-threshold handler isn't wired.
-            if (needWatchProgress || needPositionReport)
+            if (needWatchProgress || needPositionReport || SegmentSkipped.HasDelegate)
                 selfRef = DotNetObjectReference.Create(this);
 
             if (needWatchProgress)
@@ -100,18 +114,48 @@ namespace Regard.Frontend.Shared.Controls
             if (StartPosition > 0)
                 await JS.InvokeVoidAsync("RegardHelpers.seekOnLoad", videoElement, StartPosition);
 
-            if (SkipSegments != null && SkipSegments.Count > 0)
+            await RefreshSkipSegments();
+        }
+
+        /// <summary>
+        /// Re-sends the currently enabled segments to the player. Call after flipping <c>Skip</c> on any
+        /// entry of <see cref="SkipSegments"/>; the JS side replaces its handler wholesale, so an
+        /// empty result simply means nothing is skipped any more.
+        /// </summary>
+        public async Task RefreshSkipSegments()
+        {
+            var enabled = (SkipSegments ?? Array.Empty<Regard.Common.API.Model.ApiSponsorSegment>())
+                .Select((s, i) => new { index = i, start = s.Start, end = s.End, category = s.Category, s.Skip })
+                .Where(s => s.Skip)
+                .Select(s => new { s.index, s.start, s.end, s.category })
+                .ToArray();
+
+            try
             {
-                var segs = SkipSegments.Select(s => new { start = s.Start, end = s.End }).ToArray();
-                await JS.InvokeVoidAsync("RegardHelpers.addSkipSegmentsHandler", videoElement, segs);
-                skipSegmentsRegistered = true;
+                if (enabled.Length > 0)
+                {
+                    await JS.InvokeVoidAsync("RegardHelpers.addSkipSegmentsHandler", videoElement, enabled, selfRef);
+                    skipSegmentsRegistered = true;
+                }
+                else if (skipSegmentsRegistered)
+                {
+                    await JS.InvokeVoidAsync("RegardHelpers.removeSkipSegmentsHandler", videoElement);
+                    skipSegmentsRegistered = false;
+                }
             }
+            catch (Exception) { /* player/JS not ready */ }
         }
 
         [JSInvokable]
         public async Task OnWatchThresholdReached()
         {
             await WatchedThresholdReached.InvokeAsync(null);
+        }
+
+        [JSInvokable]
+        public async Task OnSegmentSkipped(int index, double start, double end, string category)
+        {
+            await SegmentSkipped.InvokeAsync(index);
         }
 
         /// <summary>Seek the underlying player to an absolute time (seconds). Used by chapter clicks.</summary>

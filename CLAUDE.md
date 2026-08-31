@@ -80,10 +80,39 @@ Back up `.dev/data/Regard.db` (timestamped copy) before a migration or any bulk 
   required — verify with an actual write first. `pragma integrity_check` returned `ok` both times and no
   rows were lost.
 
+  **It also comes as `SQLite Error 11: 'database disk image is malformed'`** — same conditions, same
+  outcome, scarier wording. Third occurrence on 2026-08-31, again at 92% used / 19 GB free, again during
+  concurrent job activity. Eight errors in a burst, every request 500ing afterwards until a restart, and
+  the message names the one thing that was *not* wrong: `integrity_check` **and** `quick_check` both
+  returned `ok`, all 508 videos / 4 subs / 1 user present, no kernel I/O or ext4 errors in `dmesg` or
+  `journalctl -k`, inodes 15% used. **Do not act on the word "malformed" — check integrity first, then
+  restart.** A restore from backup would have been destructive here for no reason.
+
 ## Frontend / styling
 
 **Edit only `.scss`.** `style.css` (+ `.map`) is generated and gitignored; `AspNetCore.SassCompiler`
 recompiles it on build. Source of truth is `wwwroot/css/style.scss` and `wwwroot/css/lib/_*.scss`.
+
+**Every `<button>` is styled as a solid chip, and its hover inverts the text.** `_controls.scss:76`
+matches bare `button`, and `button:hover:not(:disabled)` sets `color: var(--color-bg-secondary)`,
+`background: var(--color-fg-secondary)` and a glow. Two consequences for any button that isn't a chip
+(list rows, icon buttons, anything overlaying the player):
+
+- **Restate `color` and `box-shadow`, not just `background`.** A rule that only sets the hover
+  background inherits the base rule's inverted text. Where the element tints itself with
+  `--color-bg-secondary` — which the chapter and SponsorBlock rows do — the label becomes exactly the
+  colour of its own background and *vanishes on hover*. That shipped unnoticed in the chapters list
+  from Batch 4b until 2026-08-31.
+- **Watch the specificity.** `button:hover:not(:disabled)` is **(0,2,1)**, so a plain
+  `.my-button:hover` at (0,2,0) **loses** and your whole hover rule is silently discarded. Needs a
+  second class, a descendant selector, or an attribute `:not()` to outweigh it —
+  `.watch-chapter-btn:hover:not([disabled])` is (0,3,0) and wins.
+
+Known still-affected: `.watch-btn:hover` (`_watch.scss`) is (0,2,0), so the action-button row's intended
+`--color-bg-hover` never applies and it takes the inverted chip instead. Legible, so left alone.
+
+Assert hover legibility on a **computed contrast ratio**, never on a colour literal — the palette is
+themed and a literal locks in one theme while letting the bug back in on another.
 
 ## Testing (how I like it verified)
 
@@ -211,6 +240,31 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
   the bytes on disk; for a cut video the snapshot is the only correct version. It is also the missing
   piece that would let subtitles, `Chapters` and description timestamps be mapped onto a cut file —
   all three are disabled for cut videos today precisely because this was never recorded.
+- **`Sponsorblock_Actions` ships non-empty, so "off" is the literal `none`** (Batch 5d). The default is
+  `sponsor:skip` — SponsorBlock's own shipped default, which is narrower than people expect (their
+  `categorySelections` is sponsor AutoSkip, poi_highlight ManualSkip, exclusive_access/chapter
+  ShowOverlay; every other category is off). An empty/null option value means *unset* and resolves back
+  to that default, so `SponsorBlockActions.Serialize` emits `none` for an all-Keep map — otherwise
+  turning everything off in the UI silently re-enables the default. Subscription-level inherit is
+  therefore no longer expressible as "all Keep" and needs `SponsorBlockEditor AllowInherit="true"`.
+- **The watch page fetches every SponsorBlock category, not just the configured ones** (Batch 5d), and
+  marks each `ApiSponsorSegment.Skip` from the config. That's what lets the segment panel offer an intro
+  or outro to skip for one video without touching settings. One request either way. It is still gated
+  on at least one configured skip category, so a user who turns SponsorBlock off generates no traffic to
+  sponsor.ajay.app at all.
+  - `Skip` is *mutable on the client*: the panel's checkboxes flip it and call
+    `Video.RefreshSkipSegments()`, which re-arms the JS handler with the enabled subset. Indices into
+    `ApiVideo.SponsorSegments` are the identity used by the skip callback, so that list must stay stable.
+  - **Order of operations for Undo — disarm, re-arm, then seek.** Seeking back into a segment that is
+    still armed is instantly undone by the next `timeupdate`.
+  - **A fullscreened `<video>` hides its siblings**, so any overlay of ours dies in fullscreen.
+    `RegardHelpers.addFullscreenPromotion` watches `fullscreenchange`, and when the browser fullscreens
+    the video element it hands fullscreen to `.watch-player` instead. Needs transient activation, which
+    the click that opened fullscreen still provides; if it fails, you just get the old behaviour.
+  - **Testing: never assert a skip on a fixed sleep.** The stream is served over range requests, so a
+    seek's `seeked` — and the `timeupdate` the skip rides on — can land seconds later. Wait for the
+    toast. Escape can't be tested either: exiting fullscreen on Escape is browser chrome, not a DOM
+    event, so use `document.exitFullscreen()`.
 - **Background metadata refresh is the lowest-priority thing in the system** (Batch 5b).
   `RefreshMetadataJob` stands down whenever `HostThrottle.HasDownloadPressure` reports a download in
   flight or queued, or a `SynchronizeJob` row is `Running` — checked in `ShouldDefer` and again between

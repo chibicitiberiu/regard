@@ -22,6 +22,7 @@
                            WatchedThresholdReached="OnMarkWatchedFromPlayback"
                            Ended="OnMarkWatchedFromPlayback"
                            SkipSegments="video.SponsorSegments"
+                           SegmentSkipped="OnSegmentSkipped"
                            PositionChanged="OnPositionReport"
                            StartPosition="@ResumeFromSeconds"
                            Error="e => OnStreamError()">
@@ -54,13 +55,18 @@
                        away. The native one lists our labels ("English (auto-generated)") because they
                        come from the <track label> attribute, and the tracks' change event still feeds
                        the remembered-language preference, so nothing was lost by dropping it. *@
-                    @if (video.SponsorSegments != null && video.SponsorSegments.Count > 0)
+                    @* Undo affordance for an automatic skip. Lives inside .watch-player so it sits over
+                       the video, and survives fullscreen because RegardHelpers hands fullscreen to
+                       .watch-player rather than letting the browser take the <video> element alone. *@
+                    @if (skipToast != null)
                     {
-                        <p class="watch-sponsorblock text-muted">
-                            Skipping @video.SponsorSegments.Count SponsorBlock
-                            segment@(video.SponsorSegments.Count == 1 ? "" : "s") &middot;
-                            <a href="https://sponsor.ajay.app" target="_blank" rel="noopener noreferrer">SponsorBlock</a>
-                        </p>
+                        <div class="watch-skip-toast" role="status">
+                            <span class="watch-skip-toast-text">
+                                Skipped @skipToast.Count section@(skipToast.Count == 1 ? "" : "s")
+                                <span class="text-muted">(@skipToast.Label)</span>
+                            </span>
+                            <button type="button" class="watch-skip-undo" @onclick="OnUndoSkip">Undo</button>
+                        </div>
                     }
                 }
                 else if (video.EmbedUrl != null)
@@ -281,6 +287,46 @@
                                 </li>
                             }
                         </ol>
+                    </details>
+                </div>
+            }
+            @* SponsorBlock segments, in the same shape as the chapter list directly above. Every category
+               Regard models is listed, not only the ones set to skip, so an intro or an outro can be
+               turned on for this video without a detour through settings. Ticks are for this playback
+               only — reload and the configured defaults are back. *@
+            @if (HasSponsorSegments)
+            {
+                <div class="watch-chapters watch-segments">
+                    <details open>
+                        <summary>
+                            SponsorBlock <span class="text-muted">(@SkippedSegmentCount of @video.SponsorSegments.Count)</span>
+                        </summary>
+                        <ol class="watch-chapter-list">
+                            @for (int i = 0; i < video.SponsorSegments.Count; i++)
+                            {
+                                var idx = i;
+                                var seg = video.SponsorSegments[idx];
+                                <li class="watch-chapter watch-segment @(idx == ActiveSegmentIndex ? "active" : "")">
+                                    <button type="button" class="watch-chapter-btn"
+                                            title="@($"{FormatTimestamp(seg.Start)} – {FormatTimestamp(seg.End)}")"
+                                            @onclick="() => OnSegmentClicked(seg)">
+                                        <span class="watch-chapter-time">@FormatTimestamp(seg.Start)</span>
+                                        <span class="watch-chapter-title">@SegmentLabel(seg)</span>
+                                        <span class="watch-segment-length">@FormatDuration(seg.End - seg.Start)</span>
+                                    </button>
+                                    @* Outside the seek button so ticking a box never also seeks. *@
+                                    <label class="watch-segment-toggle"
+                                           title="@(seg.Skip ? "Skip this section" : "Play this section")">
+                                        <input type="checkbox" checked="@seg.Skip"
+                                               @onchange="e => OnSegmentSkipToggled(idx, e)" />
+                                    </label>
+                                </li>
+                            }
+                        </ol>
+                        <p class="watch-sponsorblock text-muted">
+                            Ticks apply to this playback only &middot;
+                            <a href="https://sponsor.ajay.app" target="_blank" rel="noopener noreferrer">SponsorBlock</a>
+                        </p>
                     </details>
                 </div>
             }

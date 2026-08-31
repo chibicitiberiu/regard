@@ -156,7 +156,16 @@ namespace Regard.Frontend.Pages
         {
             subtitleSelfRef?.Dispose();
             subtitleSelfRef = null;
-            await Task.CompletedTask;
+
+            // Stops a pending toast timer from calling StateHasChanged on a torn-down component.
+            skipToastGeneration++;
+
+            if (fullscreenPromotionRegistered)
+            {
+                fullscreenPromotionRegistered = false;
+                try { await JS.InvokeVoidAsync("RegardHelpers.removeFullscreenPromotion", PlayerWrapperSelector); }
+                catch (Exception) { /* circuit/JS already gone during teardown */ }
+            }
         }
 
         /// <summary>
@@ -244,7 +253,25 @@ namespace Regard.Frontend.Pages
             // stored preference has to be applied once the elements actually exist.
             if (!subtitlePreferenceApplied && subtitleTrackUrls != null && playerRef != null)
                 await ApplyStoredSubtitlePreference();
+
+            // Make the skip toast survive fullscreen. A fullscreened <video> hides its siblings, so the
+            // wrapper has to be the fullscreen element instead — see RegardHelpers.addFullscreenPromotion.
+            // Registered once and matched by selector, so it doesn't care when the player mounts.
+            if (firstRender && !fullscreenPromotionRegistered)
+            {
+                try
+                {
+                    await JS.InvokeVoidAsync("RegardHelpers.addFullscreenPromotion",
+                                             PlayerSelector, PlayerWrapperSelector);
+                    fullscreenPromotionRegistered = true;
+                }
+                catch (Exception) { /* JS not ready; fullscreen just stays on the video element */ }
+            }
         }
+
+        private const string PlayerWrapperSelector = ".watch-player";
+        private const string PlayerSelector = ".watch-player video";
+        private bool fullscreenPromotionRegistered;
 
         private void OnNotificationsActivityChanged(object sender, EventArgs e) => InvokeAsync(StateHasChanged);
 
@@ -603,6 +630,161 @@ namespace Regard.Frontend.Pages
                 await playerRef.SeekTo(seconds);
                 currentPlaybackSeconds = seconds;
             }
+        }
+
+        // --- SponsorBlock segments ---------------------------------------------------------------
+        // The panel under Chapters lists every segment SponsorBlock knows about, not just the categories
+        // configured to skip, each with a checkbox. Ticks live for this playback only: nothing is
+        // persisted, so a reload is back to the configured defaults. That's deliberate — the durable
+        // answer is the per-category setting, and this is the "not on this video" escape hatch.
+
+        /// <summary>Seconds the "Skipped N sections" toast stays up before fading itself out.</summary>
+        private const int SkipToastSeconds = 5;
+
+        /// <summary>What the undo toast is currently offering to put back.</summary>
+        private sealed class SkipToastState
+        {
+            /// <summary>Indices into <c>video.SponsorSegments</c>, in the order they were skipped.</summary>
+            public readonly List<int> Indexes = new List<int>();
+
+            /// <summary>Earliest start among them — where Undo puts the playhead.</summary>
+            public double SeekBackTo;
+
+            public int Count => Indexes.Count;
+
+            public string Label { get; set; }
+        }
+
+        private SkipToastState skipToast;
+
+        // Bumped on every show and on dismissal, so a pending 5 s timer belonging to an older toast can
+        // tell it has been superseded and leave the current one alone.
+        private int skipToastGeneration;
+
+        private bool HasSponsorSegments =>
+            video?.SponsorSegments != null && video.SponsorSegments.Count > 0
+            && video.IsDownloaded && !streamFailed;
+
+        private int SkippedSegmentCount =>
+            video?.SponsorSegments?.Count(s => s.Skip) ?? 0;
+
+        private static string SegmentLabel(ApiSponsorSegment segment)
+        {
+            if (segment?.Category == null)
+                return "Segment";
+            return Regard.Common.SponsorBlock.SponsorBlockActions.Labels
+                .TryGetValue(segment.Category, out var label) ? label : segment.Category;
+        }
+
+        private static string FormatDuration(double seconds) =>
+            FormatTimestamp(seconds < 0 ? 0 : seconds);
+
+        // Index of the segment covering the current playhead, or -1. Unlike chapters these don't tile the
+        // timeline, so this needs both bounds rather than "the last one that started".
+        private int ActiveSegmentIndex
+        {
+            get
+            {
+                if (!HasSponsorSegments) return -1;
+                var t = currentPlaybackSeconds;
+                for (int i = 0; i < video.SponsorSegments.Count; i++)
+                {
+                    var s = video.SponsorSegments[i];
+                    if (t >= s.Start && t < s.End) return i;
+                }
+                return -1;
+            }
+        }
+
+        // Tick/untick one segment for this playback, then re-arm the player with what's left enabled.
+        private async Task OnSegmentSkipToggled(int index, ChangeEventArgs e)
+        {
+            if (!HasSponsorSegments || index < 0 || index >= video.SponsorSegments.Count)
+                return;
+
+            video.SponsorSegments[index].Skip = e.Value is bool b && b;
+            if (playerRef != null)
+                await playerRef.RefreshSkipSegments();
+        }
+
+        // Click a segment row: seek to where it starts. If it was set to skip, that would bounce the
+        // playhead straight back out again, so turn it off first — clicking a row is a clear "I want to
+        // watch this bit", and the checkbox visibly follows along.
+        private async Task OnSegmentClicked(ApiSponsorSegment segment)
+        {
+            if (!HasSponsorSegments || playerRef == null)
+                return;
+
+            if (segment.Skip)
+            {
+                segment.Skip = false;
+                await playerRef.RefreshSkipSegments();
+            }
+
+            await playerRef.SeekTo(segment.Start);
+            currentPlaybackSeconds = segment.Start;
+        }
+
+        // The player jumped a segment. Accumulate into one toast rather than stacking: a run of adjacent
+        // sponsor reads is one interruption from the viewer's point of view, and one Undo should put all
+        // of it back.
+        private Task OnSegmentSkipped(int index)
+        {
+            if (!HasSponsorSegments || index < 0 || index >= video.SponsorSegments.Count)
+                return Task.CompletedTask;
+
+            var segment = video.SponsorSegments[index];
+            var toast = skipToast ?? new SkipToastState { SeekBackTo = segment.Start };
+
+            if (!toast.Indexes.Contains(index))
+                toast.Indexes.Add(index);
+            toast.SeekBackTo = Math.Min(toast.SeekBackTo, segment.Start);
+            toast.Label = string.Join(", ", toast.Indexes
+                .Select(i => SegmentLabel(video.SponsorSegments[i]))
+                .Distinct());
+
+            skipToast = toast;
+            StateHasChanged();
+
+            // Not awaited: this runs on a JS interop callback, and holding it open for five seconds would
+            // leave the skip's promise pending on the other side for no reason.
+            _ = DismissSkipToastAfter(SkipToastSeconds);
+            return Task.CompletedTask;
+        }
+
+        private async Task DismissSkipToastAfter(int seconds)
+        {
+            int generation = ++skipToastGeneration;
+            await Task.Delay(TimeSpan.FromSeconds(seconds));
+
+            if (generation != skipToastGeneration)
+                return;   // a later skip (or an Undo) owns the toast now
+
+            skipToast = null;
+            await InvokeAsync(StateHasChanged);
+        }
+
+        // Put back everything the current toast covers: untick those segments so they don't fire again,
+        // re-arm the player BEFORE seeking (otherwise the seek lands inside a still-enabled segment and is
+        // immediately undone), then rewind to the first one.
+        private async Task OnUndoSkip()
+        {
+            var toast = skipToast;
+            skipToast = null;
+            skipToastGeneration++;
+
+            if (toast == null || !HasSponsorSegments || playerRef == null)
+                return;
+
+            foreach (var index in toast.Indexes)
+            {
+                if (index >= 0 && index < video.SponsorSegments.Count)
+                    video.SponsorSegments[index].Skip = false;
+            }
+
+            await playerRef.RefreshSkipSegments();
+            await playerRef.SeekTo(toast.SeekBackTo);
+            currentPlaybackSeconds = toast.SeekBackTo;
         }
 
         // Index of the chapter covering the current playhead, or -1. Used to highlight the active row.
