@@ -173,10 +173,14 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
     `disabled` is never fetched, so the cues load only when one is switched on.
   - `TextTrack` exposes the `srclang` attribute as **`.language`**; matching on `.srclang` silently
     matches nothing, and the symptom is a track that loads but never displays.
-  - **Chrome will not put a captions button in its control bar.** It files Captions inside the `⋮`
-    overflow menu with Download and Picture-in-picture, with no way to promote it. The CC control on the
-    watch page is therefore ours, overlaid on the player; it drives the same text tracks, and the
-    tracks' `change` event keeps it in step with the browser's own menu.
+  - **Where Chrome puts its captions button varies by build, so don't assert either way.** Batch 4b
+    measured it inside the `⋮` overflow menu (with Download and Picture-in-picture) and added an overlay
+    button of our own on that basis; Batch 5b then saw a real browser render one *inline in the control
+    bar*, giving two CC buttons a few pixels apart. Playwright's bundled Chromium still uses the overflow
+    menu at every width from 636 px to 1032 px, so a test cannot tell you what a user sees.
+    **Our overlay is gone** — the native control lists our labels, because they come from the `<track
+    label>` attribute — and the trade is that in a build which hides captions in `⋮`, they are one extra
+    click away. The `change` listener is kept regardless: it is what remembers the chosen language.
 - **Sidecar-only reprocess** (Batch 5b). `ReprocessVideoJob` fetches subtitles for an already-downloaded
   video with `--skip-download`, and reads back the info-json the same run writes so one extraction also
   refreshes the metadata. Four things about it are load-bearing:
@@ -196,6 +200,17 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
     `json3`, which `SubtitleFile` doesn't recognise — the file would exist but be invisible, and the
     sweep would re-fetch it forever. And `SponsorsRemoved` videos are refused outright: the media is
     already cut, so fresh cues would never line up.
+- **"Fetch subtitles" and "Refresh metadata" are separate actions on purpose.** The reprocess job
+  refreshes metadata only as a by-product of actually fetching something, and returns before yt-dlp runs
+  at all when the video's subtitles are already complete (the common case) — so it is not a way to
+  refresh a stale view count. `RefreshVideoMetadataJob` is, and unlike the background sweep it ignores
+  the age-based schedule and does not defer for downloads, because a person is waiting on it.
+- **A cut file's SponsorBlock data is snapshotted, never re-fetched** (Batch 5b).
+  `Video.SponsorSegmentsRemoved` records what `--sponsorblock-remove` actually cut, captured at download
+  time. SponsorBlock is crowd-sourced and keeps moving, so a later fetch describes a different cut than
+  the bytes on disk; for a cut video the snapshot is the only correct version. It is also the missing
+  piece that would let subtitles, `Chapters` and description timestamps be mapped onto a cut file —
+  all three are disabled for cut videos today precisely because this was never recorded.
 - **Background metadata refresh is the lowest-priority thing in the system** (Batch 5b).
   `RefreshMetadataJob` stands down whenever `HostThrottle.HasDownloadPressure` reports a download in
   flight or queued, or a `SynchronizeJob` row is `Running` — checked in `ShouldDefer` and again between

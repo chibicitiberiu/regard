@@ -47,31 +47,13 @@
                             }
                         }
                     </Video>
-                    @* Our own CC control, inside the player rather than below it. Chrome files its
-                       captions control inside the "⋮" overflow menu (next to Download and
-                       Picture-in-picture) and offers no way to promote it inline, so a native-looking
-                       button has to be ours. It still drives the same text tracks, so the browser's own
-                       menu keeps working and the two stay in sync. *@
-                    @if (SubtitlesAvailable)
-                    {
-                        <button @ref="subtitleButton" type="button"
-                                class="watch-cc-overlay @(activeTrackLang != null ? "on" : "")"
-                                title="@(activeTrackLang != null ? ActiveTrackLabel : "Subtitles")"
-                                aria-label="Subtitles"
-                                @onclick="() => subtitleMenuVisible = !subtitleMenuVisible">
-                            <Icon Glyph="Icons.ClosedCaption" />
-                        </button>
-                        <Menu AttachTo="subtitleButton" @bind-IsVisible="subtitleMenuVisible">
-                            <CheckMenuItem IsChecked="@(activeTrackLang == null)"
-                                           Click="() => SelectSubtitleTrack(null)">Off</CheckMenuItem>
-                            @foreach (var track in video.SubtitleTracks)
-                            {
-                                var t = track;
-                                <CheckMenuItem IsChecked="@(activeTrackLang == t.Lang)"
-                                               Click="() => SelectSubtitleTrack(t.Lang)">@t.Label</CheckMenuItem>
-                            }
-                        </Menu>
-                    }
+                    @* No CC control of our own. Batch 4b added one because Chrome was filing captions
+                       inside the "⋮" overflow menu with no way to promote it — but with the tracks
+                       mounted up front the browser puts a captions button in its own control bar, so
+                       ours was a second, differently-styled button doing the same job a few pixels
+                       away. The native one lists our labels ("English (auto-generated)") because they
+                       come from the <track label> attribute, and the tracks' change event still feeds
+                       the remembered-language preference, so nothing was lost by dropping it. *@
                     @if (video.SponsorSegments != null && video.SponsorSegments.Count > 0)
                     {
                         <p class="watch-sponsorblock text-muted">
@@ -231,6 +213,10 @@
                             @(subtitleFetchQueued ? "Fetching…" : "Fetch subtitles")
                         </button>
                     }
+                    <button class="watch-btn" @onclick="OnRefreshMetadata" disabled="@metadataRefreshQueued"
+                            title="Re-fetch the view count, likes, title and chapters for this video now">
+                        @(metadataRefreshQueued ? "Refreshing…" : "Refresh metadata")
+                    </button>
                     @* Same gating as the grid's context menu: only for a downloaded video, with
                        DeleteScheduledAt choosing which of the pair to offer. No local state flip — the
                        change feed carries DeleteScheduledAt, so the button repaints itself. *@

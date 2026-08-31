@@ -41,6 +41,7 @@ namespace Regard.Backend.Services
             // A user-clicked "Fetch subtitles" should report back. The job itself returns null
             // notifications when the background sweep created it, so unattended runs stay silent.
             typeof(ReprocessVideoJob),
+            typeof(RefreshVideoMetadataJob),
         };
 
         public RegardScheduler(ILogger<RegardScheduler> log,

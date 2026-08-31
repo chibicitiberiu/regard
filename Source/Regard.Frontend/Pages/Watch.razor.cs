@@ -29,6 +29,7 @@ namespace Regard.Frontend.Pages
         private bool embeddingAllowed;   // effective user setting, for the placeholder message
         private bool downloadQueued;
         private bool subtitleFetchQueued;
+        private bool metadataRefreshQueued;
         private bool streamFailed;        // the downloaded file wouldn't load (missing/unreadable) -> show the fallback
         private List<ApiVideo> upNext;
         private Regard.Frontend.Shared.Controls.Video playerRef;   // set when the downloaded <video> is shown
@@ -41,15 +42,10 @@ namespace Regard.Frontend.Pages
         private Dictionary<string, string> subtitleTrackUrls;
         private DotNetObjectReference<Watch> subtitleSelfRef;
         private bool subtitlePreferenceApplied;
-        private bool subtitleMenuVisible;
-        private ElementReference subtitleButton;
-        // The language currently showing, kept in step with the tracks themselves — it changes both from
-        // our own menu and from the browser's built-in captions menu, and OnTextTrackChanged is what
-        // keeps the two in agreement.
+        // The language currently showing. There is no CC control of our own any more — the browser's
+        // native one drives the tracks directly — so this is fed purely by OnTextTrackChanged, which is
+        // what lets the chosen language still be remembered across videos.
         private string activeTrackLang;
-
-        private string ActiveTrackLabel =>
-            video?.SubtitleTracks?.FirstOrDefault(t => t.Lang == activeTrackLang)?.Label ?? "Subtitles";
 
         private bool HasSubtitles => video?.SubtitleTracks != null && video.SubtitleTracks.Count > 0;
 
@@ -172,7 +168,6 @@ namespace Regard.Frontend.Pages
             subtitleTrackUrls = null;
             subtitlePreferenceApplied = false;
             activeTrackLang = null;
-            subtitleMenuVisible = false;
 
             if (!SubtitlesAvailable)
                 return;
@@ -226,10 +221,12 @@ namespace Regard.Frontend.Pages
             catch (Exception) { /* not fatal — the choice just won't be remembered */ }
         }
 
-        /// <summary>Switches the showing track from our CC menu. Null turns subtitles off.</summary>
+        /// <summary>
+        /// Switches the showing track. Null turns subtitles off. Kept (rather than deleted with the CC
+        /// menu) because ApplyStoredSubtitlePreference uses it to restore the remembered language.
+        /// </summary>
         private async Task SelectSubtitleTrack(string lang)
         {
-            subtitleMenuVisible = false;
             if (playerRef == null)
                 return;
 
@@ -477,6 +474,20 @@ namespace Regard.Frontend.Pages
                 subtitleFetchQueued = true;
             else
                 errorMessage = "Failed to queue subtitle fetch: " + resp?.Message;
+        }
+
+        /// <summary>
+        /// Re-fetch this video's views, likes, title and chapters now, rather than waiting for the
+        /// background refresh — which won't touch an old video for up to three months.
+        /// </summary>
+        private async Task OnRefreshMetadata()
+        {
+            var (resp, http) = await Backend.VideoRefreshMetadata(
+                new VideoRefreshMetadataRequest { VideoIds = new[] { VideoId } });
+            if (http.IsSuccessStatusCode)
+                metadataRefreshQueued = true;
+            else
+                errorMessage = "Failed to queue metadata refresh: " + resp?.Message;
         }
 
         private async Task OnMarkWatched()

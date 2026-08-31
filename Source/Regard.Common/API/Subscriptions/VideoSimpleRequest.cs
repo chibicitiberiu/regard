@@ -30,6 +30,13 @@ namespace Regard.Common.API.Subscriptions
     public class VideoReprocessRequest : VideoSimpleRequest { }
 
     /// <summary>
+    /// Re-fetch a video's metadata (views, likes, title, chapters) now, ignoring the age-based schedule
+    /// the background refresh follows. Costs one throttled extraction per video, which is why there is
+    /// no subscription-wide counterpart.
+    /// </summary>
+    public class VideoRefreshMetadataRequest : VideoSimpleRequest { }
+
+    /// <summary>
     /// Queue a subtitle refetch for every downloaded video in a subscription that is missing one.
     /// The server decides which videos qualify; the response reports how many were queued.
     /// </summary>

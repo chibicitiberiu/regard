@@ -249,6 +249,23 @@ fetched", so it doubles as the staleness clock. Notes worth keeping:
 - **The refresh interval comes from the video's age** (1 day under a week old, out to 90 days past a
   year). Most of a 500-video library is old, so daily demand is a handful of videos rather than 500.
 
+**Batch 5c — follow-ups (2026-08-31, done)**
+- **"Refresh metadata" is now its own action** (video menu + watch page). "Fetch subtitles" only
+  refreshes metadata as a by-product of fetching something, and does nothing at all on a video whose
+  subtitles are already complete — so it was never a way to unstick a stale view count. Verified on
+  video 466: *"Already has subtitles (ro, en) — nothing to fetch"* from one action, *"Refreshed:
+  308,597 → 308,619 views"* from the other.
+- **A cut file's SponsorBlock data is snapshotted at download time** (`Video.SponsorSegmentsRemoved`,
+  migrated on both contexts). The data is crowd-sourced and keeps changing, so once a file is cut a
+  later fetch describes a different cut than the bytes on disk. Recording it also unblocks the thing
+  that made you ask: subtitles, chapters and description timestamps are all disabled for cut videos
+  today only because we never knew *where* the cuts were.
+- **The overlay CC button is gone.** With the tracks mounted up front, browsers that show captions in
+  their own control bar gave two CC buttons a few pixels apart. The native menu already lists our
+  labels — they come from the `<track label>` attribute — and the language is still remembered, because
+  that hangs off the tracks' `change` event rather than the button. Note this varies by browser build:
+  Playwright's Chromium still files captions in the `⋮` menu at every width tested.
+
 **Batch 6 — Ops & maintenance**
 - H: server log page
 - H: maintenance actions (VACUUM etc.)

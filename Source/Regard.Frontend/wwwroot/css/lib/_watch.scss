@@ -267,58 +267,6 @@
     &:hover { text-decoration: underline; }
 }
 
-/* CC control, overlaid on the player.
-   Chrome files its own captions control inside the "⋮" overflow menu and gives no way to promote it
-   into the control bar, so this is ours. Sits above the native bar in the bottom-right corner, styled
-   to read as a player control rather than a page button: translucent, no border, revealed on hover the
-   way the native controls are. Kept reachable for keyboard and touch, where there is no hover. */
-.watch-cc-overlay {
-    position: absolute;
-    right: 0.6rem;
-    bottom: 3.6rem;
-    z-index: 2;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.1rem;
-    height: 2.1rem;
-    padding: 0;
-
-    border: none;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.55);
-    color: #fff;
-    cursor: pointer;
-
-    opacity: 0;
-    transition: opacity 0.15s ease, background-color 0.15s ease;
-
-    .material-icons { font-size: 1.35rem; }
-
-    &:hover { background: rgba(0, 0, 0, 0.8); }
-
-    /* On while a track is showing, so the state is readable at a glance. */
-    &.on {
-        opacity: 1;
-        color: var(--color-fg-info);
-    }
-
-    &:focus-visible {
-        opacity: 1;
-        outline: 2px solid var(--color-fg-info);
-        outline-offset: 2px;
-    }
-}
-
-.watch-player:hover .watch-cc-overlay,
-.watch-cc-overlay:focus-within { opacity: 1; }
-
-@media (hover: none) {
-    /* No hover to reveal it on a touch screen. */
-    .watch-cc-overlay { opacity: 1; }
-}
-
 /* Subtitle cues.
    The default UA style is white text on an opaque black box, which sits heavily over the picture. This
    drops the box and carries the text on a soft outline instead, the way every video service renders

@@ -191,6 +191,7 @@ namespace Regard.Backend
             services.AddScoped<InitJob>();
             services.AddScoped<JellyfinSyncJob>();
             services.AddScoped<RefreshMetadataJob>();
+            services.AddScoped<RefreshVideoMetadataJob>();
             services.AddScoped<ReprocessVideoJob>();
             services.AddScoped<SynchronizeJob>();
             services.AddScoped<YoutubeDLUpdateJob>();

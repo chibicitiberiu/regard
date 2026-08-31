@@ -36,6 +36,18 @@ namespace Regard.Backend.Services
             [JsonPropertyName("actionType")] public string ActionType { get; set; }
         }
 
+        /// <summary>
+        /// Fetches the segments that were (or would be) cut out of a file by yt-dlp's
+        /// --sponsorblock-remove, so they can be recorded against the download.
+        ///
+        /// Same API and same action type as the skip lookup — yt-dlp's "remove" is the skip action
+        /// applied destructively — so this returns what yt-dlp saw, give or take any submissions made in
+        /// the seconds between the two calls. Call it at download time and never again: once a file is
+        /// cut, later versions of this data no longer describe it.
+        /// </summary>
+        public Task<List<ApiSponsorSegment>> GetRemovedSegments(string videoId, IEnumerable<string> categories)
+            => GetSkipSegments(videoId, categories);
+
         public async Task<List<ApiSponsorSegment>> GetSkipSegments(string videoId, IEnumerable<string> categories)
         {
             var cats = categories?.ToList() ?? new List<string>();

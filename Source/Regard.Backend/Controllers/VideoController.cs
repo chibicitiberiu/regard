@@ -249,6 +249,23 @@ namespace Regard.Backend.Controllers
                 : $"Fetching subtitles for {queued} video(s)…"));
         }
 
+        /// <summary>
+        /// Re-fetch a video's metadata now. Distinct from <see cref="Reprocess"/>, which only refreshes
+        /// metadata as a by-product of actually fetching subtitles and does nothing at all when the
+        /// video's subtitles are already complete.
+        /// </summary>
+        [HttpPost]
+        [Route("refresh_metadata")]
+        [Authorize]
+        public async Task<IActionResult> RefreshMetadata([FromBody] VideoRefreshMetadataRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            int queued = await videoManager.RefreshMetadata(user, request.VideoIds);
+            return Ok(responseFactory.Success(message: queued == 1
+                ? "Refreshing metadata…"
+                : $"Refreshing metadata for {queued} video(s)…"));
+        }
+
         [HttpPost]
         [Route("delete_files")]
         [Authorize]

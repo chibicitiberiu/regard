@@ -178,6 +178,10 @@ else
                         {
                             <MenuItem Click="() => OnVideoDownload(item)">Download</MenuItem>
                         }
+                        @* Offered for every video, downloaded or not — a stale view count is a stale
+                           view count either way. "Fetch subtitles" above refreshes metadata too, but
+                           only when it has subtitles to fetch. *@
+                        <MenuItem Click="() => OnVideoRefreshMetadata(item)">Refresh metadata</MenuItem>
                     </Menu>
                 </div>
             </div>

@@ -220,28 +220,11 @@ namespace Regard.Backend.Jobs
                     break;
                 }
 
-                try
-                {
-                    // Look the provider up by id rather than asking each one "can you handle this?".
-                    // IProviderManager.FindForVideo probes via IVideoProvider.CanHandleVideo, and
-                    // YouTubeDLProvider answers that with a full paced yt-dlp extraction — so the probe
-                    // alone doubled the cost of every refresh. Measured: two identical
-                    // `--dump-single-json` invocations per video. Get() is a dictionary lookup.
-                    var provider = providerManager.Get<IVideoProvider>(video.VideoProviderId)
-                        ?? await providerManager.FindForVideo(video).FirstOrDefaultAsync();
-                    if (provider == null)
-                        continue;
-
-                    // Per-item guard: the provider's own loop has none, so one failure would otherwise
-                    // abandon the rest of the batch.
-                    await provider.UpdateMetadata(new[] { video }, true, true);
-                    await dataContext.SaveChangesAsync();
+                // Shared with the user-initiated RefreshVideoMetadataJob so the two can't drift; it
+                // swallows and logs its own failures, which is what keeps one bad video from abandoning
+                // the rest of the batch (the provider's own loop has no per-item guard).
+                if (await videoManager.RefreshMetadataNow(video))
                     done++;
-                }
-                catch (Exception ex)
-                {
-                    log.LogWarning(ex, "Could not refresh metadata for video {0}", video.Id);
-                }
             }
 
             return done;

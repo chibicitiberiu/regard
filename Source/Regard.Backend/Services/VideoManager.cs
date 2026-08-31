@@ -1,5 +1,6 @@
 ﻿using MoreLinq;
 using Microsoft.Extensions.Logging;
+using Regard.Backend.Common.Providers;
 using Regard.Backend.Common.Utils;
 using Regard.Backend.Configuration;
 using Regard.Backend.DB;
@@ -262,6 +263,61 @@ namespace Regard.Backend.Services
 
                 await DownloadVideoJob.Schedule(scheduler, video, force);
             }
+        }
+
+        /// <summary>
+        /// Re-fetches one video's metadata from its provider, right now, ignoring the age-based refresh
+        /// schedule. Shared by the background refresh job and the user-initiated "Refresh metadata"
+        /// action, so the two can't drift.
+        ///
+        /// Costs one paced yt-dlp extraction, so callers are responsible for rationing it — this is the
+        /// expensive half of a refresh. Returns false (and logs) on failure rather than throwing, so a
+        /// batch caller can carry on with the rest.
+        /// </summary>
+        public async Task<bool> RefreshMetadataNow(Video video)
+        {
+            if (video == null)
+                return false;
+
+            try
+            {
+                // Look the provider up by id rather than asking each one "can you handle this?":
+                // IProviderManager.FindForVideo probes via CanHandleVideo, which YouTubeDLProvider answers
+                // with a full paced extraction — doubling the cost of every refresh.
+                var provider = providerManager.Get<IVideoProvider>(video.VideoProviderId)
+                    ?? await providerManager.FindForVideo(video).FirstOrDefaultAsync();
+                if (provider == null)
+                {
+                    log.LogWarning("No video provider for {0} (providerId={1})", video, video.VideoProviderId);
+                    return false;
+                }
+
+                await provider.UpdateMetadata(new[] { video }, true, true);
+                await dataContext.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "Could not refresh metadata for video {0}", video.Id);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Queues a metadata refresh for videos the user owns. One job per video, each costing a paced
+        /// extraction — the endpoint is per-video precisely so this can't be aimed at the whole library.
+        /// </summary>
+        public async Task<int> RefreshMetadata(UserAccount user, int[] videoIds)
+        {
+            var videos = dataContext.Videos.AsQueryable()
+                .Where(v => videoIds.Contains(v.Id))
+                .Where(v => v.Subscription.UserId == user.Id)
+                .ToList();
+
+            foreach (var video in videos)
+                await RefreshVideoMetadataJob.Schedule(scheduler, video);
+
+            return videos.Count;
         }
 
         /// <summary>

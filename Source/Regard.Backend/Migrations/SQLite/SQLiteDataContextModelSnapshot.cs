@@ -607,6 +607,9 @@ namespace Regard.Backend.Migrations.SQLite
                     b.Property<float?>("Rating")
                         .HasColumnType("REAL");
 
+                    b.Property<string>("SponsorSegmentsRemoved")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("SponsorsRemoved")
                         .HasColumnType("INTEGER");
 

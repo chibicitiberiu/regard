@@ -43,6 +43,7 @@ namespace Regard.Backend.Downloader
         protected readonly VideoManager videoManager;
         protected readonly HostThrottle hostThrottle;
         protected readonly NotificationService notificationService;
+        protected readonly SponsorBlockClient sponsorBlockClient;
 
         // Host whose download slot this run reserved (released in OnAfterExecute); null when deferred.
         private string reservedHost = null;
@@ -143,7 +144,8 @@ namespace Regard.Backend.Downloader
                                 DownloadCancellationRegistry cancellationRegistry,
                                 VideoManager videoManager,
                                 HostThrottle hostThrottle,
-                                NotificationService notificationService) : base(logger, dataContext, jobTrackerService)
+                                NotificationService notificationService,
+                                SponsorBlockClient sponsorBlockClient) : base(logger, dataContext, jobTrackerService)
         {
             this.configuration = configuration;
             this.optionManager = optionManager;
@@ -156,6 +158,7 @@ namespace Regard.Backend.Downloader
             this.videoManager = videoManager;
             this.hostThrottle = hostThrottle;
             this.notificationService = notificationService;
+            this.sponsorBlockClient = sponsorBlockClient;
         }
 
         private static string QueuedNotificationKey(int videoId) => $"download:{videoId}";
@@ -534,10 +537,16 @@ namespace Regard.Backend.Downloader
                 video.DownloadedSize = await videoStorage.CalculateSize(video);
                 // Record whether SponsorBlock cut segments out of this file, so the in-player Skip never
                 // trusts original-timeline segments against a shortened file (see Video.SponsorsRemoved).
-                video.SponsorsRemoved = VideoEmbedHelper.IsYouTube(video)
-                    && SponsorBlockActions.CategoriesWith(
-                            optionManager.GetForSubscription(Options.Sponsorblock_Actions, video.SubscriptionId),
-                            SbAction.Remove).Count > 0;
+                var removeCats = SponsorBlockActions.CategoriesWith(
+                    optionManager.GetForSubscription(Options.Sponsorblock_Actions, video.SubscriptionId),
+                    SbAction.Remove);
+                video.SponsorsRemoved = VideoEmbedHelper.IsYouTube(video) && removeCats.Count > 0;
+
+                // Snapshot WHAT was cut, not just that something was. SponsorBlock's data is
+                // crowd-sourced and keeps changing, so a later fetch would describe a different cut than
+                // the one on disk. This is the only version that will ever be correct for this file.
+                if (video.SponsorsRemoved)
+                    video.SponsorSegmentsRemoved = await CaptureRemovedSegments(removeCats);
                 await dataContext.SaveChangesAsync();
             }
 
@@ -548,6 +557,33 @@ namespace Regard.Backend.Downloader
                 await WriteEpisodeMetadata();
 
             log.LogInformation($"videoId={VideoId}: Download completed!");
+        }
+
+        /// <summary>
+        /// Fetches the SponsorBlock segments just cut out of this file and serializes them for storage.
+        ///
+        /// Best-effort by design: this runs after the download has already been committed, so a
+        /// SponsorBlock outage must cost us the snapshot, not the download. A null result simply leaves
+        /// the video in the state everything before this change was in — known to be cut, with no record
+        /// of where.
+        /// </summary>
+        private async Task<string> CaptureRemovedSegments(IReadOnlyCollection<string> removeCategories)
+        {
+            try
+            {
+                var segments = await sponsorBlockClient.GetRemovedSegments(video.VideoId, removeCategories);
+                if (segments == null || segments.Count == 0)
+                    return null;
+
+                // Same {Start, End, Category} shape the API side already uses for skip segments.
+                return System.Text.Json.JsonSerializer.Serialize(
+                    segments.Select(s => new { s.Start, s.End, s.Category }));
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning(ex, "videoId={0}: could not record the removed SponsorBlock segments", VideoId);
+                return null;
+            }
         }
 
         /// <summary>

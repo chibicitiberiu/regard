@@ -442,6 +442,17 @@ namespace Regard.Frontend.Shared.Video
             await Backend.VideoReprocess(new VideoReprocessRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
         }
 
+        /// <summary>
+        /// Re-fetch this video's views, likes, title and chapters now. Separate from "Fetch subtitles",
+        /// which only refreshes metadata when it actually has subtitles to fetch — on a video whose
+        /// subtitles are already complete it does nothing at all.
+        /// </summary>
+        async Task OnVideoRefreshMetadata(VideoViewModel videoVM)
+        {
+            await Backend.VideoRefreshMetadata(
+                new VideoRefreshMetadataRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });
+        }
+
         async Task OnVideoDeleteFiles(VideoViewModel videoVM)
         {
             await Backend.VideoDeleteFiles(new VideoDeleteFilesRequest() { VideoIds = new[] { videoVM.ApiVideo.Id } });

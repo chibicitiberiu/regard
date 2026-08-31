@@ -54,6 +54,23 @@ namespace Regard.Backend.Model
         /// </summary>
         public bool SponsorsRemoved { get; set; } = false;
 
+        /// <summary>
+        /// The SponsorBlock segments that were cut out of this file, as a JSON array of
+        /// {Start, End, Category} on the ORIGINAL timeline, captured at download time. Null unless
+        /// <see cref="SponsorsRemoved"/> is true.
+        ///
+        /// SponsorBlock's data is crowd-sourced and keeps moving: segments get submitted, revoted and
+        /// withdrawn. Once a file has been cut, a later version of that data no longer describes it —
+        /// so re-fetching would produce timings that silently disagree with the bytes on disk. This is
+        /// the snapshot of what was actually removed, and for a cut video it is the only version that
+        /// should ever be used.
+        ///
+        /// It is also the prerequisite for anything that wants to map original-timeline positions onto a
+        /// cut file: subtitles fetched later, <see cref="Chapters"/>, and description timestamps are all
+        /// currently disabled for cut videos precisely because this information was not recorded.
+        /// </summary>
+        public string SponsorSegmentsRemoved { get; set; }
+
         [MaxLength(260)]
         public string DownloadedPath { get; set; }
 
