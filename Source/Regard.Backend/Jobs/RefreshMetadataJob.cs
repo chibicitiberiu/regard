@@ -92,32 +92,11 @@ namespace Regard.Backend.Jobs
         }
 
         /// <summary>
-        /// True when something more important is using the extraction budget: a download in flight or
-        /// waiting on any host, or a sync actually running. A sync's recurring row sits in Scheduled
-        /// between runs, so only Running counts — testing Scheduled would defer forever.
+        /// True when something more important is using the extraction budget. Lives in
+        /// BackgroundWorkGate so the housekeeping sweep applies exactly the same rule.
         /// </summary>
         private bool IsBusy(out string reason)
-        {
-            foreach (var status in hostThrottle.GetStatus())
-            {
-                if (status.InFlight > 0 || status.Queued > 0)
-                {
-                    reason = $"{status.Host} has {status.InFlight} download(s) in flight and {status.Queued} queued";
-                    return true;
-                }
-            }
-
-            bool syncing = dataContext.Jobs.AsQueryable()
-                .Any(j => j.Key == nameof(SynchronizeJob) && j.State == JobState.Running);
-            if (syncing)
-            {
-                reason = "a subscription sync is running";
-                return true;
-            }
-
-            reason = null;
-            return false;
-        }
+            => BackgroundWorkGate.IsBusy(hostThrottle, dataContext, out reason);
 
         protected override async Task ExecuteJob(IJobExecutionContext context)
         {

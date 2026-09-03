@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Regard.Backend.Common.Utils;
 
 namespace Regard.Backend.Services
 {
@@ -378,11 +379,18 @@ namespace Regard.Backend.Services
         }
 
         /// <summary>
-        /// Deletes old finished jobs to keep the history bounded (all jobs are tracked). Completed
-        /// jobs are pruned past <paramref name="retentionDays"/>; failed jobs are kept ~3x longer so
-        /// problems stay visible. Linked messages cascade-delete (see DataContext Message→Job FK).
+        /// Deletes old finished jobs to keep the history bounded (all jobs are tracked). Completed and
+        /// cancelled jobs are pruned past <paramref name="retentionDays"/>; failed jobs are kept ~3x
+        /// longer so problems stay visible. Linked messages cascade-delete (see DataContext Message→Job FK).
         /// </summary>
-        public int PruneOldJobs(int retentionDays)
+        /// <param name="protectedIds">
+        /// Rows a live Quartz trigger still points at (see MaintenanceJob.LiveJobIds). Required whenever
+        /// this runs on a server that is up: a recurring job has ONE row that every fire reuses, and it
+        /// sits Completed between fires, so without this the sweep can delete the row out from under a
+        /// live trigger and the next fire throws "Invalid job ID". At boot it did not matter, because
+        /// InitJob re-created the recurring jobs immediately afterwards.
+        /// </param>
+        public int PruneOldJobs(int retentionDays, ISet<long> protectedIds = null)
         {
             if (retentionDays <= 0)
                 return 0;
@@ -390,24 +398,26 @@ namespace Regard.Backend.Services
             using var scope = scopeFactory.CreateScope();
             using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
 
-            var completedCutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
-            var failedCutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays * 3);
-
-            // Filter State server-side (translatable), then compare DateTimeOffset client-side — the
-            // SQLite provider can't translate ordering comparisons on DateTimeOffset.
-            var stale = dataContext.Jobs
-                .Where(j => (j.State == JobState.Completed || j.State == JobState.Failed) && j.Completed != null)
+            // Filter State server-side (translatable), then let JobPruneFilter do the date comparisons
+            // in memory — the SQLite provider can't translate ordering comparisons on DateTimeOffset.
+            var candidates = dataContext.Jobs
+                .Where(j => (j.State == JobState.Completed
+                          || j.State == JobState.Failed
+                          || j.State == JobState.Cancelled) && j.Completed != null)
                 .AsEnumerable()
-                .Where(j => (j.State == JobState.Completed && j.Completed < completedCutoff)
-                         || (j.State == JobState.Failed && j.Completed < failedCutoff))
                 .ToList();
 
-            if (stale.Count == 0)
+            var doomedIds = JobPruneFilter
+                .SelectPrunable(candidates, DateTimeOffset.UtcNow, retentionDays, protectedIds)
+                .ToHashSet();
+
+            if (doomedIds.Count == 0)
                 return 0;
 
-            dataContext.Jobs.RemoveRange(stale);
+            dataContext.Jobs.RemoveRange(candidates.Where(j => doomedIds.Contains(j.Id)));
             dataContext.SaveChanges();
-            return stale.Count;
+            return doomedIds.Count;
         }
+
     }
 }

@@ -20,7 +20,7 @@ namespace Regard.Backend.Common.Model
         Cancelled
     }
 
-    public class JobInfo
+    public class JobInfo : JobPruneFilter.IPrunableRow
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long Id { get; set; }

@@ -148,6 +148,39 @@ namespace Regard.Backend.Jobs
                                               DateTimeOffset.Now.AddMinutes(2),
                                               TimeSpan.FromMinutes(refreshMinutes));
 
+            // Housekeeping sweep: backup, job/notification pruning, yt-dlp log cleanup.
+            //
+            // The start time is the interesting part. Quartz's trigger store is in-memory, so this runs
+            // on every boot and would otherwise always schedule the first sweep a full interval away —
+            // meaning a machine restarted more often than the interval (a daily reboot against a 24-hour
+            // sweep, or any dev box) would never sweep at all, and never get backed up. So if the stored
+            // completion timestamp says we are already overdue, start shortly after boot instead.
+            //
+            // "Shortly" rather than "now" for the same reason RefreshMetadataJob waits: the restart
+            // reconciliation sweep is busy re-queueing interrupted downloads right about now.
+            try
+            {
+                int maintenanceHours = Math.Max(1, optionManager.GetGlobal(Configuration.Options.Server_Maintenance_IntervalHours));
+                var maintenanceInterval = TimeSpan.FromHours(maintenanceHours);
+                bool overdue = MaintenanceJob.IsOverdue(
+                    optionManager.GetGlobal(Configuration.Options.Server_Maintenance_LastRunUtc),
+                    DateTimeOffset.UtcNow,
+                    maintenanceInterval);
+
+                var maintenanceStart = overdue
+                    ? DateTimeOffset.Now.AddMinutes(3)
+                    : DateTimeOffset.Now.Add(maintenanceInterval);
+
+                if (overdue)
+                    log.LogInformation("Maintenance sweep is overdue; scheduling it shortly after startup.");
+
+                await MaintenanceJob.Schedule(scheduler, maintenanceStart, maintenanceInterval);
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Failed to schedule the maintenance sweep.");
+            }
+
             // Jellyfin watched-sync (opt-in). Guard + validate the cron: RegardScheduler.Schedule
             // re-throws on an invalid/empty cron, which would fail the whole init.
             var jellyfinCron = configuration["Jellyfin:PollSchedule"];
