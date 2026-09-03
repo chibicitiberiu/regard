@@ -80,6 +80,15 @@ Back up `.dev/data/Regard.db` (timestamped copy) before a migration or any bulk 
   required — verify with an actual write first. `pragma integrity_check` returned `ok` both times and no
   rows were lost.
 
+  **Fourth occurrence 2026-09-03**, at 94% used / 15 GB free, during a long test session (repeated
+  `pkill -9`, several restarts, many jobs). Same shape: wedged, every request 500 including login,
+  `integrity_check` **and** `quick_check` both `ok`, all 508 videos / 4 subs / 1 user present, no kernel
+  I/O errors, inodes 16%. One restart fixed it. Worth recording because it happened minutes after a
+  successful in-place `VACUUM` and it would be easy to blame that: the vacuum completed, the file
+  shrank, and reads and writes were verified working immediately afterwards, with several test suites
+  passing in between. The trigger looks like the same disk-occupancy-plus-activity condition as the
+  other three, not the vacuum.
+
   **It also comes as `SQLite Error 11: 'database disk image is malformed'`** — same conditions, same
   outcome, scarier wording. Third occurrence on 2026-08-31, again at 92% used / 19 GB free, again during
   concurrent job activity. Eight errors in a burst, every request 500ing afterwards until a restart, and
@@ -87,6 +96,35 @@ Back up `.dev/data/Regard.db` (timestamped copy) before a migration or any bulk 
   returned `ok`, all 508 videos / 4 subs / 1 user present, no kernel I/O or ext4 errors in `dmesg` or
   `journalctl -k`, inodes 15% used. **Do not act on the word "malformed" — check integrity first, then
   restart.** A restore from backup would have been destructive here for no reason.
+
+## Logging
+
+NLog, configured in **three** files that must stay in step: `Source/Regard.Backend/nlog.config` (local
+runs), `Docker/Backend/nlog-Release.config` (**what the image actually ships** — `Dockerfile` copies it
+to `nlog.config`), and `Docker/Backend/nlog-Debug.config` (referenced by nothing today).
+`NLogConfigTests` loads all three for real, which is the only thing that does: CI builds and pushes the
+image but never *loads* the config, and with `throwConfigExceptions="true"` plus `Program.cs` calling
+`SetupLogger()` outside its `try`, a typo is an unhandled startup crash with no log output.
+
+- Output is `{DataDirectory}/Logs/regard-<date>.log`, a fixed **8 pipe-delimited fields**:
+  `longdate|eventId|LEVEL|logger|callsite|request-url|mvc-action|message + exception`. Empty fields on
+  job-originated entries are deliberate — the shape is regular so it can be parsed.
+- **NLog 6 archive idiom is the opposite of what the old config did.** `archiveNumbering` and
+  `archiveFileName` are marked legacy, and both `archiveEvery` and `archiveFileName` only work when
+  `fileName` is *static* — ours carries `${shortdate}`. So: keep the dynamic `fileName`, delete those
+  two, keep `archiveAboveSize`, add `maxArchiveDays`. Verified: back-dated files past the window are
+  removed at the next new-file open (each date rollover, and each restart).
+- `maxArchiveFiles` and `maxArchiveDays` are independent OR'd conditions but compose as a *minimum*, so
+  a low file count silently caps the day retention. `maxArchiveFiles="0"` is not "unlimited" — it
+  selects a handler that truncates the active log.
+- **`maxArchiveDays` is a plain `int`, not a `Layout<int>`** — `${environment:...}` there is parsed as
+  an int, fails, and kills the process at config load.
+- `internalLogLevel` without `internalLogToConsole`/`internalLogFile` writes nowhere, which is why the
+  obsolete attributes above never announced themselves for as long as they were wrong.
+- `Logs/ytdl/*.txt` (one file per yt-dlp invocation) is **not** NLog's, so its retention never sees
+  them; `MaintenanceJob` prunes them **by mtime**. Do not parse those names: they carry a 12-hour clock
+  with AM/PM glued on the end, so 08:45 and 20:45 differ by two characters. They are only written when
+  `configuration["Debug"]` is true, i.e. development only — the shipped container writes none.
 
 ## Frontend / styling
 
@@ -317,6 +355,59 @@ I ask for changes to be **implemented and tested, usually with Playwright**, not
 - **Options**: `OptionDefinition<T>(default, key, configKey, envKey, flags)`; `flags = 0` means
   server-only. Read with `optionManager.GetGlobal` (DB → env → config → default). Nothing hardcoded —
   defaults are option defaults, admin-tunable.
+  - **There is no `UnsetGlobal`** — only `SetGlobal`, plus the per-user/subscription/folder unsets. The
+    "empty means default" convention at global level is a *consumer* convention:
+    `SetGlobal(Options.X, request.X ?? "")`, as `Server_Ytdl_LimitRate` does.
+  - **A null `Key` is a landmine.** `GetFromDatabase`/`GetFromEnvironment`/`GetFromConfiguration` all
+    guard null, but `GetGlobal` hits the cache *first* and that is a `Dictionary`, so a definition with
+    `Key = null` throws `ArgumentNullException` the moment anyone passes it to `GetGlobal`. If an option
+    must not be database-backed, use plain constants instead (see `Server_Backup_PreMigration_*`).
+  - **Anything read before `Database.Migrate()` cannot be an option at all.** `GetFromDatabase` queries
+    the `Options` table, which does not exist on a first run.
+- **Backups** (Batch 6a). `DatabaseBackupService` snapshots with SQLite's `VACUUM INTO`: a read
+  transaction against the live database, so nothing stops, no writer blocks, the copy is compacted, and
+  it is self-contained — no `-wal`/`-shm` sidecar. SQLite only; on SQL Server every operation reports
+  itself skipped, because `BACKUP DATABASE` writes on the *database* host, not this filesystem.
+  - **`VACUUM INTO` is not atomic and does not clean up after a partial failure.** Write `.db.tmp`,
+    `PRAGMA integrity_check` it, then `File.Move`. Skip that and a backup killed by a full disk leaves a
+    truncated file that is the newest match, which retention counts as good and swaps for a real one.
+  - **`ExecuteSqlRaw("VACUUM INTO {0}", path)`** — the parameter binds and is evaluated at run time.
+    Also assert `Database.CurrentTransaction` is null; SQLite refuses `VACUUM` inside a transaction.
+  - **The destination is derived (`StorageManager.BackupDirectory`), never settable.** Retention deletes
+    files there, so a configurable path would be an arbitrary-deletion primitive aimed at whatever an
+    admin typed — and the obvious thing to type is the data directory. Same reasoning as the cookies
+    path. Like it, this directory must never be served: a snapshot holds every password hash.
+  - **Retention only ever matches names it could have written** (prefix + exact UTC stamp + `.db`), so
+    hand-made copies in the same directory survive. UTC because a local timestamp repeats during a DST
+    fall-back while retention deletes oldest-first.
+  - **A pre-migration snapshot is taken in `Startup.ApplyMigrations` and a failure aborts startup.**
+    `REGARD_MIGRATE=1` is in the Dockerfile, so migrations are applied unattended on every start. Skips
+    (not aborts) when there are no pending migrations, on a fresh install with no database, and on SQL
+    Server.
+  - **`Program.Main` sets `Environment.ExitCode = 1` on a fatal startup failure.** It used to log and
+    return, i.e. exit 0 — so `restart: on-failure` never restarted and a refused migration looked like a
+    clean shutdown.
+- **In-place `VACUUM` is a button and must stay one.** It rewrites the whole file under an exclusive
+  lock; other writers block for `busy_timeout` (30 s) and *then* throw, which is the bare-500 symptom
+  above. Under WAL the file does not shrink until a checkpoint, so follow it with
+  `PRAGMA wal_checkpoint(TRUNCATE)` or the UI reports success while nothing visibly happens. SQLite's
+  scratch database goes to `/tmp` — the container's writable layer, not the data volume — so a
+  free-space check on `/data` does not cover it.
+- **A recurring job has ONE `JobInfo` row that every fire reuses, and it sits `Completed` between
+  fires.** So it is indistinguishable by state and age from finished one-shot work, and pruning by age
+  deletes it — after which the next fire throws `"Invalid job ID"` at `JobBase.Execute` and that
+  recurring job is dead until restart. Harmless at boot (InitJob recreates them); not harmless on a live
+  server. **Excluding by `Key` does not work** — `Key` is the bare type name, so a manual sync and the
+  nightly one are identical. Exclude the JobIds a live Quartz trigger points at instead
+  (`MaintenanceJob.LiveJobIds`, the same scan `RegardScheduler.TryUnschedule` uses).
+- **`JobTrackerService.OnJobFailed` ignores `job.Notify`.** Only the retry branch checks it; the
+  terminal-failure branch posts unconditionally, and a job scheduled with no `userId` broadcasts to
+  every non-admin (`NotificationService.GetRecent`, `Clients.All`). So an unattended job that throws
+  notifies the whole install. `MaintenanceJob` works around it by never letting an exception escape
+  `ExecuteJob`. Filed in `BACKLOG.md`; fixing it globally changes behaviour for every job type.
+- **Recurring jobs are re-scheduled at `now + N` on every boot**, because Quartz's trigger store is
+  in-memory. A 24-hour interval on a machine that restarts daily therefore fires *never*. Anything on a
+  long interval needs a persisted "last run" and a catch-up (`Server_Maintenance_LastRunUtc`).
 
 ## Where durable state lives
 

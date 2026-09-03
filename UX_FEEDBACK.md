@@ -152,11 +152,17 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
 ## H. Ops / maintenance / admin
 
 - `[ ]` **[L] Server log page in Settings** — inspect server logs from the UI. _Read the
-  `Logs/` files (or a ring buffer); admin-gated._
-- `[ ]` **[M] Maintenance actions** — DB `VACUUM` and similar housekeeping, triggerable
-  and/or scheduled.
-- `[ ]` **[M] Periodic DB backups.** _Recurring job; timestamped copies (aligns with my
-  global "back up before destructive ops" rule)._
+  `Logs/` files (or a ring buffer); admin-gated._ **Batch 6b.** Note Batch 6a changed what is on disk:
+  the `.csv` twin is gone and the `.log` is now a fixed 8-field pipe format (with callsite, request URL
+  and MVC action), which is what a viewer should parse.
+- `[x]` **[M] Maintenance actions** — DB `VACUUM` and similar housekeeping, triggerable
+  and/or scheduled. **Done (Batch 6a).** A nightly `MaintenanceJob` prunes the job history and
+  notifications (which previously only happened at boot, so a long-running server never pruned),
+  clears out old yt-dlp captures, and takes a snapshot. `VACUUM` itself is a button, never unattended.
+- `[x]` **[M] Periodic DB backups.** _Recurring job; timestamped copies (aligns with my
+  global "back up before destructive ops" rule)._ **Done (Batch 6a)**, and that parenthetical turned out
+  to be the important half: the app applies schema migrations on every container start and now snapshots
+  first, refusing to migrate if the snapshot fails.
 
 ---
 
@@ -300,10 +306,35 @@ fetched", so it doubles as the staleness clock. Notes worth keeping:
   `timeupdate` the skip rides on) can be several seconds late. Assert on the toast appearing, never on
   a fixed sleep.
 
-**Batch 6 — Ops & maintenance**
+**Batch 6a — Backups, log hygiene, housekeeping (2026-09-03, done)** — four commits, one per phase.
+Notes worth keeping:
+- **`VACUUM INTO` is the backup primitive.** A read transaction against the live database, so nothing
+  stops and no writer blocks; the copy is compacted and self-contained (no `-wal`/`-shm` to carry).
+  Proven to include uncheckpointed data by writing through the API with a 1.1 MB WAL and finding the
+  value in the snapshot — every other check (file exists, `integrity_check` ok, plausible row counts)
+  would have passed even if it were copying a stale main file.
+- **It is not atomic**, so a snapshot is written `.db.tmp`, integrity-checked, then moved. Otherwise a
+  backup killed by a full disk leaves a truncated file that is the newest in the directory and evicts a
+  good one.
+- **The backup directory is derived, not a setting.** A path an admin types that this code then
+  enumerates and deletes from is an arbitrary-deletion primitive, and the obvious thing to type is the
+  data directory. Off-box copies come from a bind mount.
+- **The pre-migration snapshot is the point.** `REGARD_MIGRATE=1` is set in the Dockerfile, so every
+  start applies pending migrations unattended. It now backs up first and aborts startup if it cannot.
+  Fixing that exposed `UserLogger` hanging shutdown (foreground thread, untimed wait) — the abort worked
+  and the process then sat there forever instead of exiting.
+- **Recurring jobs made pruning dangerous.** A recurring job has one `JobInfo` row that every fire
+  reuses, sitting `Completed` in between — so pruning by age deletes it and the next fire throws
+  "Invalid job ID". Excluding by `Key` doesn't work (a manual and a scheduled sync share it); the sweep
+  excludes JobIds a live Quartz trigger points at.
+- **Restore is documented in the README**, including deleting `-wal`/`-shm` before starting — leaving a
+  stale write-ahead log next to a restored database is the likeliest way to lose data while recovering.
+- **NLog 6 wants the opposite of the old config**: keep `${shortdate}` in `fileName`, delete
+  `archiveFileName`/`archiveNumbering` (legacy), add `maxArchiveDays`. Also: there are *three* nlog
+  configs and the Dockerfile ships the one a local run never uses.
+
+**Batch 6b — Ops, remaining**
 - H: server log page
-- H: maintenance actions (VACUUM etc.)
-- H: periodic DB backups
 
 **Batch 3 status (2026-08-30): all four items implemented, uncommitted.** Measured results: create
 returns in ~0.05 s (was ~3 min) and the Add dialog closes in 0.3 s; "Download again" sweeps the old

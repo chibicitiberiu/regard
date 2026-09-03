@@ -128,6 +128,19 @@ from every extraction. Fixing it means installing deno (host: the user's call; i
 line), and it should land alongside the `--impersonate` work since both are anti-bot/extraction
 quality. Verified on 2026-08-30 with yt-dlp 2026.8.19.
 
+### A failing background job notifies every user on the server (2026-09-03)
+
+`JobTrackerService.OnJobFailed` posts a notification on terminal failure **without checking
+`job.Notify`** — only the retry branch (`RetryCount > 0`) checks it. And a job scheduled with no
+`userId`, which every recurring job is, gets `Notification.UserId = null`; `NotificationService.GetRecent`
+matches `n.UserId == userId || n.UserId == null` for non-admins and `Send` uses `Clients.All`. So when
+`FetchThumbnailsJob` or the deletions sweep fails, every account on the install gets a card about it.
+
+Pre-existing and live today. `MaintenanceJob` (Batch 6a) works around it locally by never letting an
+exception escape `ExecuteJob`, which is why an unattended sweep dying on a full disk stays quiet. The
+real fix is to gate the `RetryCount <= 0` branch on `job.Notify` like the other one, but that changes
+behaviour for every job type at once — worth doing deliberately rather than as a side effect.
+
 ### SponsorBlock settings are missing from the folder page (2026-08-31)
 
 `Options.Sponsorblock_Actions` carries `OptionFlags.SubscriptionFolder`, and the resolver walks the
@@ -160,7 +173,11 @@ matters. Note the segments must **not** be persisted on `Video`: the whole point
   `userId` argument is essentially never passed. Job pushes therefore broadcast to all authenticated
   clients, which matches `JobsController.VisibleJobs` (non-admins already see `UserId == null` jobs).
   Populating it would allow per-user job pushes.
-- **`UserLogger.Stop()`** `Join()`s a thread parked in `Monitor.Wait` with no timeout and a non-volatile
-  stop flag — an existing shutdown hang risk.
+- ~~**`UserLogger.Stop()`** `Join()`s a thread parked in `Monitor.Wait` with no timeout and a non-volatile
+  stop flag — an existing shutdown hang risk.~~ **FIXED (Batch 6a).** It was not just a risk: the thread
+  was also a *foreground* thread, so any fatal startup failure left the process hanging forever after
+  `Program.Main` returned instead of exiting. Found because the new pre-migration backup refusal aborted
+  startup correctly and the process then never died. Now background, `volatile` flag, timed wait, pulsed
+  and bounded join.
 - **SignalR has no backplane**, so live updates only reach clients connected to the same instance. Fine for
   a single-instance deployment; would need one if ever scaled out.
