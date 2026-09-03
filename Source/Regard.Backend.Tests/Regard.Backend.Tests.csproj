@@ -14,6 +14,21 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- The three NLog configs, so NLogConfigTests can actually load them. They go into a subfolder on
+       purpose: copying nlog-Release.config to the output root would clobber the nlog.config that
+       Regard.Backend already copies there, and the test host reads that one. -->
+  <ItemGroup>
+    <None Include="..\Regard.Backend\nlog.config" Link="NLogConfigs\nlog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Docker\Backend\nlog-Release.config" Link="NLogConfigs\nlog-Release.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Docker\Backend\nlog-Debug.config" Link="NLogConfigs\nlog-Debug.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Regard.Backend\Regard.Backend.csproj" />
     <ProjectReference Include="..\Regard.Backend.Providers.Rss\Regard.Backend.Providers.Rss.csproj" />

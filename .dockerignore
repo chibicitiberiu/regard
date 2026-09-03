@@ -5,3 +5,9 @@ Build
 .git
 .vs
 .vscode
+
+# Local dev data: SQLite database, downloaded videos, thumbnails, logs, backups. This is 11 GB on a
+# working checkout and none of it belongs in a build context — without this line `docker build` copies
+# the whole lot to the daemon, which on a nearly-full disk is exactly the condition that has wedged
+# SQLite with "Error 10 / disk I/O" here before. See CLAUDE.md.
+.dev
