@@ -18,6 +18,11 @@ services:
       # - Jellyfin__RegardUser=me
     volumes:
       - regard-data:/data
+      # Database snapshots default to /data/Backups — i.e. inside the same volume as the database
+      # they protect, so `docker volume rm regard-data` would take both. Uncomment to keep them on
+      # the host instead. Same ownership rule as the downloads mount below:
+      #   mkdir -p /srv/regard/backups && sudo chown 1000:1000 /srv/regard/backups
+      # - /srv/regard/backups:/data/Backups
       # Videos. Mount this SAME host path into Jellyfin at the SAME container path (/downloads)
       # and point a Jellyfin "Shows" library at it — Regard matches played videos by full file
       # path. The host dir must be writable by uid 1000 (a bind mount keeps host ownership):

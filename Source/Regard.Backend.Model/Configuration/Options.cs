@@ -87,6 +87,115 @@ namespace Regard.Backend.Configuration
             0
         );
 
+        // ---- Maintenance sweep and database backups (server-wide) ----
+        //
+        // A note that applies to every option in this block: GetGlobal resolves database -> environment
+        // -> appsettings -> default and short-circuits at the first hit, so as soon as an admin presses
+        // Save on the settings page each of these gets a row and the matching REGARD_* variable is
+        // permanently shadowed. That is true of every option here, but it matters more in this block
+        // than elsewhere, because these decide which files get deleted.
+
+        /// <summary>
+        /// Master switch for the nightly housekeeping sweep (backup, job/notification pruning, yt-dlp log
+        /// cleanup). Read inside the job rather than at schedule time, so toggling it takes effect
+        /// without a restart.
+        /// </summary>
+        public static readonly OptionDefinition<bool> Server_Maintenance_Enabled = new OptionDefinition<bool>(
+            true,
+            "server.maintenance.enabled",
+            "Server:Maintenance:Enabled",
+            "REGARD_MAINTENANCE_ENABLED",
+            0
+        );
+
+        /// <summary>
+        /// How often the sweep runs. Unlike the master switch this IS read at schedule time (InitJob
+        /// builds the trigger once), so a change needs a restart.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_Maintenance_IntervalHours = new OptionDefinition<int>(
+            24,
+            "server.maintenance.interval_hours",
+            "Server:Maintenance:IntervalHours",
+            "REGARD_MAINTENANCE_INTERVAL_HOURS",
+            0
+        );
+
+        /// <summary>
+        /// When the sweep last completed, so a server that restarts more often than the interval still
+        /// gets swept. Quartz's trigger store is in-memory: every boot re-schedules the recurring jobs at
+        /// "now + N", so a 24-hour interval on a box rebooted daily would otherwise fire exactly never.
+        ///
+        /// This is internal state, not a setting. It has no configuration or environment key on purpose —
+        /// an env var here would shadow the real value forever — and it must stay out of ApiServerSettings,
+        /// because SaveServerSettings writes every field it carries and would reset the clock on each Save.
+        /// </summary>
+        public static readonly OptionDefinition<string> Server_Maintenance_LastRunUtc = new OptionDefinition<string>(
+            "",
+            "server.maintenance.last_run_utc",
+            null,
+            null,
+            0
+        );
+
+        /// <summary>
+        /// How long to keep the per-invocation yt-dlp stdout captures in Logs/ytdl.
+        ///
+        /// Worth knowing what this does and does not control: those files are only written when
+        /// configuration["Debug"] is true, which is appsettings.Development.json only — the shipped
+        /// container never writes them. And that flag is read straight from IConfiguration by
+        /// YoutubeDLService, not through this option store, so there is no admin setting that turns the
+        /// files on. This only bounds them once something else has.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_Maintenance_YtdlLogRetentionDays = new OptionDefinition<int>(
+            7,
+            "server.maintenance.ytdl_log_retention_days",
+            "Server:Maintenance:YtdlLogRetentionDays",
+            "REGARD_YTDL_LOG_RETENTION_DAYS",
+            0
+        );
+
+        /// <summary>
+        /// Whether the sweep takes a database snapshot. Snapshots land in DataDirectory/Backups, which is
+        /// derived rather than settable — see StorageManager.BackupDirectory for why.
+        /// </summary>
+        public static readonly OptionDefinition<bool> Server_Backup_Enabled = new OptionDefinition<bool>(
+            true,
+            "server.backup.enabled",
+            "Server:Backup:Enabled",
+            "REGARD_BACKUP_ENABLED",
+            0
+        );
+
+        /// <summary>
+        /// How many routine snapshots to keep. Pre-migration snapshots have their own separate budget, so
+        /// a burst of nightly backups after an upgrade cannot evict the one taken just before it.
+        /// 0 or negative means keep everything, not delete everything.
+        /// </summary>
+        public static readonly OptionDefinition<int> Server_Backup_KeepCount = new OptionDefinition<int>(
+            7,
+            "server.backup.keep_count",
+            "Server:Backup:KeepCount",
+            "REGARD_BACKUP_KEEP_COUNT",
+            0
+        );
+
+        /// <summary>
+        /// Whether to snapshot the database immediately before applying schema migrations. Default true.
+        ///
+        /// Deliberately NOT an <see cref="OptionDefinition{TValue}"/>. The check runs before
+        /// Database.Migrate(), and on a first run the Options table that GetGlobal reads does not exist
+        /// yet — resolving it as a normal option would throw "no such table: Options" and, since a
+        /// failed pre-migration backup aborts startup, brick a fresh install. Giving it a null database
+        /// key would sidestep that but leave a worse trap: GetGlobal's cache is a Dictionary, so a null
+        /// key throws ArgumentNullException the moment anyone passes the definition to it.
+        ///
+        /// So it is plain constants, read straight from IConfiguration (which already includes
+        /// environment variables) by the startup path. SQLite only; see DatabaseBackupService.
+        /// </summary>
+        public const string Server_Backup_PreMigration_ConfigKey = "Server:Backup:PreMigration";
+        public const string Server_Backup_PreMigration_EnvKey = "REGARD_BACKUP_PREMIGRATION";
+        public const bool Server_Backup_PreMigration_Default = true;
+
         /// <summary>
         /// If enabled, videos will be downloaded automatically
         /// </summary>

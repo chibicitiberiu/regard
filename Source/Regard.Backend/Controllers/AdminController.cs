@@ -30,6 +30,7 @@ namespace Regard.Backend.Controllers
         private readonly ApiResponseFactory responseFactory;
         private readonly Microsoft.Extensions.Configuration.IConfiguration configuration;
         private readonly Regard.Backend.Common.Services.IYoutubeDlService ytdlService;
+        private readonly DatabaseBackupService backupService;
 
         public AdminController(UserManager<UserAccount> userManager,
                                RoleManager<IdentityRole> roleManager,
@@ -38,7 +39,8 @@ namespace Regard.Backend.Controllers
                                RegardScheduler scheduler,
                                ApiResponseFactory responseFactory,
                                Microsoft.Extensions.Configuration.IConfiguration configuration,
-                               Regard.Backend.Common.Services.IYoutubeDlService ytdlService)
+                               Regard.Backend.Common.Services.IYoutubeDlService ytdlService,
+                               DatabaseBackupService backupService)
         {
             this.userManager = userManager;
             this.roleManager = roleManager;
@@ -48,6 +50,7 @@ namespace Regard.Backend.Controllers
             this.responseFactory = responseFactory;
             this.configuration = configuration;
             this.ytdlService = ytdlService;
+            this.backupService = backupService;
         }
 
         /// <summary>Fixed on-disk location of the uploaded yt-dlp cookies.txt (null if DataDirectory unset).</summary>
@@ -141,6 +144,65 @@ namespace Regard.Backend.Controllers
             }
 
             return Ok(responseFactory.Success());
+        }
+
+        // ---- Database maintenance ----------------------------------------------------------
+
+        [HttpGet]
+        [Route("maintenance")]
+        public IActionResult GetMaintenanceStatus()
+        {
+            var status = backupService.GetStatus();
+
+            DateTimeOffset? lastSweep = null;
+            var stored = optionManager.GetGlobal(Options.Server_Maintenance_LastRunUtc);
+            if (!string.IsNullOrWhiteSpace(stored)
+                && DateTimeOffset.TryParse(stored, null,
+                        System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
+                lastSweep = parsed;
+
+            return Ok(responseFactory.Success(new ApiMaintenanceStatus
+            {
+                Supported = status.Supported,
+                BackupDirectory = status.Directory,
+                DatabaseBytes = status.DatabaseBytes,
+                WalBytes = status.WalBytes,
+                ReclaimableBytes = status.ReclaimableBytes,
+                FreeBytes = status.FreeBytes,
+                BackupCount = status.Count,
+                BackupTotalBytes = status.TotalBytes,
+                LatestBackupUtc = status.LatestUtc,
+                LastSweepUtc = lastSweep,
+            }));
+        }
+
+        /// <summary>
+        /// Takes a snapshot now, then applies retention. Runs inline rather than queueing a job:
+        /// VACUUM INTO is a read transaction that takes well under a second on a database of this size
+        /// and does not block writers, and an admin pressing a button wants to be told what happened
+        /// rather than to go and look in the job log.
+        /// </summary>
+        [HttpPost]
+        [Route("maintenance/backup")]
+        public async Task<IActionResult> BackupNow()
+        {
+            var outcome = await backupService.CreateBackupAsync();
+
+            if (!outcome.Succeeded)
+            {
+                // A skip is an expected, explainable state (SQL Server, no database yet, not enough
+                // disk), so report it as a message rather than a server error.
+                return outcome.Skipped
+                    ? Ok(responseFactory.Success(message: $"No backup taken — {outcome.Reason}"))
+                    : BadRequest(responseFactory.Error($"Backup failed: {outcome.Reason}"));
+            }
+
+            int removed = backupService.ApplyRetention(
+                optionManager.GetGlobal(Options.Server_Backup_KeepCount));
+
+            var message = $"Backup created: {outcome.Describe()}"
+                        + (removed > 0 ? $"; removed {removed} older snapshot(s)" : "");
+            return Ok(responseFactory.Success(message: message));
         }
 
         // ---- User management ---------------------------------------------------------------

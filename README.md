@@ -48,7 +48,12 @@ Set these under the service's `environment:` in `docker-compose.yml`:
 | `DataDirectory` | `/data` | App data (DB, thumbnails, yt-dlp, logs). Keep it on the volume. |
 | `DownloadDirectory` | `/downloads` | Video storage. **Must be an absolute path.** |
 | `ASPNETCORE_URLS` | `http://+:8080` | Listen address inside the container. |
-| `REGARD_MIGRATE` | `1` | Apply database migrations on start (needed on first run). |
+| `REGARD_MIGRATE` | `1` | Apply database migrations on start (needed on first run). A snapshot of the database is taken first — see *Backups*. |
+| `REGARD_BACKUP_PREMIGRATION` | `true` | Snapshot the database before applying migrations, and **refuse to migrate** if that snapshot fails. Set `false` only if you back up by other means. SQLite only. |
+| `REGARD_BACKUP_ENABLED` | `true` | Take a nightly database snapshot. |
+| `REGARD_BACKUP_KEEP_COUNT` | `7` | How many routine snapshots to keep. Pre-migration snapshots are kept separately. |
+| `REGARD_MAINTENANCE_ENABLED` | `true` | Run the nightly housekeeping sweep (snapshot, prune job history and notifications, clean up yt-dlp logs). |
+| `REGARD_MAINTENANCE_INTERVAL_HOURS` | `24` | How often that sweep runs. Changing it needs a restart. |
 | `REGARD_ALLOW_REGISTRATIONS` | `true` | Allow new account sign-ups. Set `false` after creating your account to lock it down (the first account is always allowed and becomes the admin). |
 | `JWT__Secret` | *(generated)* | JWT signing secret. Leave unset to auto-generate + persist one at `{DataDirectory}/jwt-secret`. |
 | `Metadata__Enabled` | `false` | Write Jellyfin/Kodi NFO sidecars + poster/thumbnail images and name files `SxxExx - Title`. |
@@ -64,6 +69,46 @@ Set these under the service's `environment:` in `docker-compose.yml`:
 - The **first account you register becomes the administrator.** Register it immediately after starting the container, then set `REGARD_ALLOW_REGISTRATIONS=false` to close public sign-ups.
 - On first boot Regard generates a random JWT signing secret and stores it at `{DataDirectory}/jwt-secret` (override with `JWT__Secret`). Keep the `regard-data` volume — losing it forces everyone to log in again.
 - The container serves plain **HTTP**; always put it behind a TLS-terminating reverse proxy when exposing it to the internet.
+
+### Backups
+
+Regard snapshots its own database into **`{DataDirectory}/Backups`** — nightly, and always immediately
+before applying a schema migration. Snapshots are named `Regard-<UTC timestamp>.db`, and the
+pre-migration ones `Regard-premigration-<UTC timestamp>.db`.
+
+They are taken with SQLite's `VACUUM INTO`, so they are consistent point-in-time copies made without
+stopping the app, and each one is a single self-contained file — there is no `-wal`/`-shm` to keep
+alongside it. Each is verified with `PRAGMA integrity_check` before it replaces the previous one.
+
+Two things to be aware of:
+
+- **The default location is inside the same volume as the database it protects.** That survives
+  recreating the container, and nothing else — `docker volume rm regard-data` takes the database and
+  every snapshot with it. For real safety, bind-mount somewhere off-box: uncomment the
+  `- /srv/regard/backups:/data/Backups` line in `docker-compose.yml` (the host directory must be
+  writable by uid 1000, same as the downloads mount).
+- **On SQL Server none of this happens.** There is no `VACUUM INTO`, and `BACKUP DATABASE` writes to
+  the database server's own filesystem rather than Regard's, so snapshots — including the
+  pre-migration one — are skipped with a log line. Back up by your usual SQL Server means.
+
+Only files matching Regard's own naming are ever deleted by retention, so your own copies can safely
+sit in the same directory.
+
+#### Restoring
+
+Restoring is deliberately manual — a wrong click here is not recoverable.
+
+1. Stop the container: `docker compose stop regard`
+2. Replace `/data/Regard.db` with the snapshot you want, renamed to `Regard.db`.
+3. **Delete `/data/Regard.db-wal` and `/data/Regard.db-shm` if they exist.** This step is not
+   optional: leaving a stale write-ahead log next to a restored database makes SQLite replay the old
+   log over the new file, which will corrupt it.
+4. Start it again: `docker compose start regard`
+5. Log in and check your subscriptions and video counts look right.
+
+If the app refuses to start with *"Refusing to apply N migration(s)"*, the pre-migration snapshot
+could not be written — usually a full disk or a permissions problem on the backup directory. Fix that
+and start again, or set `REGARD_BACKUP_PREMIGRATION=false` to migrate without one.
 
 ### Using it with Jellyfin
 

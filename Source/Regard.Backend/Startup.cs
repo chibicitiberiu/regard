@@ -1,5 +1,6 @@
 using Regard.Backend.Services.LiveUpdates;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -208,6 +209,7 @@ namespace Regard.Backend
             services.AddScoped<SubscriptionManager>();
             services.AddScoped<VideoManager>();
             services.AddScoped<UserQuotaService>();
+            services.AddScoped<DatabaseBackupService>();   // scoped: it uses the scoped DataContext
             services.AddScoped<UserCookiesService>();
             services.AddSingleton<StorageManager>();
             services.AddSingleton<ThumbnailService>();
@@ -223,10 +225,13 @@ namespace Regard.Backend
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        // Configure's parameters are resolved from a scope the host creates around this call, which is
+        // why the scoped DataContext below works — DatabaseBackupService is scoped for the same reason.
         public void Configure(IApplicationBuilder app,
                               IWebHostEnvironment env,
                               DataContext dataContext,
-                              StorageManager storageManager)
+                              StorageManager storageManager,
+                              DatabaseBackupService backupService)
         {
             app.UseSignalRQueryStringAuth();
 
@@ -270,13 +275,86 @@ namespace Regard.Backend
             storageManager.Initialize(app);
 
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("REGARD_MIGRATE")))
-                ApplyMigrations(dataContext);
+                ApplyMigrations(dataContext, backupService);
         }
 
-        public void ApplyMigrations(DataContext dataContext)
+        public void ApplyMigrations(DataContext dataContext, DatabaseBackupService backupService)
         {
+            // Applying a migration rewrites the schema of a database nobody has a copy of. This runs
+            // unattended on every container start (the Dockerfile sets REGARD_MIGRATE=1), so it is the
+            // one place in the app that most deserves a snapshot first.
+            //
+            // Only when there is something to apply: GetPendingMigrations() works fine without a
+            // database and reports every migration as pending on a fresh install, so without this check
+            // a first run would snapshot the empty file SQLite just created.
+            var pending = SafePendingMigrations(dataContext);
+            if (pending.Count > 0 && IsPreMigrationBackupEnabled())
+            {
+                Console.WriteLine($"Backing up the database before applying {pending.Count} migration(s)...");
+
+                var outcome = backupService.CreateBackupAsync(preMigration: true)
+                                           .GetAwaiter().GetResult();
+
+                if (outcome.Succeeded)
+                {
+                    Console.WriteLine($"Pre-migration backup: {outcome.Describe()}");
+                }
+                else if (outcome.Skipped)
+                {
+                    // Nothing to protect (fresh install) or nothing we can do (SQL Server, where
+                    // BACKUP DATABASE would write on the database host rather than here). Migrating
+                    // unprotected is the documented behaviour there, not a silent one.
+                    Console.WriteLine($"Pre-migration backup skipped — {outcome.Reason}. "
+                                    + "Applying migrations without one.");
+                }
+                else
+                {
+                    // We could have backed up and failed to. Refusing to migrate is the whole point:
+                    // the alternative is an irreversible schema change with no copy behind it.
+                    throw new InvalidOperationException(
+                        $"Refusing to apply {pending.Count} migration(s): the pre-migration backup {outcome.Describe()}. "
+                        + $"Free up space or fix permissions on {backupService.BackupDirectory}, or set "
+                        + $"{Regard.Backend.Configuration.Options.Server_Backup_PreMigration_EnvKey}=false to migrate without one.");
+                }
+            }
+
             Console.WriteLine("Applying migrations...");
             dataContext.Database.Migrate();
+        }
+
+        /// <summary>
+        /// Read straight from IConfiguration (which already folds in environment variables) rather than
+        /// through IOptionManager: this runs before Database.Migrate(), and on a first run the Options
+        /// table that GetGlobal consults does not exist yet.
+        /// </summary>
+        private bool IsPreMigrationBackupEnabled()
+        {
+            var configured = Configuration.GetValue<bool?>(
+                Regard.Backend.Configuration.Options.Server_Backup_PreMigration_ConfigKey);
+            if (configured.HasValue)
+                return configured.Value;
+
+            var env = Environment.GetEnvironmentVariable(
+                Regard.Backend.Configuration.Options.Server_Backup_PreMigration_EnvKey);
+            if (!string.IsNullOrWhiteSpace(env) && bool.TryParse(env, out bool parsed))
+                return parsed;
+
+            return Regard.Backend.Configuration.Options.Server_Backup_PreMigration_Default;
+        }
+
+        private static List<string> SafePendingMigrations(DataContext dataContext)
+        {
+            try
+            {
+                return dataContext.Database.GetPendingMigrations().ToList();
+            }
+            catch (Exception ex)
+            {
+                // If we cannot even ask, let Migrate() produce the real error rather than masking it
+                // behind a backup decision.
+                Console.WriteLine($"Could not determine pending migrations ({ex.Message}); continuing.");
+                return new List<string>();
+            }
         }
     }
 }

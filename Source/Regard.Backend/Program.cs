@@ -42,6 +42,11 @@ namespace Regard.Backend
             catch(Exception ex)
             {
                 logger.Fatal(ex, "Shutdown caused by critical exception!");
+
+                // Exit non-zero. Without this the process ends with code 0 after a fatal startup
+                // failure, so `restart: on-failure` never restarts, CI and shell callers read a clean
+                // shutdown, and a refused pre-migration backup looks like an ordinary stop.
+                Environment.ExitCode = 1;
             }
             finally
             {

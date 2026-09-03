@@ -19,14 +19,25 @@ namespace Regard.Backend.Logging
         private readonly ConcurrentQueue<Message> messageQueue = new();
         private readonly Thread messageThread;
         private readonly object @lock = new object();
-        private bool stop = false;
+        // volatile: the writer is whatever thread calls Stop(), the reader is the message thread's
+        // loop condition. Without it the JIT is free to hoist the read out of the loop.
+        private volatile bool stop = false;
 
         public event EventHandler<Message> MessageCreated;
 
         public UserLogger(IServiceScopeFactory scopeFactory)
         {
             this.scopeFactory = scopeFactory;
-            this.messageThread = new Thread(RunMessageThread);
+            this.messageThread = new Thread(RunMessageThread)
+            {
+                // Background, so this thread can never be the reason the process refuses to exit.
+                // It was a foreground thread, which meant a startup failure -- Program.Main logging a
+                // fatal exception and returning -- left the process hanging forever instead of
+                // exiting. Nothing here is worth blocking shutdown for: an undelivered user-facing
+                // message is less important than the process actually stopping.
+                IsBackground = true,
+                Name = "UserLogger",
+            };
             messageThread.Start();
         }
 
@@ -56,7 +67,10 @@ namespace Regard.Backend.Logging
                 {
                     lock (@lock)
                     {
-                        Monitor.Wait(@lock);
+                        // Timed wait rather than an indefinite one: Stop() sets the flag and pulses,
+                        // but if the pulse is missed (set between the queue check and taking the lock)
+                        // an untimed wait would park here forever and Join() below would never return.
+                        Monitor.Wait(@lock, TimeSpan.FromSeconds(1));
                     }
                 }
             }
@@ -112,8 +126,17 @@ namespace Regard.Backend.Logging
         {
             stop = true;
 
+            // Wake the thread if it is parked, so it notices the flag rather than waiting out its
+            // timeout.
+            lock (@lock)
+            {
+                Monitor.PulseAll(@lock);
+            }
+
+            // Bounded: a logging thread must not be able to hold up shutdown. If it is wedged on a
+            // database write we abandon it -- it is a background thread, so the process still exits.
             if (waitForExit)
-                messageThread.Join();
+                messageThread.Join(TimeSpan.FromSeconds(5));
         }
 
         public void Dispose()
