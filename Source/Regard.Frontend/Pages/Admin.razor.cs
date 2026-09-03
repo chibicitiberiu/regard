@@ -26,6 +26,19 @@ namespace Regard.Frontend.Pages
         protected string DefaultStorageQuotaStr { get; set; } = string.Empty;
         protected int JobHistoryRetentionDays { get; set; }
 
+        // Maintenance + backups
+        protected bool MaintenanceEnabled { get; set; }
+        protected int MaintenanceIntervalHours { get; set; }
+        protected int YtdlLogRetentionDays { get; set; }
+        protected bool BackupEnabled { get; set; }
+        protected int BackupKeepCount { get; set; }
+
+        /// <summary>Read-only sizes/counts, refreshed after every action so the numbers stay honest.</summary>
+        protected ApiMaintenanceStatus maintenance;
+        protected bool maintenanceBusy = false;
+        protected bool maintenanceFailed = false;
+        protected string maintenanceStatus = string.Empty;
+
         // Throttling / anti-bot
         protected bool ReturnYouTubeDislikeEnabled { get; set; }
         protected bool ThrottleEnabled { get; set; }
@@ -66,6 +79,7 @@ namespace Regard.Frontend.Pages
         {
             currentUsername = await Auth.GetUsername();
             await LoadServer();
+            await LoadMaintenance();
             await LoadUsers();
         }
 
@@ -79,6 +93,11 @@ namespace Regard.Frontend.Pages
                 DefaultVideoQuotaStr = s.DefaultVideoQuota?.ToString() ?? string.Empty;
                 DefaultStorageQuotaStr = s.DefaultStorageQuotaGb?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
                 JobHistoryRetentionDays = s.JobHistoryRetentionDays;
+                MaintenanceEnabled = s.MaintenanceEnabled;
+                MaintenanceIntervalHours = s.MaintenanceIntervalHours;
+                YtdlLogRetentionDays = s.YtdlLogRetentionDays;
+                BackupEnabled = s.BackupEnabled;
+                BackupKeepCount = s.BackupKeepCount;
                 ReturnYouTubeDislikeEnabled = s.ReturnYouTubeDislikeEnabled;
                 ThrottleEnabled = s.ThrottleEnabled;
                 SleepRequests = s.SleepRequests;
@@ -123,6 +142,11 @@ namespace Regard.Frontend.Pages
                 DefaultVideoQuota = ParseIntOrNull(DefaultVideoQuotaStr),
                 DefaultStorageQuotaGb = ParseDoubleOrNull(DefaultStorageQuotaStr),
                 JobHistoryRetentionDays = JobHistoryRetentionDays,
+                MaintenanceEnabled = MaintenanceEnabled,
+                MaintenanceIntervalHours = MaintenanceIntervalHours,
+                YtdlLogRetentionDays = YtdlLogRetentionDays,
+                BackupEnabled = BackupEnabled,
+                BackupKeepCount = BackupKeepCount,
                 ReturnYouTubeDislikeEnabled = ReturnYouTubeDislikeEnabled,
                 ThrottleEnabled = ThrottleEnabled,
                 SleepRequests = SleepRequests,
@@ -145,6 +169,68 @@ namespace Regard.Frontend.Pages
             serverStatus = serverSaved ? "Saved." : ("Save failed: " + resp?.Message);
             if (serverSaved)
                 await LoadServer();   // refresh cookies-configured indicator + clear the pending upload
+        }
+
+        private async Task LoadMaintenance()
+        {
+            maintenance = (await Backend.GetMaintenanceStatus())?.Data;
+        }
+
+        /// <summary>
+        /// Runs one of the maintenance actions and reports what it said. They share a busy flag so the
+        /// three buttons can't be stacked -- compacting in particular holds an exclusive database lock,
+        /// and firing a backup into the middle of it would just block.
+        /// </summary>
+        private async Task RunMaintenanceAction(Func<Task<(Common.API.ApiResponse, System.Net.Http.HttpResponseMessage)>> action)
+        {
+            maintenanceBusy = true;
+            maintenanceStatus = string.Empty;
+            StateHasChanged();
+
+            try
+            {
+                var (resp, httpResp) = await action();
+                maintenanceFailed = !httpResp.IsSuccessStatusCode;
+                maintenanceStatus = resp?.Message ?? (maintenanceFailed ? "Failed." : "Done.");
+            }
+            catch (Exception ex)
+            {
+                maintenanceFailed = true;
+                maintenanceStatus = ex.Message;
+            }
+            finally
+            {
+                maintenanceBusy = false;
+                // The sizes on screen are now stale whatever happened.
+                await LoadMaintenance();
+            }
+        }
+
+        protected Task OnBackupNow() => RunMaintenanceAction(() => Backend.BackupDatabaseNow());
+
+        protected Task OnRunMaintenance() => RunMaintenanceAction(() => Backend.RunMaintenanceNow());
+
+        protected Task OnCompact() => RunMaintenanceAction(() => Backend.CompactDatabase());
+
+        /// <summary>Relative where it is useful, absolute where it is not. "never" is a real answer here.</summary>
+        protected static string FormatWhen(DateTimeOffset? when)
+        {
+            if (when == null)
+                return "never";
+
+            var ago = DateTimeOffset.UtcNow - when.Value.ToUniversalTime();
+            if (ago < TimeSpan.Zero)
+                return when.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+            if (ago < TimeSpan.FromMinutes(1))
+                return "just now";
+            if (ago < TimeSpan.FromHours(1))
+                return $"{(int)ago.TotalMinutes} min ago";
+            if (ago < TimeSpan.FromDays(1))
+                return $"{(int)ago.TotalHours} h ago";
+            if (ago < TimeSpan.FromDays(30))
+                return $"{(int)ago.TotalDays} d ago";
+
+            return when.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
         }
 
         protected async Task OnCookiesFile(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)

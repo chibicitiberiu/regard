@@ -18,6 +18,30 @@ namespace Regard.Common.API.Admin
         /// <summary>How long finished jobs are kept in the Job Log, in days.</summary>
         public int JobHistoryRetentionDays { get; set; }
 
+        // ---- Database maintenance ----
+        //
+        // Note there is deliberately no LastRunUtc here. SaveServerSettings writes every field this DTO
+        // carries, so putting the sweep's completion timestamp in it would reset the clock on every Save
+        // and re-trigger the catch-up sweep.
+
+        /// <summary>Run the nightly housekeeping sweep (snapshot, prune history, clean up yt-dlp logs).</summary>
+        public bool MaintenanceEnabled { get; set; }
+
+        /// <summary>How often that sweep runs. Read when the trigger is built, so a change needs a restart.</summary>
+        public int MaintenanceIntervalHours { get; set; }
+
+        /// <summary>
+        /// How long per-invocation yt-dlp stdout captures are kept. Only has an effect when those files
+        /// are being written at all, which is a development-only setting.
+        /// </summary>
+        public int YtdlLogRetentionDays { get; set; }
+
+        /// <summary>Take a database snapshot as part of the sweep.</summary>
+        public bool BackupEnabled { get; set; }
+
+        /// <summary>How many routine snapshots to keep. Pre-migration ones have a separate budget.</summary>
+        public int BackupKeepCount { get; set; }
+
         // ---- External services ----
 
         /// <summary>

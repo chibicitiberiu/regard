@@ -68,12 +68,158 @@
 
                     <section class="settings-section">
                         <h3>Maintenance</h3>
+                        <p class="text-muted">
+                            A nightly sweep keeps the database and logs from growing without limit. It also
+                            runs shortly after startup if it is overdue, so a server that restarts often
+                            still gets swept.
+                        </p>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Run nightly sweep:</label>
+                            <div class="col-xs-8">
+                                <label class="inline-check">
+                                    <input type="checkbox" @bind="MaintenanceEnabled" /> Prune history and clean up logs
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Sweep every (hours):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" min="1" @bind="MaintenanceIntervalHours" />
+                                <small class="text-muted">Takes effect after a restart.</small>
+                            </div>
+                        </div>
                         <div class="form-group row">
                             <label class="col-xs-4 col-form-label">Keep job history for (days):</label>
                             <div class="col-xs-8">
                                 <input class="form-control" type="number" min="0" @bind="JobHistoryRetentionDays" />
+                                <small class="text-muted">0 disables pruning. Failed jobs are kept three times longer.</small>
                             </div>
                         </div>
+                        <div class="form-group row">
+                            <label class="col-xs-4 col-form-label">Keep yt-dlp logs for (days):</label>
+                            <div class="col-xs-8">
+                                <input class="form-control" type="number" min="0" @bind="YtdlLogRetentionDays" />
+                                <small class="text-muted">
+                                    Per-invocation output captures. Only written when the server runs with
+                                    debug logging on, which is not the case for a normal install.
+                                </small>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section">
+                        <h3>Database backups</h3>
+                        @if (maintenance == null)
+                        {
+                            <p class="text-muted">Loading…</p>
+                        }
+                        else if (!maintenance.Supported)
+                        {
+                            <p class="fg-error">
+                                Not available on SQL Server &mdash; a backup would have to be written on the
+                                database server rather than here, and there is no compaction equivalent.
+                                Back up by your usual SQL Server means. <strong>This also means no snapshot
+                                is taken before schema migrations.</strong>
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-muted">
+                                Snapshots are written to <code>@maintenance.BackupDirectory</code> and taken
+                                without stopping the server. One is always taken before applying a schema
+                                migration, and startup is refused if that fails.
+                            </p>
+
+                            <div class="form-group row">
+                                <label class="col-xs-4 col-form-label">Database:</label>
+                                <div class="col-xs-8">
+                                    <span>@FormatSize(maintenance.DatabaseBytes)</span>
+                                    @if (maintenance.WalBytes > 0)
+                                    {
+                                        <span class="text-muted"> + @FormatSize(maintenance.WalBytes) write-ahead log</span>
+                                    }
+                                    @if (maintenance.ReclaimableBytes > 0)
+                                    {
+                                        <div>
+                                            <small class="text-muted">
+                                                @FormatSize(maintenance.ReclaimableBytes.Value) of that is reusable free space.
+                                            </small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label class="col-xs-4 col-form-label">Snapshots:</label>
+                                <div class="col-xs-8">
+                                    @if (maintenance.BackupCount == 0)
+                                    {
+                                        <span class="fg-error">none yet</span>
+                                    }
+                                    else
+                                    {
+                                        <span>
+                                            @maintenance.BackupCount kept, @FormatSize(maintenance.BackupTotalBytes) total
+                                        </span>
+                                        <div><small class="text-muted">Most recent: @FormatWhen(maintenance.LatestBackupUtc)</small></div>
+                                    }
+                                    <div>
+                                        <small class="text-muted">
+                                            Last sweep: @FormatWhen(maintenance.LastSweepUtc)
+                                            @if (maintenance.FreeBytes.HasValue)
+                                            {
+                                                <text> &middot; @FormatSize(maintenance.FreeBytes.Value) free on that filesystem</text>
+                                            }
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label class="col-xs-4 col-form-label">Snapshot nightly:</label>
+                                <div class="col-xs-8">
+                                    <label class="inline-check">
+                                        <input type="checkbox" @bind="BackupEnabled" /> Include a backup in the sweep
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label class="col-xs-4 col-form-label">Snapshots to keep:</label>
+                                <div class="col-xs-8">
+                                    <input class="form-control" type="number" min="0" @bind="BackupKeepCount" />
+                                    <small class="text-muted">
+                                        Pre-migration snapshots are kept separately, so routine backups can't
+                                        push one out. 0 keeps everything.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label class="col-xs-4 col-form-label">Actions:</label>
+                                <div class="col-xs-8 admin-maintenance-actions">
+                                    <button class="button-small" type="button" disabled="@maintenanceBusy" @onclick="OnBackupNow">
+                                        Back up now
+                                    </button>
+                                    <button class="button-small" type="button" disabled="@maintenanceBusy" @onclick="OnRunMaintenance">
+                                        Run sweep now
+                                    </button>
+                                    <button class="button-small" type="button" disabled="@maintenanceBusy" @onclick="OnCompact">
+                                        Compact database
+                                    </button>
+                                    @if (!string.IsNullOrEmpty(maintenanceStatus))
+                                    {
+                                        <div><small class="@(maintenanceFailed ? "fg-error" : "fg-success")">@maintenanceStatus</small></div>
+                                    }
+                                    <div>
+                                        <small class="text-muted">
+                                            Compacting reclaims free space inside the database file, but briefly
+                                            blocks all database access while it runs &mdash; it is not part of the
+                                            nightly sweep for that reason.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </section>
 
                     <section class="settings-section">

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Regard.Backend.Configuration;
+using Regard.Backend.DB;
 using Regard.Backend.Jobs;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
@@ -31,6 +33,7 @@ namespace Regard.Backend.Controllers
         private readonly Microsoft.Extensions.Configuration.IConfiguration configuration;
         private readonly Regard.Backend.Common.Services.IYoutubeDlService ytdlService;
         private readonly DatabaseBackupService backupService;
+        private readonly DataContext dataContext;
 
         public AdminController(UserManager<UserAccount> userManager,
                                RoleManager<IdentityRole> roleManager,
@@ -40,7 +43,8 @@ namespace Regard.Backend.Controllers
                                ApiResponseFactory responseFactory,
                                Microsoft.Extensions.Configuration.IConfiguration configuration,
                                Regard.Backend.Common.Services.IYoutubeDlService ytdlService,
-                               DatabaseBackupService backupService)
+                               DatabaseBackupService backupService,
+                               DataContext dataContext)
         {
             this.userManager = userManager;
             this.roleManager = roleManager;
@@ -51,6 +55,7 @@ namespace Regard.Backend.Controllers
             this.configuration = configuration;
             this.ytdlService = ytdlService;
             this.backupService = backupService;
+            this.dataContext = dataContext;
         }
 
         /// <summary>Fixed on-disk location of the uploaded yt-dlp cookies.txt (null if DataDirectory unset).</summary>
@@ -75,6 +80,11 @@ namespace Regard.Backend.Controllers
                 DefaultVideoQuota = countQuota >= 0 ? countQuota : (int?)null,
                 DefaultStorageQuotaGb = sizeQuotaMb >= 0 ? sizeQuotaMb / (double)MbPerGb : (double?)null,
                 JobHistoryRetentionDays = optionManager.GetGlobal(Options.Server_JobHistoryRetentionDays),
+                MaintenanceEnabled = optionManager.GetGlobal(Options.Server_Maintenance_Enabled),
+                MaintenanceIntervalHours = optionManager.GetGlobal(Options.Server_Maintenance_IntervalHours),
+                YtdlLogRetentionDays = optionManager.GetGlobal(Options.Server_Maintenance_YtdlLogRetentionDays),
+                BackupEnabled = optionManager.GetGlobal(Options.Server_Backup_Enabled),
+                BackupKeepCount = optionManager.GetGlobal(Options.Server_Backup_KeepCount),
                 ReturnYouTubeDislikeEnabled = optionManager.GetGlobal(Options.ReturnYouTubeDislike_Enabled),
                 ThrottleEnabled = optionManager.GetGlobal(Options.Server_Throttle_Enabled),
                 SleepRequests = optionManager.GetGlobal(Options.Server_Ytdl_SleepRequests),
@@ -105,6 +115,11 @@ namespace Regard.Backend.Controllers
             optionManager.SetGlobal(Options.User_SizeQuota,
                 request.DefaultStorageQuotaGb.HasValue ? (long)(request.DefaultStorageQuotaGb.Value * MbPerGb) : -1);
             optionManager.SetGlobal(Options.Server_JobHistoryRetentionDays, request.JobHistoryRetentionDays);
+            optionManager.SetGlobal(Options.Server_Maintenance_Enabled, request.MaintenanceEnabled);
+            optionManager.SetGlobal(Options.Server_Maintenance_IntervalHours, request.MaintenanceIntervalHours);
+            optionManager.SetGlobal(Options.Server_Maintenance_YtdlLogRetentionDays, request.YtdlLogRetentionDays);
+            optionManager.SetGlobal(Options.Server_Backup_Enabled, request.BackupEnabled);
+            optionManager.SetGlobal(Options.Server_Backup_KeepCount, request.BackupKeepCount);
 
             optionManager.SetGlobal(Options.ReturnYouTubeDislike_Enabled, request.ReturnYouTubeDislikeEnabled);
             optionManager.SetGlobal(Options.Server_Throttle_Enabled, request.ThrottleEnabled);
@@ -203,6 +218,65 @@ namespace Regard.Backend.Controllers
             var message = $"Backup created: {outcome.Describe()}"
                         + (removed > 0 ? $"; removed {removed} older snapshot(s)" : "");
             return Ok(responseFactory.Success(message: message));
+        }
+
+        /// <summary>
+        /// Compacts the database in place, returning free pages to the filesystem.
+        ///
+        /// A button rather than part of the nightly sweep, on purpose. VACUUM rewrites the whole file
+        /// and holds an exclusive lock while it does; every other writer blocks for busy_timeout (30 s)
+        /// and then *fails*, which on this database has previously meant unrelated endpoints returning
+        /// bare 500s until a restart. That is an acceptable risk when a person chose it and is watching,
+        /// and not one worth taking unattended at 3am to reclaim a few hundred KB.
+        ///
+        /// The follow-up checkpoint is not optional: under WAL the size reduction commits through the
+        /// log, so without it the file on disk does not actually shrink and the UI would report success
+        /// while nothing appeared to happen.
+        /// </summary>
+        [HttpPost]
+        [Route("maintenance/compact")]
+        public async Task<IActionResult> CompactNow()
+        {
+            var status = backupService.GetStatus();
+            if (!status.Supported)
+                return Ok(responseFactory.Success(message: "Compacting is only available on SQLite."));
+
+            long before = status.DatabaseBytes;
+            long reclaimable = status.ReclaimableBytes ?? 0;
+
+            try
+            {
+                await dataContext.Database.ExecuteSqlRawAsync("VACUUM;");
+                await dataContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(responseFactory.Error($"Compacting failed: {ex.Message}"));
+            }
+
+            long after = backupService.GetStatus().DatabaseBytes;
+            long freed = before - after;
+
+            return Ok(responseFactory.Success(message: freed > 0
+                ? $"Database compacted, freeing {DatabaseBackupService.Bytes(freed)}."
+                : $"Database compacted (about {DatabaseBackupService.Bytes(reclaimable)} was reusable; the file did not shrink)."));
+        }
+
+        /// <summary>
+        /// Runs the housekeeping sweep now instead of waiting for its schedule. This queues a normal
+        /// job run; if the scheduled sweep happens to be running already, Quartz serialises the two
+        /// (MaintenanceJob is [DisallowConcurrentExecution]) and this one starts when that finishes.
+        /// </summary>
+        [HttpPost]
+        [Route("maintenance/run")]
+        public async Task<IActionResult> RunMaintenanceNow()
+        {
+            await scheduler.Schedule<MaintenanceJob>(
+                name: "Database maintenance (manual)",
+                userId: userManager.GetUserId(User),
+                retryCount: 0);
+
+            return Ok(responseFactory.Success(message: "Maintenance sweep queued."));
         }
 
         // ---- User management ---------------------------------------------------------------

@@ -250,6 +250,21 @@ namespace Regard.Services
         public Task<(ApiResponse, HttpResponseMessage)> SaveServerSettings(ApiServerSettings data)
             => Post("api/admin/settings", data);
 
+        public Task<ApiResponse<ApiMaintenanceStatus>> GetMaintenanceStatus()
+            => Get<ApiMaintenanceStatus>("api/admin/maintenance");
+
+        /// <summary>Takes a snapshot and applies retention. Runs inline; returns what it did.</summary>
+        public Task<(ApiResponse, HttpResponseMessage)> BackupDatabaseNow()
+            => Post("api/admin/maintenance/backup", new object());
+
+        /// <summary>Queues the housekeeping sweep instead of waiting for its schedule.</summary>
+        public Task<(ApiResponse, HttpResponseMessage)> RunMaintenanceNow()
+            => Post("api/admin/maintenance/run", new object());
+
+        /// <summary>Compacts the database in place. Blocks database access while it runs.</summary>
+        public Task<(ApiResponse, HttpResponseMessage)> CompactDatabase()
+            => Post("api/admin/maintenance/compact", new object());
+
         public Task<ApiResponse<List<ApiAdminUser>>> GetAdminUsers()
             => Get<List<ApiAdminUser>>("api/admin/users");
 

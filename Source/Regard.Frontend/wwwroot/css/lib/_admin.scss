@@ -22,6 +22,19 @@
     }
 }
 
+// Maintenance actions (back up / sweep / compact). These wrap rather than overflow, because the
+// explanatory text underneath is part of the control, not decoration.
+.admin-maintenance-actions {
+    button {
+        margin: 0 0.35rem 0.4rem 0;
+    }
+
+    small {
+        display: block;
+        margin-top: 0.15rem;
+    }
+}
+
 .button-small {
     font-size: 0.85em;
     padding: 0.2rem 0.55rem;
