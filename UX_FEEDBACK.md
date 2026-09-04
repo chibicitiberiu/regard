@@ -151,10 +151,10 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (link the co
 
 ## H. Ops / maintenance / admin
 
-- `[ ]` **[L] Server log page in Settings** — inspect server logs from the UI. _Read the
-  `Logs/` files (or a ring buffer); admin-gated._ **Batch 6b.** Note Batch 6a changed what is on disk:
-  the `.csv` twin is gone and the `.log` is now a fixed 8-field pipe format (with callsite, request URL
-  and MVC action), which is what a viewer should parse.
+- `[x]` **[L] Server log page in Settings** — inspect server logs from the UI. _Read the
+  `Logs/` files (or a ring buffer); admin-gated._ **Done (Batch 6b).** Three tabs: the parsed
+  application log with level/text filters, follow and download; the yt-dlp per-invocation captures; and
+  the `Message` table, which had been written since the beginning and read by nothing.
 - `[x]` **[M] Maintenance actions** — DB `VACUUM` and similar housekeeping, triggerable
   and/or scheduled. **Done (Batch 6a).** A nightly `MaintenanceJob` prunes the job history and
   notifications (which previously only happened at boot, so a long-running server never pruned),
@@ -333,8 +333,27 @@ Notes worth keeping:
   `archiveFileName`/`archiveNumbering` (legacy), add `maxArchiveDays`. Also: there are *three* nlog
   configs and the Dockerfile ships the one a local run never uses.
 
-**Batch 6b — Ops, remaining**
-- H: server log page
+**Batch 6b — Server log page (2026-09-05, done)** — three commits. **Section H is now complete, and so
+is this document's checklist.** Notes worth keeping:
+- **The parser is the whole feature.** Two layouts coexist *inside one file* (Batch 6a widened it
+  mid-day), messages contain pipes so every split is bounded, and 9% of lines are stack-trace
+  continuations that belong to the entry above. The layouts are told apart by field 5 — a callsite has
+  no spaces and always contains a dot; a message is prose. Verified against every line on disk: zero of
+  the 69,815 old-format lines misread, and the entry count reconciles exactly with an independent count
+  per file (78,000 entries across 11 files).
+- **Never build a path from a client string.** A requested file name is resolved by looking it up in a
+  directory listing, so traversal attempts simply are not in the list. Ten probes asserted, including
+  `../regard-<date>.log`, which stays inside the Logs tree and would pass a naive prefix check.
+- **Reading the live file needs `FileShare.ReadWrite | Delete`.** NLog holds it open for writing;
+  `Delete` matters too, or an open read blocks NLog's own retention from rolling a file away.
+- **The palette's semantic colour pairs are not usable for small text** — `--color-fg-info` on
+  `--color-bg-info` is about 2.3:1, which is what the existing `.job-state-*` chips do. The level pills
+  put the colour on a dark chip instead: 9.7 / 10.7 / 14.4:1.
+- **`table-layout: fixed` takes its widths from the first row**, so column widths belong in a
+  `<colgroup>`, not on the cells — otherwise the browser splits the remainder evenly and the message
+  column ends up a quarter of the table.
+- **The `Message` table empties itself.** Rows cascade off the job FK, so Batch 6a's job prune took all
+  408 of them. No retention of its own needed; but it does mean the tab is often empty.
 
 **Batch 3 status (2026-08-30): all four items implemented, uncommitted.** Measured results: create
 returns in ~0.05 s (was ~3 min) and the Add dialog closes in 0.3 s; "Download again" sweeps the old

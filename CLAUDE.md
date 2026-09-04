@@ -122,9 +122,40 @@ image but never *loads* the config, and with `throwConfigExceptions="true"` plus
 - `internalLogLevel` without `internalLogToConsole`/`internalLogFile` writes nowhere, which is why the
   obsolete attributes above never announced themselves for as long as they were wrong.
 - `Logs/ytdl/*.txt` (one file per yt-dlp invocation) is **not** NLog's, so its retention never sees
-  them; `MaintenanceJob` prunes them **by mtime**. Do not parse those names: they carry a 12-hour clock
-  with AM/PM glued on the end, so 08:45 and 20:45 differ by two characters. They are only written when
-  `configuration["Debug"]` is true, i.e. development only — the shipped container writes none.
+  them; `MaintenanceJob` prunes them **by mtime**. Do not parse those names, and **do not sort by them
+  either**: they carry a 12-hour clock with AM/PM glued on the end, so `12…AM` sorts *after* `01…PM`
+  while being eleven hours earlier. They are only written when `configuration["Debug"]` is true, i.e.
+  development only — the shipped container writes none.
+
+### Reading the logs back (Batch 6b)
+
+`LogLineParser` turns the files into entries for the admin log viewer. Three properties of the real
+files drive it, each measured rather than assumed:
+
+- **Two layouts coexist, sometimes in one file.** Batch 6a widened the layout from 5 fields to 8
+  mid-day, so `regard-2026-09-03.log` holds both. Detection is **per line**, by field 5: a `${callsite}`
+  has no whitespace and always contains a dot (`Namespace.Type.Method`); a message is prose. The dot
+  matters — a message with 3+ pipes fills all eight slots of the bounded split, so field count alone
+  cannot decide. Zero misreads across 69,815 old-format lines.
+- **Messages contain pipes** (a video titled `Swimming | Episode 2`; 681 such lines in one file), so
+  every split takes a limit and the message keeps its own separators.
+- **~9% of lines are continuations** — stack traces with no leading timestamp, belonging to the entry
+  above. Treating lines as entries turns one failure into a dozen rows.
+
+Other things that are load-bearing there:
+- **Open the live file `FileShare.ReadWrite | FileShare.Delete`.** NLog holds the current day's file
+  open for writing; `Delete` matters too, or a read in flight blocks NLog's retention from rolling an
+  aged-out file away.
+- **Never `Path.Combine` a client-supplied file name.** `LogFileReader` resolves a requested name by
+  looking it up in the directory listing, so a traversal is simply not in the list — including
+  `../regard-<date>.log`, which stays inside `Logs/` and would satisfy a naive prefix check. Same rule
+  as `VideoController.Subtitle`.
+- **Downloads use an authenticated `fetch`** (`RegardHelpers.downloadWithAuth`), not an `<a href>`.
+  A bare link sends no `Authorization` header, which is the *only* reason `/api/video/view` and
+  `/api/video/subtitle` are in `QueryStringAuthMiddleware`'s whitelist; don't widen it for convenience.
+- Verification that actually catches a broken parser: **reconcile the entry count per file** against an
+  independent count of timestamp-prefixed lines. Everything else (it renders, levels look right) passes
+  even when entries are being silently dropped or invented.
 
 ## Frontend / styling
 
@@ -151,6 +182,18 @@ Known still-affected: `.watch-btn:hover` (`_watch.scss`) is (0,2,0), so the acti
 
 Assert hover legibility on a **computed contrast ratio**, never on a colour literal — the palette is
 themed and a literal locks in one theme while letting the bug back in on another.
+
+**The theme's semantic colour pairs are not usable for small text.** `--color-fg-info` on
+`--color-bg-info` measures about **2.3:1**, and the same holds for the warning pair; the existing
+`.job-state-*` chips use them. For anything pill-sized, put the semantic *foreground* colour on
+`--color-bg-secondary` instead — that measures 9-14:1 and keeps the colour coding. The log-level pills
+in `_logs.scss` do this (errors keep a solid `--color-bg-error` chip with white text, 5.3:1, because
+they should be loud).
+
+**`table-layout: fixed` takes its column widths from the first row**, so widths belong in a
+`<colgroup>`, not on the `<td>`s. Set them on cells and the browser gives every column that didn't
+declare one an equal share of the remainder — which is how the log viewer's message column ended up a
+quarter of the table while Time and Level sat on slack.
 
 ## Testing (how I like it verified)
 
