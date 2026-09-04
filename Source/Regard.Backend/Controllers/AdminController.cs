@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Regard.Backend.Common.Utils;
 using Regard.Backend.Configuration;
 using Regard.Backend.DB;
 using Regard.Backend.Jobs;
@@ -11,6 +12,7 @@ using Regard.Backend.Services;
 using Regard.Common.API.Admin;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -34,6 +36,7 @@ namespace Regard.Backend.Controllers
         private readonly Regard.Backend.Common.Services.IYoutubeDlService ytdlService;
         private readonly DatabaseBackupService backupService;
         private readonly DataContext dataContext;
+        private readonly LogFileReader logReader;
 
         public AdminController(UserManager<UserAccount> userManager,
                                RoleManager<IdentityRole> roleManager,
@@ -44,7 +47,8 @@ namespace Regard.Backend.Controllers
                                Microsoft.Extensions.Configuration.IConfiguration configuration,
                                Regard.Backend.Common.Services.IYoutubeDlService ytdlService,
                                DatabaseBackupService backupService,
-                               DataContext dataContext)
+                               DataContext dataContext,
+                               LogFileReader logReader)
         {
             this.userManager = userManager;
             this.roleManager = roleManager;
@@ -56,6 +60,7 @@ namespace Regard.Backend.Controllers
             this.ytdlService = ytdlService;
             this.backupService = backupService;
             this.dataContext = dataContext;
+            this.logReader = logReader;
         }
 
         /// <summary>Fixed on-disk location of the uploaded yt-dlp cookies.txt (null if DataDirectory unset).</summary>
@@ -278,6 +283,92 @@ namespace Regard.Backend.Controllers
 
             return Ok(responseFactory.Success(message: "Maintenance sweep queued."));
         }
+
+        // ---- Server logs -------------------------------------------------------------------
+        //
+        // Everything here inherits the class-level [Authorize(Roles = Admin)]. Note that no route below
+        // ever builds a path from a client string: a requested file name is resolved by looking it up in
+        // a directory listing, so a traversal attempt is simply not in the list and 404s.
+
+        [HttpGet]
+        [Route("logs/files")]
+        public IActionResult GetLogFiles()
+        {
+            var files = logReader.ListAppLogs()
+                .Select(f => new ApiLogFile { Name = f.Name, Bytes = f.Bytes, LastWriteUtc = f.LastWriteUtc })
+                .ToArray();
+
+            return Ok(responseFactory.Success(files));
+        }
+
+        [HttpGet]
+        [Route("logs/entries")]
+        public IActionResult GetLogEntries([FromQuery] string file = null,
+                                           [FromQuery] int minSeverity = 0,
+                                           [FromQuery] string search = null,
+                                           [FromQuery] int skip = 0,
+                                           [FromQuery] int take = 100)
+        {
+            // Same clamping shape as JobsController: a client cannot ask for an unbounded page.
+            take = take <= 0 ? 100 : Math.Min(take, 500);
+            skip = Math.Max(0, skip);
+
+            var name = string.IsNullOrWhiteSpace(file) ? logReader.DefaultAppLogName() : file;
+            if (name == null)
+                return Ok(responseFactory.Success(new ApiLogPage()));   // no logs on disk yet
+
+            var path = logReader.ResolveAppLog(name);
+            if (path == null)
+                return NotFound(responseFactory.Error("No such log file."));
+
+            LogPage page;
+            try
+            {
+                page = logReader.Query(path, new LogQuery
+                {
+                    MinSeverity = (LogSeverity)Math.Clamp(minSeverity, (int)LogSeverity.Trace, (int)LogSeverity.Unknown),
+                    Search = search,
+                    Skip = skip,
+                    Take = take,
+                });
+            }
+            catch (IOException ex)
+            {
+                return BadRequest(responseFactory.Error("Could not read the log file.", ex.Message));
+            }
+
+            return Ok(responseFactory.Success(new ApiLogPage
+            {
+                File = name,
+                TotalMatched = page.TotalMatched,
+                Entries = page.Entries.Select(ToApi).ToArray(),
+            }));
+        }
+
+        [HttpGet]
+        [Route("logs/download")]
+        public IActionResult DownloadLog([FromQuery] string file)
+        {
+            var path = logReader.ResolveAppLog(file);
+            if (path == null)
+                return NotFound(responseFactory.Error("No such log file."));
+
+            // FileStreamResult over a shared handle rather than PhysicalFile: the current day's file is
+            // held open for writing by NLog, and PhysicalFile would open it without sharing.
+            return File(LogFileReader.OpenShared(path).BaseStream, "text/plain", file);
+        }
+
+        private static ApiLogEntry ToApi(LogEntry entry) => new ApiLogEntry
+        {
+            Timestamp = entry.Timestamp,
+            Level = entry.Level,
+            Severity = (int)entry.Severity,
+            Logger = entry.Logger,
+            Callsite = entry.Callsite,
+            RequestUrl = entry.RequestUrl,
+            Message = entry.Message,
+            Detail = entry.Detail,
+        };
 
         // ---- User management ---------------------------------------------------------------
 

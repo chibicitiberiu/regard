@@ -1,0 +1,94 @@
+// Server log viewer. The table itself reuses .job-log-table and stack traces reuse .job-log-output —
+// only the things specific to log entries live here.
+
+.server-log-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+
+    select.form-control {
+        width: auto;
+        min-width: 10rem;
+    }
+
+    input[type="search"] {
+        flex: 1 1 16rem;
+        min-width: 12rem;
+    }
+}
+
+.server-log-table {
+    // Fixed layout so a long unbroken URL can't stretch a column; the widths come from the <colgroup>
+    // because that is what fixed layout reads. The message is the only column without one, so it takes
+    // everything left over -- which is the point. The other three are sized to their actual content
+    // (a HH:MM:SS, a short pill, a truncated type name) and no wider.
+    table-layout: fixed;
+    width: 100%;
+
+    .server-log-col-time { width: 4.5rem; }
+    .server-log-col-level { width: 4.5rem; }
+    .server-log-col-source { width: 9rem; }
+
+    .server-log-time {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .server-log-source {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .server-log-message {
+        // Log lines contain URLs and file paths with no spaces to break on.
+        overflow-wrap: anywhere;
+
+        summary {
+            cursor: pointer;
+        }
+    }
+
+    .server-log-request {
+        overflow-wrap: anywhere;
+    }
+}
+
+// Level pills, following the .job-state-* idiom in _jobs.scss.
+.log-level {
+    display: inline-block;
+    padding: 0.05rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+// The palette's semantic pairs (--color-fg-info on --color-bg-info, and friends) are the theme's
+// existing chip look, but they land around 2.3:1 — unreadable at this size. So the colour carries on a
+// dark chip instead, which keeps the level instantly distinguishable and measures 9-10:1. Errors are
+// the exception: a solid red chip is worth the loudness, and white on it is still 5.3:1.
+.log-level-trace,
+.log-level-debug {
+    // The bulk of any log; muted on purpose so anything above it stands out by contrast.
+    background-color: var(--color-bg-secondary);
+    color: var(--color-fg-secondary);
+}
+
+.log-level-info {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-fg-info);
+}
+
+.log-level-warn {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-fg-warning);
+}
+
+.log-level-error,
+.log-level-fatal,
+.log-level-unknown {
+    background-color: var(--color-bg-error);
+    color: #fff;
+}

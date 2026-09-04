@@ -253,6 +253,18 @@ namespace Regard.Services
         public Task<ApiResponse<ApiMaintenanceStatus>> GetMaintenanceStatus()
             => Get<ApiMaintenanceStatus>("api/admin/maintenance");
 
+        public Task<ApiResponse<ApiLogFile[]>> GetLogFiles()
+            => Get<ApiLogFile[]>("api/admin/logs/files");
+
+        /// <summary>One page of parsed log entries, newest first. An empty file name means "the newest".</summary>
+        public Task<ApiResponse<ApiLogPage>> GetLogEntries(string file, int minSeverity, string search,
+                                                           int skip, int take)
+            => Get<ApiLogPage>("api/admin/logs/entries"
+                + $"?file={Uri.EscapeDataString(file ?? string.Empty)}"
+                + $"&minSeverity={minSeverity}"
+                + $"&search={Uri.EscapeDataString(search ?? string.Empty)}"
+                + $"&skip={skip}&take={take}");
+
         /// <summary>Takes a snapshot and applies retention. Runs inline; returns what it did.</summary>
         public Task<(ApiResponse, HttpResponseMessage)> BackupDatabaseNow()
             => Post("api/admin/maintenance/backup", new object());

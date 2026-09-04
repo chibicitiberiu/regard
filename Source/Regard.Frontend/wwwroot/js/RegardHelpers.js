@@ -432,6 +432,41 @@
         var el = document.querySelector(selector);
         if (el)
             el.scrollTop = 0;
+    },
+
+    // Downloads a file from an endpoint that requires the bearer token.
+    //
+    // A plain <a href> can't do this: it sends no Authorization header, which is exactly why
+    // /api/video/view and /api/video/subtitle had to be added to QueryStringAuthMiddleware's whitelist
+    // (a <video>/<track> element has the same limitation). Doing it with fetch keeps the log endpoint
+    // ordinarily authorized instead of widening that whitelist for a file full of internal paths.
+    //
+    // Returns an error string, or null on success, so the caller can show what went wrong rather than
+    // failing silently.
+    downloadWithAuth: async function (url, token, filename) {
+        var objectUrl = null;
+        try {
+            var response = await fetch(url, { headers: { "Authorization": "Bearer " + token } });
+            if (!response.ok)
+                return "Server returned " + response.status;
+
+            var blob = await response.blob();
+            objectUrl = URL.createObjectURL(blob);
+
+            var a = document.createElement("a");
+            a.href = objectUrl;
+            a.download = filename || "download";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            return null;
+        } catch (e) {
+            return (e && e.message) ? e.message : "Download failed";
+        } finally {
+            // Revoking immediately can cancel the download in some browsers, so give it a moment.
+            if (objectUrl)
+                setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 30000);
+        }
     }
 }
 

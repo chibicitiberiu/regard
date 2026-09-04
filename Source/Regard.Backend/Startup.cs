@@ -210,7 +210,8 @@ namespace Regard.Backend
             services.AddScoped<SubscriptionManager>();
             services.AddScoped<VideoManager>();
             services.AddScoped<UserQuotaService>();
-            services.AddScoped<DatabaseBackupService>();   // scoped: it uses the scoped DataContext
+            services.AddScoped<DatabaseBackupService>();
+            services.AddSingleton<LogFileReader>();   // stateless; reads files under StorageManager's dirs   // scoped: it uses the scoped DataContext
             services.AddScoped<UserCookiesService>();
             services.AddSingleton<StorageManager>();
             services.AddSingleton<ThumbnailService>();

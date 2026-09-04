@@ -441,6 +441,14 @@
                 <JobLog />
             </Content>
         </TabPage>
+        <AuthorizeView Roles="admin" Context="logCtx">
+            <TabPage Name="serverlog">
+                <Title>Server Log</Title>
+                <Content>
+                    <ServerLog />
+                </Content>
+            </TabPage>
+        </AuthorizeView>
         <AuthorizeView Roles="admin" Context="adminCtx">
             <TabPage Name="admin">
                 <Title>Administration</Title>

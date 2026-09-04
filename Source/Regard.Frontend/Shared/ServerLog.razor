@@ -1,0 +1,337 @@
+@using Regard.Common.API.Admin
+@implements System.IDisposable
+@inject Regard.Services.BackendService Backend
+@inject Regard.Services.AuthenticationService Auth
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<div class="server-log">
+    <div class="toolbar server-log-toolbar">
+        <select class="form-control" @onchange="OnFileChanged">
+            @foreach (var f in files)
+            {
+                <option value="@f.Name" selected="@(f.Name == file)">@FileLabel(f)</option>
+            }
+        </select>
+
+        <select class="form-control" @onchange="OnSeverityChanged">
+            @foreach (var level in Levels)
+            {
+                <option value="@level.Value" selected="@(level.Value == minSeverity)">@level.Label</option>
+            }
+        </select>
+
+        <input type="search" placeholder="Search messages, loggers, stack traces"
+               value="@search" @onchange="OnSearchChanged" />
+
+        <label class="inline-check" title="Re-read the file every few seconds">
+            <input type="checkbox" checked="@follow" @onchange="OnFollowChanged" /> Follow
+        </label>
+
+        <button class="button-small" type="button" @onclick="Reload" disabled="@loading">Refresh</button>
+        <button class="button-small" type="button" @onclick="OnDownload"
+                disabled="@(string.IsNullOrEmpty(file) || downloading)">Download</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(status))
+    {
+        <p class="@(statusIsError ? "fg-error" : "text-muted")"><small>@status</small></p>
+    }
+
+    @if (loading && entries.Length == 0)
+    {
+        <p>Loading…</p>
+    }
+    else if (files.Length == 0)
+    {
+        <p class="np-empty">No log files on disk yet.</p>
+    }
+    else if (entries.Length == 0)
+    {
+        <p class="np-empty">
+            Nothing matches. @(total == 0 ? "" : $"({total} entries in this file are hidden by the filter.)")
+        </p>
+    }
+    else
+    {
+        <table class="job-log-table server-log-table">
+            @* table-layout is fixed, and fixed layout takes its widths from the first row -- so the
+               widths belong here rather than on the cells, or the browser splits the remainder evenly
+               between the columns that didn't declare one and the message ends up in a narrow gutter. *@
+            <colgroup>
+                <col class="server-log-col-time" />
+                <col class="server-log-col-level" />
+                <col class="server-log-col-source" />
+                <col class="server-log-col-message" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Level</th>
+                    <th>Source</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in entries)
+                {
+                    <tr @key="RowKey(entry)">
+                        <td class="server-log-time">@entry.Timestamp.ToString("HH:mm:ss")</td>
+                        <td>
+                            <span class="log-level log-level-@LevelClass(entry)">@entry.Level</span>
+                        </td>
+                        <td class="server-log-source" title="@SourceTitle(entry)">@ShortLogger(entry.Logger)</td>
+                        <td class="server-log-message">
+                            @if (string.IsNullOrEmpty(entry.Detail))
+                            {
+                                @entry.Message
+                            }
+                            else
+                            {
+                                @* Stack traces are folded into the entry they belong to, so they collapse
+                                   here rather than filling the table with unreadable rows. *@
+                                <details>
+                                    <summary>@entry.Message</summary>
+                                    <pre class="job-log-output">@entry.Detail</pre>
+                                </details>
+                            }
+                            @if (!string.IsNullOrEmpty(entry.RequestUrl))
+                            {
+                                <div class="server-log-request text-muted"><small>@entry.RequestUrl</small></div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <PaginationControl Page="page" PageChanged="SetPage" ItemCount="total" ItemsPerPage="PageSize" />
+    }
+</div>
+
+@code {
+    private const int PageSize = 100;
+    private static readonly TimeSpan FollowInterval = TimeSpan.FromSeconds(5);
+
+    private sealed class LevelOption
+    {
+        public int Value { get; set; }
+        public string Label { get; set; }
+    }
+
+    // Values match LogSeverity on the server.
+    private static readonly LevelOption[] Levels =
+    {
+        new LevelOption { Value = 0, Label = "All levels" },
+        new LevelOption { Value = 1, Label = "Debug and above" },
+        new LevelOption { Value = 2, Label = "Info and above" },
+        new LevelOption { Value = 3, Label = "Warnings and above" },
+        new LevelOption { Value = 4, Label = "Errors only" },
+    };
+
+    private ApiLogFile[] files = System.Array.Empty<ApiLogFile>();
+    private ApiLogEntry[] entries = System.Array.Empty<ApiLogEntry>();
+    private string file;
+    private string search = string.Empty;
+    private int minSeverity = 0;
+    private int page = 0;
+    private int total = 0;
+    private bool loading = true;
+    private bool follow = false;
+    private bool downloading = false;
+    private string status;
+    private bool statusIsError;
+    private System.Threading.CancellationTokenSource followCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFiles();
+        await Load();
+    }
+
+    private async Task LoadFiles()
+    {
+        files = (await Backend.GetLogFiles())?.Data ?? System.Array.Empty<ApiLogFile>();
+        if (file == null || System.Array.FindIndex(files, f => f.Name == file) < 0)
+            file = files.Length > 0 ? files[0].Name : null;
+    }
+
+    private async Task Load()
+    {
+        loading = true;
+        StateHasChanged();
+        await Fetch();
+        loading = false;
+    }
+
+    private async Task Fetch()
+    {
+        var resp = await Backend.GetLogEntries(file, minSeverity, search, page * PageSize, PageSize);
+        var data = resp?.Data;
+
+        if (data == null)
+        {
+            status = resp?.Message ?? "Could not read the log.";
+            statusIsError = true;
+            entries = System.Array.Empty<ApiLogEntry>();
+            total = 0;
+            return;
+        }
+
+        status = null;
+        statusIsError = false;
+        entries = data.Entries ?? System.Array.Empty<ApiLogEntry>();
+        total = data.TotalMatched;
+
+        // The server resolves an empty name to the newest file; reflect what it actually opened.
+        if (!string.IsNullOrEmpty(data.File))
+            file = data.File;
+    }
+
+    // ---------------------------------------------------------------- toolbar
+
+    private async Task OnFileChanged(ChangeEventArgs e)
+    {
+        file = e.Value?.ToString();
+        page = 0;
+        await Load();
+    }
+
+    private async Task OnSeverityChanged(ChangeEventArgs e)
+    {
+        minSeverity = int.TryParse(e.Value?.ToString(), out int v) ? v : 0;
+        page = 0;
+        await Load();
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        search = e.Value?.ToString() ?? string.Empty;
+        page = 0;
+        await Load();
+    }
+
+    private async Task SetPage(int newPage)
+    {
+        page = newPage;
+        await Load();
+    }
+
+    private Task Reload() => Load();
+
+    // Follow re-reads the file on a timer. Same shape as the Job Log's poll loop, but it only runs
+    // while the box is ticked -- re-parsing a multi-megabyte file every few seconds is not something to
+    // do unasked.
+    private async Task OnFollowChanged(ChangeEventArgs e)
+    {
+        follow = e.Value is bool b && b;
+
+        if (!follow)
+        {
+            StopFollowing();
+            return;
+        }
+
+        // Following the middle of a file is meaningless; jump to the newest page.
+        page = 0;
+        await Load();
+
+        followCts = new System.Threading.CancellationTokenSource();
+        _ = FollowLoop(followCts.Token);
+    }
+
+    private async Task FollowLoop(System.Threading.CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(FollowInterval, token);
+                await Fetch();
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException) { /* toggled off or disposed */ }
+    }
+
+    private void StopFollowing()
+    {
+        followCts?.Cancel();
+        followCts?.Dispose();
+        followCts = null;
+    }
+
+    private async Task OnDownload()
+    {
+        if (string.IsNullOrEmpty(file))
+            return;
+
+        downloading = true;
+        status = null;
+        StateHasChanged();
+
+        try
+        {
+            var token = await Auth.GetToken();
+            var url = $"{Backend.BaseUrl}api/admin/logs/download?file={System.Uri.EscapeDataString(file)}";
+            var error = await JS.InvokeAsync<string>("RegardHelpers.downloadWithAuth", url, token, file);
+
+            statusIsError = error != null;
+            status = error == null ? $"Downloaded {file}." : $"Download failed: {error}";
+        }
+        catch (System.Exception ex)
+        {
+            statusIsError = true;
+            status = $"Download failed: {ex.Message}";
+        }
+        finally
+        {
+            downloading = false;
+        }
+    }
+
+    // ---------------------------------------------------------------- display
+
+    private static string RowKey(ApiLogEntry e) => $"{e.Timestamp.Ticks}:{e.Message?.GetHashCode()}";
+
+    private static string LevelClass(ApiLogEntry e)
+        => string.IsNullOrEmpty(e.Level) ? "unknown" : e.Level.ToLowerInvariant();
+
+    /// <summary>
+    /// Logger names are fully-qualified and long; the tail is the part that identifies anything. The
+    /// full name (and callsite) stays in the tooltip.
+    /// </summary>
+    private static string ShortLogger(string logger)
+    {
+        if (string.IsNullOrEmpty(logger))
+            return string.Empty;
+        int dot = logger.LastIndexOf('.');
+        return dot >= 0 && dot < logger.Length - 1 ? logger.Substring(dot + 1) : logger;
+    }
+
+    private static string SourceTitle(ApiLogEntry e)
+        => string.IsNullOrEmpty(e.Callsite) ? e.Logger : $"{e.Logger}\n{e.Callsite}";
+
+    private static string FileLabel(ApiLogFile f)
+    {
+        // "regard-2026-09-05.log" -> "2026-09-05 (1.4 MB)"
+        var name = f.Name;
+        if (name.StartsWith("regard-") && name.EndsWith(".log"))
+            name = name.Substring("regard-".Length, name.Length - "regard-".Length - ".log".Length);
+        return $"{name} ({FormatSize(f.Bytes)})";
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = { "B", "KB", "MB", "GB" };
+        double size = bytes;
+        int unit = 0;
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+        return $"{size:0.#} {units[unit]}";
+    }
+
+    public void Dispose() => StopFollowing();
+}

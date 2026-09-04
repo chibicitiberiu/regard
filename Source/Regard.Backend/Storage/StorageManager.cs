@@ -37,6 +37,26 @@ namespace Regard.Backend.Services
         /// </summary>
         public string BackupDirectory { get; }
 
+        /// <summary>
+        /// Where NLog writes <c>regard-&lt;date&gt;.log</c>. The path is otherwise expressed only inside
+        /// nlog.config (via the DataDirectory that Program.cs seeds into NLog's GlobalDiagnosticsContext),
+        /// so this property exists to give the C# side one definition instead of several ad-hoc
+        /// Path.Combine calls.
+        ///
+        /// Never served, for the same reason as <see cref="CookiesDirectory"/> and
+        /// <see cref="BackupDirectory"/>: the logs carry absolute paths, yt-dlp command lines and the
+        /// location of the cookie jars. The admin log viewer reads them through an authorized endpoint
+        /// that resolves a requested name against a directory listing — it never builds a path from
+        /// anything a client sent.
+        /// </summary>
+        public string LogsDirectory { get; }
+
+        /// <summary>
+        /// Per-invocation yt-dlp stdout captures. Written only when <c>Debug</c> is on (development),
+        /// and pruned by the maintenance sweep. Never served, as above.
+        /// </summary>
+        public string YtdlLogsDirectory { get; }
+
         public Uri ThumbnailsBaseUrl { get; } = new Uri("thumbs", UriKind.Relative);
 
         public StorageManager(ILogger<VideoStorageService> log,
@@ -47,6 +67,8 @@ namespace Regard.Backend.Services
             ThumbnailsDirectory = Path.Combine(DataDirectory, "Thumbnails");
             CookiesDirectory = Path.Combine(DataDirectory, "Cookies");
             BackupDirectory = Path.Combine(DataDirectory, "Backups");
+            LogsDirectory = Path.Combine(DataDirectory, "Logs");
+            YtdlLogsDirectory = Path.Combine(LogsDirectory, "ytdl");
             DownloadDirectory = configuration["DownloadDirectory"];
         }
 
