@@ -50,4 +50,14 @@ namespace Regard.Common.API.Admin
         public long Bytes { get; set; }
         public DateTimeOffset LastWriteUtc { get; set; }
     }
+
+    /// <summary>
+    /// A page of yt-dlp stdout captures. Paged rather than returned whole because there is one file per
+    /// invocation and they run to thousands.
+    /// </summary>
+    public class ApiYtdlLogPage
+    {
+        public ApiLogFile[] Files { get; set; } = Array.Empty<ApiLogFile>();
+        public int TotalCount { get; set; }
+    }
 }

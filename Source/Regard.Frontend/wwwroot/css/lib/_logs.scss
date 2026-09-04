@@ -54,6 +54,26 @@
     }
 }
 
+.ytdl-log-table {
+    table-layout: fixed;
+    width: 100%;
+
+    .ytdl-log-col-when { width: 11rem; }
+    .ytdl-log-col-size { width: 5rem; }
+
+    .ytdl-log-when {
+        white-space: nowrap;
+    }
+
+    .ytdl-log-name {
+        overflow-wrap: anywhere;
+
+        summary {
+            cursor: pointer;
+        }
+    }
+}
+
 // Level pills, following the .job-state-* idiom in _jobs.scss.
 .log-level {
     display: inline-block;
@@ -91,4 +111,31 @@
 .log-level-unknown {
     background-color: var(--color-bg-error);
     color: #fff;
+}
+
+.user-message-table {
+    table-layout: fixed;
+    width: 100%;
+
+    .user-message-col-when { width: 11rem; }
+    .user-message-col-severity { width: 6rem; }
+    .user-message-col-job { width: 12rem; }
+
+    .user-message-when {
+        white-space: nowrap;
+    }
+
+    .user-message-job {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .user-message-content {
+        overflow-wrap: anywhere;
+
+        summary {
+            cursor: pointer;
+        }
+    }
 }

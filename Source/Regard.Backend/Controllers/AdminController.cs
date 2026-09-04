@@ -7,6 +7,7 @@ using Regard.Backend.Common.Utils;
 using Regard.Backend.Configuration;
 using Regard.Backend.DB;
 using Regard.Backend.Jobs;
+using Regard.Backend.Common.Model;
 using Regard.Backend.Model;
 using Regard.Backend.Services;
 using Regard.Common.API.Admin;
@@ -356,6 +357,103 @@ namespace Regard.Backend.Controllers
             // FileStreamResult over a shared handle rather than PhysicalFile: the current day's file is
             // held open for writing by NLog, and PhysicalFile would open it without sharing.
             return File(LogFileReader.OpenShared(path).BaseStream, "text/plain", file);
+        }
+
+        /// <summary>
+        /// The per-invocation yt-dlp stdout captures. There are thousands of these when they are being
+        /// written at all, so the listing pages rather than returning the directory.
+        ///
+        /// Worth knowing: they only exist when the server runs with Debug on, which is a development
+        /// setting no admin control changes. A normal install shows an empty tab, and that is correct
+        /// rather than broken.
+        /// </summary>
+        [HttpGet]
+        [Route("logs/ytdl")]
+        public IActionResult GetYtdlLogs([FromQuery] int skip = 0, [FromQuery] int take = 50)
+        {
+            take = take <= 0 ? 50 : Math.Min(take, 200);
+            skip = Math.Max(0, skip);
+
+            var all = logReader.ListYtdlLogs();
+            var page = all.Skip(skip).Take(take)
+                .Select(f => new ApiLogFile { Name = f.Name, Bytes = f.Bytes, LastWriteUtc = f.LastWriteUtc })
+                .ToArray();
+
+            return Ok(responseFactory.Success(new ApiYtdlLogPage { Files = page, TotalCount = all.Count }));
+        }
+
+        [HttpGet]
+        [Route("logs/ytdl/content")]
+        public IActionResult GetYtdlLogContent([FromQuery] string name)
+        {
+            var path = logReader.ResolveYtdlLog(name);
+            if (path == null)
+                return NotFound(responseFactory.Error("No such capture."));
+
+            try
+            {
+                // Explicit generic: a bare string would be ambiguous with the (message, debugMessage) overload.
+                return Ok(responseFactory.Success<string>(logReader.ReadText(path)));
+            }
+            catch (IOException ex)
+            {
+                return BadRequest(responseFactory.Error("Could not read the capture.", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// The Messages table, which UserLogger has been filling since the start and which nothing has
+        /// ever read back. Written on job cancellation and terminal job failure; rows cascade away when
+        /// their job is pruned, so it stays bounded without its own retention.
+        /// </summary>
+        [HttpGet]
+        [Route("messages")]
+        public async Task<IActionResult> GetMessages([FromQuery] int skip = 0,
+                                                     [FromQuery] int take = 50,
+                                                     [FromQuery] int minSeverity = 0)
+        {
+            take = take <= 0 ? 50 : Math.Min(take, 200);
+            skip = Math.Max(0, skip);
+
+            var severity = (MessageSeverity)Math.Clamp(minSeverity, (int)MessageSeverity.Info, (int)MessageSeverity.Error);
+
+            var query = dataContext.Messages.AsQueryable().Where(m => m.Severity >= severity);
+            int total = await query.CountAsync();
+
+            // Ordered by Id rather than Timestamp: the column is a DateTimeOffset, which SQLite cannot
+            // translate an ordering for, and Id is monotonic anyway.
+            var rows = await query
+                .OrderByDescending(m => m.Id)
+                .Skip(skip)
+                .Take(take)
+                .Select(m => new
+                {
+                    m.Id,
+                    m.Timestamp,
+                    m.Content,
+                    m.Details,
+                    m.Severity,
+                    m.JobId,
+                    JobName = m.Job != null ? m.Job.Name : null,
+                    UserName = m.User != null ? m.User.UserName : null,
+                })
+                .ToListAsync();
+
+            return Ok(responseFactory.Success(new ApiUserMessagePage
+            {
+                TotalCount = total,
+                Messages = rows.Select(m => new ApiUserMessage
+                {
+                    Id = m.Id,
+                    Timestamp = m.Timestamp,
+                    Content = m.Content,
+                    Details = m.Details,
+                    Severity = (int)m.Severity,
+                    JobId = m.JobId,
+                    JobName = m.JobName,
+                    UserName = m.UserName,
+                }).ToArray(),
+            }));
         }
 
         private static ApiLogEntry ToApi(LogEntry entry) => new ApiLogEntry

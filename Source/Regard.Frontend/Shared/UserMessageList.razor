@@ -1,0 +1,125 @@
+@using Regard.Common.API.Admin
+@inject Regard.Services.BackendService Backend
+
+<div class="user-message-log">
+    <div class="toolbar server-log-toolbar">
+        <select class="form-control" @onchange="OnSeverityChanged">
+            <option value="0" selected="@(minSeverity == 0)">All messages</option>
+            <option value="1" selected="@(minSeverity == 1)">Warnings and errors</option>
+            <option value="2" selected="@(minSeverity == 2)">Errors only</option>
+        </select>
+        <button class="button-small" type="button" @onclick="Load" disabled="@loading">Refresh</button>
+    </div>
+
+    <p class="text-muted">
+        Plain-language notices recorded when a job was cancelled or failed — the counterpart to the
+        application log, without the stack traces. They are removed along with the job they belong to
+        when the job history is pruned.
+    </p>
+
+    @if (loading && messages.Length == 0)
+    {
+        <p>Loading…</p>
+    }
+    else if (messages.Length == 0)
+    {
+        <p class="np-empty">Nothing recorded.</p>
+    }
+    else
+    {
+        <table class="job-log-table user-message-table">
+            <colgroup>
+                <col class="user-message-col-when" />
+                <col class="user-message-col-severity" />
+                <col class="user-message-col-job" />
+                <col />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Severity</th>
+                    <th>Job</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in messages)
+                {
+                    <tr @key="m.Id">
+                        <td class="user-message-when">@m.Timestamp.LocalDateTime.ToString("g")</td>
+                        <td><span class="log-level log-level-@SeverityClass(m.Severity)">@SeverityName(m.Severity)</span></td>
+                        <td class="user-message-job" title="@m.JobName">@(m.JobName ?? "—")</td>
+                        <td class="user-message-content">
+                            @if (string.IsNullOrEmpty(m.Details))
+                            {
+                                @m.Content
+                            }
+                            else
+                            {
+                                <details>
+                                    <summary>@m.Content</summary>
+                                    <pre class="job-log-output">@m.Details</pre>
+                                </details>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <PaginationControl Page="page" PageChanged="SetPage" ItemCount="total" ItemsPerPage="PageSize" />
+    }
+</div>
+
+@code {
+    private const int PageSize = 50;
+
+    private ApiUserMessage[] messages = System.Array.Empty<ApiUserMessage>();
+    private int minSeverity = 0;
+    private int page = 0;
+    private int total = 0;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        StateHasChanged();
+
+        var data = (await Backend.GetUserMessages(page * PageSize, PageSize, minSeverity))?.Data;
+        messages = data?.Messages ?? System.Array.Empty<ApiUserMessage>();
+        total = data?.TotalCount ?? 0;
+
+        loading = false;
+    }
+
+    private async Task OnSeverityChanged(ChangeEventArgs e)
+    {
+        minSeverity = int.TryParse(e.Value?.ToString(), out int v) ? v : 0;
+        page = 0;
+        await Load();
+    }
+
+    private async Task SetPage(int newPage)
+    {
+        page = newPage;
+        await Load();
+    }
+
+    // MessageSeverity: 0 Info, 1 Warning, 2 Error. Reuses the log-level pill styling so severity reads
+    // the same way on both tabs.
+    private static string SeverityName(int severity) => severity switch
+    {
+        1 => "WARNING",
+        2 => "ERROR",
+        _ => "INFO",
+    };
+
+    private static string SeverityClass(int severity) => severity switch
+    {
+        1 => "warn",
+        2 => "error",
+        _ => "info",
+    };
+}

@@ -1,0 +1,117 @@
+@using Regard.Common.API.Admin
+@inject Regard.Services.BackendService Backend
+
+<div class="ytdl-log">
+    <p class="text-muted">
+        One file per yt-dlp invocation. These are only written when the server runs with debug logging
+        on, which is a development setting — an empty list here is normal for an ordinary install. The
+        maintenance sweep prunes them by age.
+    </p>
+
+    @if (loading && files.Length == 0)
+    {
+        <p>Loading…</p>
+    }
+    else if (files.Length == 0)
+    {
+        <p class="np-empty">No yt-dlp captures on disk.</p>
+    }
+    else
+    {
+        <table class="job-log-table ytdl-log-table">
+            <colgroup>
+                <col class="ytdl-log-col-when" />
+                <col class="ytdl-log-col-size" />
+                <col class="ytdl-log-col-name" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Size</th>
+                    <th>Capture</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var f in files)
+                {
+                    <tr @key="f.Name">
+                        <td class="ytdl-log-when">@f.LastWriteUtc.LocalDateTime.ToString("g")</td>
+                        <td>@FormatSize(f.Bytes)</td>
+                        <td class="ytdl-log-name">
+                            <details @ontoggle="() => OnToggle(f.Name)">
+                                <summary>@f.Name</summary>
+                                <pre class="job-log-output">@ContentFor(f.Name)</pre>
+                            </details>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <PaginationControl Page="page" PageChanged="SetPage" ItemCount="total" ItemsPerPage="PageSize" />
+    }
+</div>
+
+@code {
+    private const int PageSize = 50;
+
+    private ApiLogFile[] files = System.Array.Empty<ApiLogFile>();
+    private readonly Dictionary<string, string> contents = new();
+    private readonly HashSet<string> expanded = new();
+    private int page = 0;
+    private int total = 0;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        contents.Clear();
+        expanded.Clear();
+
+        var data = (await Backend.GetYtdlLogs(page * PageSize, PageSize))?.Data;
+        files = data?.Files ?? System.Array.Empty<ApiLogFile>();
+        total = data?.TotalCount ?? 0;
+
+        loading = false;
+    }
+
+    private async Task SetPage(int newPage)
+    {
+        page = newPage;
+        await Load();
+    }
+
+    // <details> ontoggle fires on open AND close, so a removal means "was open, now closing".
+    private async Task OnToggle(string name)
+    {
+        if (expanded.Remove(name))
+            return;
+
+        expanded.Add(name);
+        if (!contents.ContainsKey(name))
+        {
+            var resp = await Backend.GetYtdlLogContent(name);
+            contents[name] = string.IsNullOrWhiteSpace(resp?.Data)
+                ? "(empty — yt-dlp produced no output for this run)"
+                : resp.Data;
+        }
+        StateHasChanged();
+    }
+
+    private string ContentFor(string name) => contents.TryGetValue(name, out var c) ? c : "Loading…";
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = { "B", "KB", "MB", "GB" };
+        double size = bytes;
+        int unit = 0;
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+        return $"{size:0.#} {units[unit]}";
+    }
+}

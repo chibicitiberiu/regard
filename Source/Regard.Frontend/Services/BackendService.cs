@@ -265,6 +265,15 @@ namespace Regard.Services
                 + $"&search={Uri.EscapeDataString(search ?? string.Empty)}"
                 + $"&skip={skip}&take={take}");
 
+        public Task<ApiResponse<ApiYtdlLogPage>> GetYtdlLogs(int skip, int take)
+            => Get<ApiYtdlLogPage>($"api/admin/logs/ytdl?skip={skip}&take={take}");
+
+        public Task<ApiResponse<ApiUserMessagePage>> GetUserMessages(int skip, int take, int minSeverity)
+            => Get<ApiUserMessagePage>($"api/admin/messages?skip={skip}&take={take}&minSeverity={minSeverity}");
+
+        public Task<ApiResponse<string>> GetYtdlLogContent(string name)
+            => Get<string>($"api/admin/logs/ytdl/content?name={Uri.EscapeDataString(name ?? string.Empty)}");
+
         /// <summary>Takes a snapshot and applies retention. Runs inline; returns what it did.</summary>
         public Task<(ApiResponse, HttpResponseMessage)> BackupDatabaseNow()
             => Post("api/admin/maintenance/backup", new object());

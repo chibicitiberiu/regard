@@ -47,15 +47,24 @@ namespace Regard.Backend.Services
 
         // ------------------------------------------------------------------ listing
 
-        /// <summary>Application log files, newest first.</summary>
+        /// <summary>
+        /// Application log files, newest first. Ordered by name, which is safe here because the name is
+        /// an ISO date (regard-2026-09-05.log) and sorts chronologically.
+        /// </summary>
         public IReadOnlyList<LogFileDescriptor> ListAppLogs()
-            => List(storageManager.LogsDirectory, AppLogPattern);
+            => List(storageManager.LogsDirectory, AppLogPattern, byName: true);
 
-        /// <summary>yt-dlp stdout captures, newest first. There can be thousands, so callers page.</summary>
+        /// <summary>
+        /// yt-dlp stdout captures, newest first. There can be thousands, so callers page.
+        ///
+        /// Ordered by modification time, NOT by name: these are stamped with a 12-hour clock and the
+        /// AM/PM glued on the end (20260905121016AM_360_stdout.txt), so "12…AM" sorts after "01…PM"
+        /// while actually being eleven hours earlier. The filesystem already knows the real order.
+        /// </summary>
         public IReadOnlyList<LogFileDescriptor> ListYtdlLogs()
-            => List(storageManager.YtdlLogsDirectory, YtdlPattern);
+            => List(storageManager.YtdlLogsDirectory, YtdlPattern, byName: false);
 
-        private IReadOnlyList<LogFileDescriptor> List(string directory, string pattern)
+        private IReadOnlyList<LogFileDescriptor> List(string directory, string pattern, bool byName)
         {
             if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
                 return Array.Empty<LogFileDescriptor>();
@@ -70,7 +79,8 @@ namespace Regard.Backend.Services
                         Bytes = f.Length,
                         LastWriteUtc = new DateTimeOffset(f.LastWriteTimeUtc, TimeSpan.Zero),
                     })
-                    .OrderByDescending(f => f.Name, StringComparer.Ordinal)
+                    .OrderByDescending(f => byName ? default : f.LastWriteUtc)
+                    .ThenByDescending(f => byName ? f.Name : string.Empty, StringComparer.Ordinal)
                     .ToList();
             }
             catch (Exception ex)
