@@ -53,6 +53,11 @@ namespace Regard.Backend.Jobs
         private bool auto;
         private bool noOpped;
         private readonly List<string> writtenSubtitles = new();
+        private List<string> subtitlesBefore = new();
+        private string wantedSignature = "";
+        // Set from ProcessStderr when a subtitle fetch hit a transient error (rate limit / HTTP), so an
+        // empty result isn't mistaken for "there are no subtitles" (which would write a false sentinel).
+        private bool subtitleFetchError;
 
         public ReprocessVideoJob(ILogger<ReprocessVideoJob> log,
                                  DataContext dataContext,
@@ -196,19 +201,20 @@ namespace Regard.Backend.Jobs
                 return;
             }
 
-            var before = (await videoStorage.GetSubtitleFiles(video)).Select(s => s.Lang).ToList();
-            bool needs = SubtitleNeeds.NeedsSubtitles(
-                before,
-                optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId),
-                optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId),
-                optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId),
-                optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId));
+            subtitlesBefore = (await videoStorage.GetSubtitleFiles(video)).Select(s => s.Lang).ToList();
+            string subLangCsv = optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId);
+            bool writeSubs = optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId);
+            bool writeAutoSubs = optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId);
+            bool allSubs = optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId);
+            wantedSignature = SubtitleSentinel.Signature(subLangCsv, allSubs, writeSubs, writeAutoSubs);
+
+            bool needs = SubtitleNeeds.NeedsSubtitles(subtitlesBefore, subLangCsv, writeSubs, writeAutoSubs, allSubs);
 
             if (!needs)
             {
                 noOpped = true;
-                JobLog(before.Count > 0
-                    ? $"Already has subtitles ({string.Join(", ", before)}) — nothing to fetch."
+                JobLog(subtitlesBefore.Count > 0
+                    ? $"Already has subtitles ({string.Join(", ", subtitlesBefore)}) — nothing to fetch."
                     : "Subtitles are turned off for this subscription — nothing to fetch.");
                 return;
             }
@@ -245,6 +251,15 @@ namespace Regard.Backend.Jobs
             var after = (await videoStorage.GetSubtitleFiles(video)).Select(s => s.Lang).ToList();
             writtenSubtitles.Clear();
             writtenSubtitles.AddRange(after);
+
+            // Record (or clear) the "nothing more to fetch" sentinel so the hourly sweep stops re-queuing
+            // a video with no captions. Skip it when this run hit a transient error — a rate-limited fetch
+            // must not be mistaken for genuine absence.
+            var newLangs = after.Where(l => !subtitlesBefore.Contains(l, StringComparer.OrdinalIgnoreCase)).ToList();
+            if (newLangs.Count > 0)
+                SubtitleSentinel.Clear(video.DownloadedPath);
+            else if (!subtitleFetchError)
+                SubtitleSentinel.Write(video.DownloadedPath, wantedSignature);
 
             string infoJsonPath = video.DownloadedPath + ".info.json";
             bool keepInfoJson = optionManager.GetForSubscription(Options.Ytdl_WriteInfoJson, video.SubscriptionId);
@@ -335,8 +350,19 @@ namespace Regard.Backend.Jobs
 
         private void ProcessStderr(string line)
         {
-            if (!string.IsNullOrWhiteSpace(line))
-                JobLog(line.Trim(), MessageSeverity.Warning);
+            if (string.IsNullOrWhiteSpace(line))
+                return;
+
+            // A transient subtitle failure (YouTube rate-limits the caption endpoint) is swallowed by
+            // --ignore-errors, so this line is its only trace. Remember it so ApplyResults doesn't treat
+            // an empty result as "no captions exist" and write a false .nosubs sentinel.
+            if (line.Contains("429") || line.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("Unable to download video subtitles", StringComparison.OrdinalIgnoreCase)
+                || (line.Contains("subtitle", StringComparison.OrdinalIgnoreCase)
+                    && line.Contains("Unable to download", StringComparison.OrdinalIgnoreCase)))
+                subtitleFetchError = true;
+
+            JobLog(line.Trim(), MessageSeverity.Warning);
         }
 
         /// <summary>

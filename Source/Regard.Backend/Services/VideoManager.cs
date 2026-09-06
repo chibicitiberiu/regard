@@ -373,6 +373,23 @@ namespace Regard.Backend.Services
                     continue;
                 }
 
+                // Auto sweep only: skip a video already confirmed to have no more subtitles to fetch for
+                // the current config (a matching .nosubs sentinel), so it isn't re-queued every hour. A
+                // manual reprocess (auto == false) ignores the sentinel and re-checks.
+                if (auto)
+                {
+                    string sig = SubtitleSentinel.Signature(
+                        optionManager.GetForSubscription(Options.Ytdl_SubLang, video.SubscriptionId),
+                        optionManager.GetForSubscription(Options.Ytdl_AllSubs, video.SubscriptionId),
+                        optionManager.GetForSubscription(Options.Ytdl_WriteSubtitles, video.SubscriptionId),
+                        optionManager.GetForSubscription(Options.Ytdl_WriteAutoSub, video.SubscriptionId));
+                    if (SubtitleSentinel.IsSatisfied(video.DownloadedPath, sig))
+                    {
+                        complete++;
+                        continue;
+                    }
+                }
+
                 if (limit.HasValue && queued >= limit.Value)
                     break;
 
