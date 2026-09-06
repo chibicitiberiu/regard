@@ -16,8 +16,8 @@ using System.Threading.Tasks;
 namespace Regard.Backend.Jobs
 {
     /// <summary>
-    /// Keeps view counts, like counts and titles from going stale, and backfills the like ratio that
-    /// "Highest rated" sorting depends on.
+    /// Keeps view counts, like counts and titles from going stale, and backfills the like ratio the
+    /// watch page shows (the "Most liked" sort keys off the broadly-populated like COUNT, not this ratio).
     ///
     /// Two things shape this job, and both are about spending a very small budget well:
     ///
@@ -117,10 +117,10 @@ namespace Regard.Backend.Jobs
         /// The cheap half. Return YouTube Dislike is a plain HTTP GET against a different host, outside
         /// the yt-dlp throttle entirely, so it can cover far more videos per run.
         ///
-        /// Videos with no rating at all go first. That is the backfill that makes the "Highest rated"
-        /// sort mean something: Video.Rating is only ever set by RYD, and until now only for videos whose
-        /// watch page someone happened to open, so a handful of arbitrary rows floated to the top while
-        /// everything else tied at null.
+        /// Videos with no rating at all go first. Video.Rating is only ever set by RYD (used for the
+        /// like/dislike ratio the watch page shows); the sweep backfills it beyond just the videos whose
+        /// watch page someone happened to open. The "Most liked" sort no longer depends on it — it keys
+        /// off Video.Likes, which enrichment populates for every video.
         /// </summary>
         private async Task<int> RefreshRatings(DateTimeOffset now)
         {

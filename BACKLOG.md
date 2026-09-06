@@ -113,11 +113,13 @@ leaves the sidebar unhighlighted. Pre-existing; noted while adding that link (Ba
 deliberately does not paper over it by writing AppState (that would navigate twice and still not
 highlight).
 
-### `VideoOrder.Rating` ("Highest rated") quietly changed meaning
-Inert before Batch 4a — `Video.Rating` was null for every YouTube video, so the sort did nothing. It's
-now populated for videos whose watch page was opened while Return YouTube Dislike was on, so a handful
-of arbitrary rows float to the top and everything else ties at null. Either backfill the ratio during
-enrichment or hide the sort option until coverage is better.
+### ~~`VideoOrder.Rating` ("Highest rated") quietly changed meaning~~ — DONE
+Replaced the sparse RYD like-ratio sort with a like-COUNT sort: the enum member `Rating` was renamed to
+`MostLiked` (int value preserved, so stored DownloadOrder rows are unaffected) and now orders by
+`Video.Likes`, which enrichment populates for every video (yt-dlp `like_count`) — broad coverage instead
+of the handful of RYD-rated rows. Labelled "Most liked" everywhere. `Video.Rating` still drives the
+watch page's like/dislike ratio. Verified: the API sort returns CGP Grey videos by likes descending, and
+the sort menu + Settings show "Most liked".
 
 ### ~~No JavaScript runtime for yt-dlp~~ — DONE (`30af97a`)
 yt-dlp needs a JS runtime (deno) or YouTube extraction degrades and some formats go missing. Resolved

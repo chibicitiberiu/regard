@@ -12,7 +12,7 @@ namespace Regard.Model
         Playlist,
         ReversePlaylist,
         Popularity,
-        Rating,
+        MostLiked,
         Name,
     }
 }

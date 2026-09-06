@@ -22,7 +22,7 @@ namespace Regard.Backend.Common.Utils
                 VideoOrder.Playlist => @this.OrderBy(x => x.PlaylistIndex),
                 VideoOrder.ReversePlaylist => @this.OrderByDescending(x => x.PlaylistIndex),
                 VideoOrder.Popularity => @this.OrderByDescending(x => x.Views),
-                VideoOrder.Rating => @this.OrderByDescending(x => x.Rating),
+                VideoOrder.MostLiked => @this.OrderByDescending(x => x.Likes),
                 VideoOrder.Name => @this.OrderBy(x => x.Name),
                 _ => throw new NotImplementedException(),
             };
@@ -44,7 +44,7 @@ namespace Regard.Backend.Common.Utils
                 VideoOrder.Playlist => @this.OrderBy(x => x.PlaylistIndex),
                 VideoOrder.ReversePlaylist => @this.OrderByDescending(x => x.PlaylistIndex),
                 VideoOrder.Popularity => @this.OrderByDescending(x => x.Views),
-                VideoOrder.Rating => @this.OrderByDescending(x => x.Rating),
+                VideoOrder.MostLiked => @this.OrderByDescending(x => x.Likes),
                 VideoOrder.Name => @this.OrderBy(x => x.Name),
                 _ => throw new NotImplementedException(),
             };

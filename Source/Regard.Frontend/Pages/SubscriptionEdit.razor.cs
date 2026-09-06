@@ -195,7 +195,7 @@ namespace Regard.Frontend.Pages
             VideoOrder.Playlist => "Playlist order",
             VideoOrder.ReversePlaylist => "Reverse playlist order",
             VideoOrder.Popularity => "Most popular",
-            VideoOrder.Rating => "Highest rated",
+            VideoOrder.MostLiked => "Most liked",
             VideoOrder.Name => "Name",
             _ => o.ToString(),
         };
