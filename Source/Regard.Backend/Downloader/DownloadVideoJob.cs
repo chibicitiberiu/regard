@@ -73,6 +73,10 @@ namespace Regard.Backend.Downloader
         private CancellationTokenSource cancellationTokenSrc = new CancellationTokenSource();
         private DownloadCancellationRegistry.CancelContext cancelContext;
         private bool limitsChecked = false;
+
+        // Set from ProcessStderr when yt-dlp reports a permanent failure (members-only/private/removed);
+        // the download catch fails fast and skips the video instead of retrying (see the catch below).
+        private string permanentFailureReason = null;
         private int lastReportedPercent = -1;
 
         /// <summary>
@@ -534,6 +538,23 @@ namespace Regard.Backend.Downloader
                 log.LogInformation("videoId={0}: download stopped (quota/limit).", VideoId);
                 throw;
             }
+            catch (Exception) when (permanentFailureReason != null)
+            {
+                // yt-dlp reported a permanent failure (members-only, private, removed). Retrying only
+                // wastes bot-gate requests and, for this [ResumeAfterRestart] job, re-queues on every
+                // boot and starves background maintenance. Fail once and skip the video so the
+                // auto-downloader stops trying it too.
+                Job.RetryCount = 0;
+                using (await videoMutex.LockAsync())
+                {
+                    video.DownloadSkipped = true;
+                    await dataContext.SaveChangesAsync();
+                }
+                JobLog($"This video can't be downloaded ({permanentFailureReason}) — it won't be retried or auto-downloaded again.",
+                    Regard.Backend.Common.Model.MessageSeverity.Error);
+                log.LogWarning("videoId={0}: permanent download failure ({1}); marked skipped, not retrying.", VideoId, permanentFailureReason);
+                throw;
+            }
             finally
             {
                 cancellationRegistry.Unregister(Job.Id);
@@ -714,6 +735,10 @@ namespace Regard.Backend.Downloader
         {
             if (message == null)
                 return;
+
+            // Flag a permanent (non-transient) failure so the download catch can fail fast instead of
+            // burning two more retries + bot-gate requests. Keep the first reason seen.
+            permanentFailureReason ??= PermanentDownloadError.Match(message);
 
             log.LogError($"videoId={VideoId}: {message}");
             JobLog(message, Regard.Backend.Common.Model.MessageSeverity.Error);
