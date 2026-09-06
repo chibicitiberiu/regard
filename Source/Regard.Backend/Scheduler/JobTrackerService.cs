@@ -272,6 +272,14 @@ namespace Regard.Backend.Services
             JobCancelled?.Invoke(this, new JobCancelledEventArgs() { Job = job });
         }
 
+        /// <summary>
+        /// Whether a terminal job failure should surface a notification card: only when this was the
+        /// final attempt (RetryCount &lt;= 0) AND the job opted into notifications. An unattended
+        /// background job (Notify=false, often no UserId) must not — a no-UserId card broadcasts to
+        /// every non-admin. Mirrors the job.Notify gate on the retry/complete/cancel paths.
+        /// </summary>
+        public static bool ShouldPostTerminalFailure(JobInfo job) => job.RetryCount <= 0 && job.Notify;
+
         public void OnJobFailed(JobInfo job, string reason, string details = null, JobNotification failure = null)
         {
             using var scope = scopeFactory.CreateScope();
@@ -286,11 +294,13 @@ namespace Regard.Backend.Services
             // Keep a Message row for the (vestigial) Messages table; nothing displays it live anymore.
             userLogger.LogError($"{job.Name}: {reason}", details, userId: job.UserId, jobId: job.Id);
 
-            // Emit the terminal failure notification ONLY when no retries remain. RetryCount is read
-            // here, BEFORE RegardScheduler's JobFailed handler decrements it — so >0 means an attempt is
-            // still pending (leave the in-progress notification up), and <=0 means this was the final
-            // attempt. This is what stops a 3-retry download from firing up to 4 "failed" notifications.
-            if (job.RetryCount <= 0)
+            // Emit the terminal failure notification ONLY when no retries remain AND the job opted into
+            // notifications (see ShouldPostTerminalFailure). RetryCount is read here, BEFORE
+            // RegardScheduler's JobFailed handler decrements it — so >0 means an attempt is still pending
+            // (leave the in-progress notification up), and <=0 means this was the final attempt. The
+            // job.Notify gate stops an unattended background job (no UserId) from broadcasting a "failed"
+            // card to every non-admin.
+            if (ShouldPostTerminalFailure(job))
             {
                 _ = notificationService.PostOrUpdate(
                     job.UserId, NotificationKey(job),
