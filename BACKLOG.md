@@ -119,14 +119,13 @@ now populated for videos whose watch page was opened while Return YouTube Dislik
 of arbitrary rows float to the top and everything else ties at null. Either backfill the ratio during
 enrichment or hide the sort option until coverage is better.
 
-### No JavaScript runtime for yt-dlp — YouTube extraction is running degraded
-Every YouTube extraction currently logs:
-`WARNING: [youtube] No supported JavaScript runtime could be found. … YouTube extraction without a JS
-runtime has been deprecated, and some formats may be missing.` yt-dlp enables **deno** by default (see
-its EJS wiki page). Neither the host nor the Docker image has it, so some formats are silently missing
-from every extraction. Fixing it means installing deno (host: the user's call; image: a Dockerfile
-line), and it should land alongside the `--impersonate` work since both are anti-bot/extraction
-quality. Verified on 2026-08-30 with yt-dlp 2026.8.19.
+### ~~No JavaScript runtime for yt-dlp~~ — DONE (`30af97a`)
+yt-dlp needs a JS runtime (deno) or YouTube extraction degrades and some formats go missing. Resolved
+in `30af97a`: the Docker image installs the static deno binary to `/usr/local/bin` (arch-aware amd64/
+arm64, with a build-time `deno --version` check), and `run-debug.sh` puts a userspace `~/.deno/bin` on
+PATH for local runs. Verified 2026-09-07: host has deno 2.9.6, the running dev backend logs no
+"No supported JavaScript runtime" warning, and the image's deno release URL resolves. (Installing deno
+on a bare production host, if not using the image, stays the user's call.)
 
 ### A failing background job notifies every user on the server (2026-09-03)
 
