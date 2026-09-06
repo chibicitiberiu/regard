@@ -481,6 +481,14 @@ namespace Regard.Backend.Downloader
 
             int idleTimeoutMs = optionManager.GetGlobal(Options.Ytdl_IdleTimeout) * 60 * 1000;
 
+            // Liveness probe for the idle watchdog: a large fragmented download can go silent on the
+            // pipe for minutes while its .part keeps growing. Snapshot the pristine output dir + base
+            // HERE — outputPath is rewritten to "<base>.fNNN" by UpdateOutputPath once the download
+            // starts, and reading the mutated value would miss the sibling stream's file.
+            string probeDir = Path.GetDirectoryName(outputPath);
+            string probeBase = Path.GetFileName(outputPath);
+            Func<long> sizeProbe = () => OutputSizeProbe.Sum(probeDir, probeBase);
+
             // Register a cancellation context so the API can cancel this specific download. It shares
             // its token source with the size-quota abort below, and its UserCancelled flag tells the two
             // apart in the catch.
@@ -496,7 +504,8 @@ namespace Regard.Backend.Downloader
                         ProcessStderr,
                         timeoutMs: 24 * 3600 * 1000,
                         cancellationToken: cancellationTokenSrc.Token,
-                        idleTimeoutMs: idleTimeoutMs);
+                        idleTimeoutMs: idleTimeoutMs,
+                        outputSizeProbe: sizeProbe);
 
                     if (resultCode != 0)
                         throw new Exception($"videoId={VideoId}: Download failed!\n");
