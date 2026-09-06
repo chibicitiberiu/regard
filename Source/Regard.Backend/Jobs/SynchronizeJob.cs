@@ -215,6 +215,18 @@ namespace Regard.Backend.Jobs
                     if (!includeMembersOnly && VideoScopeFilter.IsMembersOnly(video.ProviderAvailability))
                     {
                         skippedMembersOnly++;
+
+                        // A members-only video can't be fetched without a channel membership. If one is
+                        // already stored (ingested before this scope filter existed), take it out of the
+                        // auto-downloader so it isn't a perpetual pending-download candidate — the same
+                        // outcome as the download fast-fail path, reached without wasting an attempt.
+                        var stored = FindMatchingVideo(sub, video);
+                        if (stored != null && stored.DownloadedPath == null && !stored.DownloadSkipped)
+                        {
+                            stored.DownloadSkipped = true;
+                            await dataContext.SaveChangesAsync();
+                            log.LogInformation("videoId={0}: members-only; marked skipped so the auto-downloader stops trying it.", stored.Id);
+                        }
                         continue;
                     }
 
