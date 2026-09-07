@@ -215,6 +215,18 @@ independent copies so a mutated `Skip` doesn't leak, empty result cached, empty 
 hits the network); API triple-fetch returns byte-identical segments with correct per-config `skip`; and
 Playwright (watch page renders the segment panel identically across reloads, no JS errors).
 
+### ~~Cross-user delete IDOR — a user could delete another user's subscriptions/folders and files~~ — FIXED (2026-09-07)
+Found during the first multi-user test pass. `SubscriptionManager.Delete` / `DeleteFolders` passed the
+client-supplied ids straight to the file-deletion jobs (`DeleteSubscriptionFilesJob` /
+`DeleteSubscriptionFolderFilesJob`), whose `AddAdditionalVideos` selects files by `SubscriptionIds`
+alone and whose `DeleteInternal(firstSub.User, …)` removes rows for the owner of the first id — so
+`POST /api/subscription/delete` with another user's id + `deleteDownloadedFiles:true` deleted that
+user's files and rows. The non-recursive `DeleteFolders` branch also deleted folders with a
+`Where(ids.Contains(x.Id))` that had no `UserId` filter. Fixed by intersecting the incoming ids with the
+caller's owned rows at the top of both methods (one choke point covering every downstream path).
+Verified by `scratchpad/multiuser_test.py` (a non-admin can't delete another user's subs/folders even
+with files on, but can delete its own). Full write-up in `TEST_FINDINGS_MULTIUSER.md`.
+
 ## Known issues found during the live-update rework (2026-08-30), deliberately out of scope
 
 - **DbContexts don't take `DbContextOptions`.** `DataContext(IConfiguration)` chains to the parameterless
@@ -230,7 +242,14 @@ Playwright (watch page renders the segment panel identically across reloads, no 
 - **`JobInfo.UserId` is never populated** — every job row is ownerless, because `RegardScheduler.Schedule`'s
   `userId` argument is essentially never passed. Job pushes therefore broadcast to all authenticated
   clients, which matches `JobsController.VisibleJobs` (non-admins already see `UserId == null` jobs).
-  Populating it would allow per-user job pushes.
+  Populating it would allow per-user job pushes. **Empirically confirmed 2026-09-07** during the
+  multi-user test pass: a fresh non-admin's `GET /api/jobs` returned all 25 rows, every one
+  `userId: null` — identical to admin. Harmless while the visible rows are system maintenance jobs, but a
+  user-initiated **sync**/**download** row leaks the subscription/video name in `job.Name` (and a bell
+  card) to every non-admin. Recommended fix (own change): pass the initiating user's id into the
+  user-scoped Schedule calls (per-sub/per-folder sync, download, reprocess, refresh-video-metadata),
+  leaving recurring/global maintenance jobs null; `VisibleJobs` and `NotificationService.Send` already
+  key on `UserId`, so no routing changes are needed. See `TEST_FINDINGS_MULTIUSER.md`.
 - ~~**`UserLogger.Stop()`** `Join()`s a thread parked in `Monitor.Wait` with no timeout and a non-volatile
   stop flag — an existing shutdown hang risk.~~ **FIXED (Batch 6a).** It was not just a risk: the thread
   was also a *foreground* thread, so any fatal startup failure left the process hanging forever after

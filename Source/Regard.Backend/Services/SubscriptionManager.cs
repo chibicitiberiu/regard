@@ -315,11 +315,27 @@ namespace Regard.Backend.Services
                                  int[] ids,
                                  bool deleteFiles)
         {
+            // Scope the ids to what this user actually owns BEFORE anything acts on them. The
+            // deleteFiles path hands the ids straight to DeleteSubscriptionFilesJob, which deletes the
+            // matching videos' files and rows without an owner check of its own — so an unscoped id here
+            // is a cross-user delete (another account's downloads and subscription). See DeleteInternal.
+            ids = OwnedSubscriptionIds(userAccount, ids);
+            if (ids.Length == 0)
+                return;
+
             if (deleteFiles)
                 await DeleteSubscriptionFilesJob.Schedule(scheduler, ids, true);
             else
                 DeleteInternal(userAccount, ids);
         }
+
+        /// <summary>Intersects the requested subscription ids with the ones this user owns.</summary>
+        private int[] OwnedSubscriptionIds(UserAccount userAccount, int[] ids)
+            => dataContext.Subscriptions.AsQueryable()
+                .Where(x => x.UserId == userAccount.Id)
+                .Where(x => ids.Contains(x.Id))
+                .Select(x => x.Id)
+                .ToArray();
 
         public void DeleteInternal(UserAccount userAccount,
                                    int[] ids)
@@ -422,6 +438,17 @@ namespace Regard.Backend.Services
                                         bool recursive,
                                         bool deleteFiles)
         {
+            // Scope to owned folders up front. Both branches below trust these ids without an owner
+            // check of their own: the recursive-files job deletes by id, and the non-recursive branch's
+            // final RemoveRange filters on id alone — so an unscoped id deletes another user's folder.
+            ids = dataContext.SubscriptionFolders.AsQueryable()
+                .Where(x => x.UserId == userAccount.Id)
+                .Where(x => ids.Contains(x.Id))
+                .Select(x => x.Id)
+                .ToArray();
+            if (ids.Length == 0)
+                return;
+
             if (recursive)
             {
                 if (deleteFiles)
