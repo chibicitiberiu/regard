@@ -149,13 +149,28 @@ exception escape `ExecuteJob`, which is why an unattended sweep dying on a full 
 real fix is to gate the `RetryCount <= 0` branch on `job.Notify` like the other one, but that changes
 behaviour for every job type at once — worth doing deliberately rather than as a side effect.
 
-### SponsorBlock settings are missing from the folder page (2026-08-31)
+### ~~SponsorBlock settings are missing from the folder page (2026-08-31)~~ — DONE
 
 `Options.Sponsorblock_Actions` carries `OptionFlags.SubscriptionFolder`, and the resolver walks the
-folder level, but `Pages/FolderEdit.razor` has no SponsorBlock field — so the middle level of the
-inheritance chain can only be set through the DB. Same shape as the user/subscription pages: drop in
-`<SponsorBlockEditor AllowInherit="true" />` plus the DTO field and the controller set/unset pair. Worth
-checking whether other folder-capable options have the same gap before doing it one at a time.
+folder level, but `Pages/FolderEdit.razor` had no SponsorBlock field — so the middle level of the
+inheritance chain could only be set through the DB.
+
+Fixed by mirroring the subscription page: added `SponsorblockActions` to `SubscriptionFolderEditRequest`
+and `ApiSubscriptionFolderConfig`, read it back in `SubscriptionFolderController.AddConfigs`
+(`GetForSubscriptionFolderNoResolve`), and wrote it in `Edit` with the `Set/UnsetForSubscriptionFolder`
+pair plus the same `HasRemoveSkipConflict` guard the subscription edit has (validated before anything
+persists). UI: `<SponsorBlockEditor AllowInherit="true" @bind-Value="Request.SponsorblockActions" />` on
+`FolderEdit.razor`, loaded from `Folder.Config`. Verified: API (conflict rejected without persisting,
+valid set persists at folder scope, `none` distinct from inherit, inherit unsets) and Playwright
+(field renders, Inherit↔Custom round-trips through save+reload, no JS errors).
+
+**Still open — other folder-capable options with no folder-page field** (26 in all carry
+`OptionFlags.SubscriptionFolder`; only 7 are surfaced now). The subscription page already has a
+copyable UI+DTO+controller pattern for: `Ytdl_WriteSubtitles`, `Ytdl_WriteAutoSub`, `Ytdl_AllSubs`,
+`Ytdl_SubFormat`, `Ytdl_SubLang`, `Subscriptions_DeleteGracePeriod`, `Subscriptions_IncludeShorts`,
+`Subscriptions_IncludeMembersOnly`, `Subscriptions_PublishedAfter`, `Subscriptions_PublishedBefore`.
+The remaining `Ytdl_*` (format/codec/transcode/write-metadata/limit-rate/retries) aren't on either edit
+page today (admin/global-only in the UI). Left as a separate follow-up — not part of the SponsorBlock fix.
 
 ### The watch page re-fetches SponsorBlock on every load (2026-08-31)
 

@@ -40,6 +40,10 @@ namespace Regard.Common.API.Model
 
         public string DownloadPath { get; set; }
 
+        // SponsorBlock action CSV (category:action,…); null/empty means inherit from the parent
+        // folder / user / global default. The editor renders empty as "Inherit".
+        public string SponsorblockActions { get; set; }
+
         // Effective inherited defaults (from the parent folder / user / global) for the tri-state fields.
         public bool AutoDownloadDefault { get; set; }
         public VideoOrder DownloadOrderDefault { get; set; }

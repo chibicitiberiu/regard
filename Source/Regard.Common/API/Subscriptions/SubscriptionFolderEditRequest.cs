@@ -24,5 +24,7 @@ namespace Regard.Common.API.Subscriptions
         public bool? DeleteWatched { get; set; }
 
         public string DownloadPath { get; set; }
+
+        public string SponsorblockActions { get; set; }
     }
 }

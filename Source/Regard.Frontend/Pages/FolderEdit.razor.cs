@@ -77,6 +77,7 @@ namespace Regard.Frontend.Pages
                     Request.DeleteWatched = Folder.Config.DeleteWatched;
                     Request.MarkDeletedAsWatched = Folder.Config.MarkDeletedAsWatched;
                     Request.DownloadPath = Folder.Config.DownloadPath;
+                    Request.SponsorblockActions = Folder.Config.SponsorblockActions;
                     SubmitEnabled = true;
                     ValidationMessage = string.Empty;
                 }

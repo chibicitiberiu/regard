@@ -111,6 +111,9 @@ namespace Regard.Backend.Controllers
                 if (optionManager.GetForSubscriptionFolderNoResolve(Options.Subscriptions_DownloadPath, folder.Id, out var path))
                     folder.Config.DownloadPath = path;
 
+                if (optionManager.GetForSubscriptionFolderNoResolve(Options.Sponsorblock_Actions, folder.Id, out var sponsorblock))
+                    folder.Config.SponsorblockActions = sponsorblock;
+
                 folder.Config.AutoDownloadDefault = ResolveInherited(Options.Subscriptions_AutoDownload, folder, userId);
                 folder.Config.DownloadOrderDefault = ResolveInherited(Options.Subscriptions_DownloadOrder, folder, userId);
                 folder.Config.DeleteWatchedDefault = ResolveInherited(Options.Subscriptions_DeleteWatched, folder, userId);
@@ -178,6 +181,13 @@ namespace Regard.Backend.Controllers
         {
             var user = await userManager.GetUserAsync(User);
 
+            // Validate before anything persists, or a rejected save still leaves half the options
+            // written (same reasoning as SubscriptionController.Edit).
+            if (Regard.Common.SponsorBlock.SponsorBlockActions.HasRemoveSkipConflict(request.SponsorblockActions))
+                return BadRequest(responseFactory.Error(
+                    "SponsorBlock: Remove and Skip can't be combined (Remove cuts the file, which shifts the "
+                    + "timestamps the in-player Skip relies on)."));
+
             try
             {
                 subscriptionManager.UpdateFolder(user, request.Id, request.Name, request.ParentFolderId);
@@ -211,6 +221,10 @@ namespace Regard.Backend.Controllers
             if (!string.IsNullOrEmpty(request.DownloadPath))
                 optionManager.SetForSubscriptionFolder(Options.Subscriptions_DownloadPath, request.Id, request.DownloadPath);
             else optionManager.UnsetForSubscriptionFolder(Options.Subscriptions_DownloadPath, request.Id);
+
+            if (!string.IsNullOrEmpty(request.SponsorblockActions))
+                optionManager.SetForSubscriptionFolder(Options.Sponsorblock_Actions, request.Id, request.SponsorblockActions);
+            else optionManager.UnsetForSubscriptionFolder(Options.Sponsorblock_Actions, request.Id);
 
             return Ok(responseFactory.Success());
         }

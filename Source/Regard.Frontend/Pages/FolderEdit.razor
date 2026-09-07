@@ -78,6 +78,12 @@
                  autocapitalize="none"
                  autofocus />
 
+    <RgFieldWrapper Id="folder_sponsorblock" Label="SponsorBlock:" Required="false">
+        <Field>
+            <SponsorBlockEditor @bind-Value="Request.SponsorblockActions" AllowInherit="true" />
+        </Field>
+    </RgFieldWrapper>
+
     <div class="form-group row">
         <div class="col-xs-12 fg-error">
             @ValidationMessage
