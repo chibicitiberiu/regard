@@ -104,14 +104,21 @@ job logs the count, but nothing removes what's already stored — deleting rows 
 that deserves its own opt-in. Candidates: a "remove out-of-scope videos" maintenance action, or marking
 them `DownloadSkipped` so the auto-downloader stops trying.
 
-### Sidebar tree doesn't highlight on a deep link
+### ~~Sidebar tree doesn't highlight on a deep link~~ — DONE
 `SubscriptionTree`'s highlight is its own `treeView.SelectedItem`, which only its own click handler
 sets. `AppState.SelectedSubscription` changes drive *navigation* (`AppController.cs:141-149`) but the
-tree's listener (`SubscriptionTree.razor.cs:119-127`) only recomputes `isHomeActive`. So navigating to
-`/subscription/5` directly — from the watch page's new uploader link, a bookmark, or a typed URL —
-leaves the sidebar unhighlighted. Pre-existing; noted while adding that link (Batch 4a), which
-deliberately does not paper over it by writing AppState (that would navigate twice and still not
-highlight).
+tree's listener only recomputed `isHomeActive`. So navigating to `/subscription/5` directly — from the
+watch page's uploader link, a bookmark, or a typed URL — left the sidebar unhighlighted.
+
+Fixed by making the highlight follow the **route** (the real "what am I viewing"), not AppState. The
+tree subscribes to `NavigationManager.LocationChanged` and, after each build, parses the URL
+(`/subscription/{id}`, `/folder/{id}`, plus their `/edit/{id}` forms) to `treeView.SelectedItem` via
+`ResolveRouteNode` → `treeSubs`/`treeFolders`. It's display-only: a `syncingSelectionFromRoute` flag
+suppresses `OnSelectedItemChanged` during the sync, so it never writes AppState or double-navigates.
+Covers deep-links, back/forward, and the watch-page uploader link; direct tree clicks still select and
+navigate as before. `SubscriptionTree` now `IDisposable` to unhook the handlers. Playwright-verified
+(deep-link sub/folder highlight, selection moves between subs, Home deselects, click still works, no JS
+errors).
 
 ### ~~`VideoOrder.Rating` ("Highest rated") quietly changed meaning~~ — DONE
 Replaced the sparse RYD like-ratio sort with a like-COUNT sort: the enum member `Rating` was renamed to

@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace Regard.Frontend.Shared.Subscription
 {
-    public partial class SubscriptionTree
+    public partial class SubscriptionTree : IDisposable
     {
         private TreeView<SubscriptionItemViewModelBase> treeView;
         private Dialog deleteDialog;
@@ -34,6 +34,12 @@ namespace Regard.Frontend.Shared.Subscription
         private int? moveExcludeSubtreeRootId = null;
 
         private bool isHomeActive = true;
+
+        // Set while we push the current route into the tree's highlight. The resulting
+        // TreeView.SelectedItemChanged -> OnSelectedItemChanged would otherwise write
+        // AppState.SelectedSubscription and make AppController navigate again; this flag makes that
+        // handler a no-op so the route sync stays display-only (no navigation, no loop).
+        private bool syncingSelectionFromRoute = false;
 
         private readonly Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>> treeFolders = new Dictionary<int, TreeViewNode<SubscriptionItemViewModelBase>>();
 
@@ -61,6 +67,7 @@ namespace Regard.Frontend.Shared.Subscription
             AppState.Folders.DictionaryChanged += Folders_DictionaryChanged;
             AppState.Subscriptions.DictionaryChanged += Subscriptions_DictionaryChanged;
             AppState.PropertyChanged += AppState_PropertyChanged;
+            Navigation.LocationChanged += OnLocationChanged;    // keep the highlight on the current route
             isHomeActive = AppState.SelectedSubscription == null;
 
             await SubscriptionManager.Load();
@@ -111,7 +118,11 @@ namespace Regard.Frontend.Shared.Subscription
             foreach (var sub in AppState.Subscriptions.Values)
                 AddSubscription(sub);
 
-            StateHasChanged();
+            // Highlight the current route now the nodes exist. A cold deep-link builds the tree after
+            // the page has already navigated (and LocationChanged doesn't fire for the initial load), so
+            // this is what makes the node light up on first paint. SyncSelectionToRoute calls
+            // StateHasChanged itself.
+            SyncSelectionToRoute();
         }
 
         public void DeselectAll()
@@ -333,8 +344,76 @@ namespace Regard.Frontend.Shared.Subscription
             return false;
         }
 
+        // Highlights the tree node for the page currently in the address bar. The route is the real
+        // "what am I viewing" — a deep-link, the back/forward buttons, or a channel link on the watch
+        // page all change it without going through a tree click, and each should move the highlight.
+        // This is display-only: OnSelectedItemChanged is suppressed while it runs, so it never writes
+        // AppState / triggers AppController navigation. No-op until the tree is built.
+        private void SyncSelectionToRoute()
+        {
+            if (treeView == null)
+                return;
+
+            var node = ResolveRouteNode();
+            isHomeActive = node == null;
+
+            syncingSelectionFromRoute = true;
+            try
+            {
+                treeView.SelectedItem = node;   // TreeView's own no-change guard makes a repeat a no-op
+            }
+            finally
+            {
+                syncingSelectionFromRoute = false;
+            }
+
+            StateHasChanged();
+        }
+
+        // Maps the current URL to its tree node: /subscription/{id} (and /subscription/edit/{id}) -> its
+        // leaf, /folder/{id} (and /folder/edit/{id}) -> its node, anything else (Home, watch, settings…)
+        // -> null. Returns null when the node isn't in the tree (still loading or pruned), which safely
+        // leaves nothing highlighted.
+        private TreeViewNode<SubscriptionItemViewModelBase> ResolveRouteNode()
+        {
+            var path = new Uri(Navigation.Uri).AbsolutePath.Trim('/');
+            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length < 2)
+                return null;
+
+            // The id is the last segment for both "/{kind}/{id}" and "/{kind}/edit/{id}".
+            if (!int.TryParse(segments[^1], out int id))
+                return null;
+
+            if (segments[0] == "subscription")
+                return treeSubs.TryGetValue(id, out var subNode) ? subNode : null;
+
+            if (segments[0] == "folder")
+                return treeFolders.TryGetValue(id, out var folderNode) ? folderNode : null;
+
+            return null;
+        }
+
+        private void OnLocationChanged(object sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+            => SyncSelectionToRoute();
+
+        public void Dispose()
+        {
+            // NavigationManager is a long-lived singleton, so a leaked handler would fire into a disposed
+            // component; unsubscribe everything we hooked in OnInitializedAsync.
+            Navigation.LocationChanged -= OnLocationChanged;
+            AppState.PropertyChanged -= AppState_PropertyChanged;
+            AppState.Folders.DictionaryChanged -= Folders_DictionaryChanged;
+            AppState.Subscriptions.DictionaryChanged -= Subscriptions_DictionaryChanged;
+        }
+
         protected virtual async Task OnSelectedItemChanged(TreeViewNode<SubscriptionItemViewModelBase> item)
         {
+            // The route sync is only mirroring the address bar into the highlight; the navigation that
+            // set the route already happened, so don't write AppState / navigate again from here.
+            if (syncingSelectionFromRoute)
+                return;
+
             if (item == null)
             {
                 // Deselected (e.g. Home / logo): clear the selection so the root view shows.
