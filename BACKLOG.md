@@ -172,13 +172,26 @@ copyable UI+DTO+controller pattern for: `Ytdl_WriteSubtitles`, `Ytdl_WriteAutoSu
 The remaining `Ytdl_*` (format/codec/transcode/write-metadata/limit-rate/retries) aren't on either edit
 page today (admin/global-only in the UI). Left as a separate follow-up — not part of the SponsorBlock fix.
 
-### The watch page re-fetches SponsorBlock on every load (2026-08-31)
+### ~~The watch page re-fetches SponsorBlock on every load (2026-08-31)~~ — DONE
 
-`VideoController.List` calls sponsor.ajay.app on each single-video fetch, with no caching, so opening
-the same video five times is five requests. Fine at personal scale and deliberately live (the config
-can change between loads), but a short in-memory cache keyed on video id would be cheap if it ever
-matters. Note the segments must **not** be persisted on `Video`: the whole point of the
-`SponsorSegmentsRemoved` snapshot is that this data legitimately moves.
+`VideoController.List` called sponsor.ajay.app on each single-video fetch, with no caching, so opening
+the same video five times was five requests.
+
+Fixed with a short in-memory cache in `SponsorBlockClient.GetSkipSegmentsCached` (backed by
+`IMemoryCache`, registered via `AddMemoryCache`), keyed on video id + the category set, 5-minute TTL.
+The watch fetch (`VideoController`) now goes through it. Two things keep it safe: (1) the cached list is
+the **raw** all-category fetch with `Skip` unset — the controller marks `Skip` from the current config
+*after* the cache read, so config changes still take effect on a cache hit; (2) each call returns fresh
+copies, so the controller mutating `Skip`/reordering can't corrupt the cached list. A no-segments result
+is cached too (that's the common case worth not re-fetching), so a transient upstream failure is
+suppressed for up to the TTL and self-heals. **Not** persisted on `Video` (the note stands — this data
+legitimately moves; the `SponsorSegmentsRemoved` snapshot remains the only persisted copy). Download-time
+`GetRemovedSegments` deliberately still uses the uncached `GetSkipSegments` and always sees fresh data.
+
+Verified: 5 unit tests (repeat lookup served from cache, distinct video fetched separately, callers get
+independent copies so a mutated `Skip` doesn't leak, empty result cached, empty video/categories never
+hits the network); API triple-fetch returns byte-identical segments with correct per-config `skip`; and
+Playwright (watch page renders the segment panel identically across reloads, no JS errors).
 
 ## Known issues found during the live-update rework (2026-08-30), deliberately out of scope
 

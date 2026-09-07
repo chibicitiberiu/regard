@@ -166,6 +166,8 @@ namespace Regard.Backend
             services.AddHostedService<JobRetryService>();   // singleton: failed-job retries (see JobRetryService)
             services.AddSingleton<UserLogger>();
 
+            services.AddMemoryCache();   // backs SponsorBlockClient's short-lived watch-page segment cache
+
             services.AddHttpClient<SponsorBlockClient>(c =>
             {
                 c.BaseAddress = new Uri("https://sponsor.ajay.app");

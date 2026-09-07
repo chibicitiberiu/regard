@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Regard.Common.API.Model;
 using System;
@@ -20,11 +21,18 @@ namespace Regard.Backend.Services
     public class SponsorBlockClient
     {
         private readonly HttpClient http;
+        private readonly IMemoryCache cache;
         private readonly ILogger<SponsorBlockClient> log;
 
-        public SponsorBlockClient(HttpClient http, ILogger<SponsorBlockClient> log)
+        /// <summary>How long a watch-page segment lookup is reused before hitting sponsor.ajay.app again.
+        /// Short on purpose: SponsorBlock is live crowd-sourced data that can gain segments at any time,
+        /// but reopening the same video a few times in a sitting shouldn't be a request each.</summary>
+        private static readonly TimeSpan WatchCacheTtl = TimeSpan.FromMinutes(5);
+
+        public SponsorBlockClient(HttpClient http, IMemoryCache cache, ILogger<SponsorBlockClient> log)
         {
             this.http = http;
+            this.cache = cache;
             this.log = log;
         }
 
@@ -47,6 +55,38 @@ namespace Regard.Backend.Services
         /// </summary>
         public Task<List<ApiSponsorSegment>> GetRemovedSegments(string videoId, IEnumerable<string> categories)
             => GetSkipSegments(videoId, categories);
+
+        /// <summary>
+        /// Watch-page lookup with a short in-memory cache, so opening the same video repeatedly doesn't
+        /// call sponsor.ajay.app every time. The cached list is the raw fetch with <see
+        /// cref="ApiSponsorSegment.Skip"/> unset — the caller marks Skip from its own (possibly changed)
+        /// config, so a fresh copy of each segment is returned every call and mutating it can't corrupt
+        /// the cache. A miss and an empty/no-segments result are both cached (that's the common case we
+        /// want to stop re-fetching); a transient upstream failure is therefore also suppressed for up to
+        /// <see cref="WatchCacheTtl"/>, which self-heals.
+        ///
+        /// Deliberately separate from <see cref="GetSkipSegments"/>: <see cref="GetRemovedSegments"/> at
+        /// download time must always see the freshest data and must never read a stale cached list.
+        /// </summary>
+        public async Task<List<ApiSponsorSegment>> GetSkipSegmentsCached(string videoId, IEnumerable<string> categories)
+        {
+            var cats = categories?.ToList() ?? new List<string>();
+            if (string.IsNullOrEmpty(videoId) || cats.Count == 0)
+                return new List<ApiSponsorSegment>();
+
+            // Key on the video and the exact category set, so a lookup for a different set can't collide.
+            var key = "sb:" + videoId + ":" + string.Join(",", cats.OrderBy(c => c, StringComparer.Ordinal));
+            if (!cache.TryGetValue(key, out List<ApiSponsorSegment> cached))
+            {
+                cached = await GetSkipSegments(videoId, cats);
+                cache.Set(key, cached, WatchCacheTtl);
+            }
+
+            // Hand back copies: the caller sets Skip and reorders the list, which must not touch the cache.
+            return cached
+                .Select(s => new ApiSponsorSegment { Start = s.Start, End = s.End, Category = s.Category })
+                .ToList();
+        }
 
         public async Task<List<ApiSponsorSegment>> GetSkipSegments(string videoId, IEnumerable<string> categories)
         {
