@@ -28,9 +28,31 @@ a **per-subscription** `PlaylistIndex`. Default `DownloadOrder = Newest` orders 
   is correct (they genuinely are the older, back-catalog videos). Any un-enriched video is
   enriched with full metadata in `DownloadVideoJob` before the download, so the
   filename/season/NFO are right regardless of order.
-- **Still worth a real-data check:** verify on the NAS that `Oldest` truly yields
-  oldest-first for both a channel and a curated playlist, and that the `Playlist` /
-  `ReversePlaylist` order options match their names against yt-dlp's `playlist_index`.
+- **Real-data check done (2026-09-07, dev CGP Grey channel, 194 videos, 146 enriched):**
+  - **`Oldest` ✓** — enriched videos come back strictly oldest-first (published non-decreasing);
+    un-enriched flat placeholders (`Published = MinValue`) sort first, which is correct here because
+    they are all genuinely old back-catalog. (A *recent* un-enriched upload would mis-sort as "oldest",
+    but eager enrichment of the newest N means recent uploads always have a real date, so it doesn't
+    arise in practice.)
+  - **`Playlist` / `ReversePlaylist` ✗ do NOT correspond to yt-dlp's `playlist_index`.** The provider
+    (`YouTubeDLProvider`) does assign `PlaylistIndex = index++` in yt-dlp order, but
+    `SynchronizeJob.FillVideoDetails` **overwrites** it with an internal `max+1` per-subscription
+    **discovery counter** (`SynchronizeJob.cs:328-334`; the code even carries a `TODO: allow providers
+    to set playlist indices`). So `Playlist` order is "order first seen by sync", which:
+    - is **unstable across code versions**: this dev data has `pi=0` = *oldest* (seeded by an older
+      oldest-first sync), but the current flat-sync lists **newest-first**, so a *freshly created*
+      subscription would get `pi=0` = *newest* — the two subscriptions would sort oppositely under the
+      same "Playlist order" option;
+    - **does not track publication order** for the back-catalog: CGP Grey's 2011-2012 videos that were
+      discovered later as flat entries carry the *highest* indices (`pi` 149-196), so under `Playlist`
+      they land last and under `ReversePlaylist` first, regardless of their true age.
+  - **Proposed fix (not done — larger, needs a real curated playlist to validate, i.e. the NAS):** the
+    whole channel/playlist is already re-listed every sync, so re-derive `PlaylistIndex` from the
+    provider's per-sync order on each full sync instead of appending `max+1`, and stop overwriting the
+    provider index in `FillVideoDetails`. Must be validated against a genuinely **curated** playlist
+    (where source order is user-meaningful and differs from chronological), plus a channel (where yt-dlp
+    order is newest-first), and needs a migration/re-sync to fix existing indices. Deferred until there's
+    real curated-playlist data to test against.
 
 ### Large downloads get killed by the idle watchdog while still writing — likely the source of the broken files
 Observed live on 2026-08-30 (job 417, "Why Runways Have to Be Repainted", ~1 GB at `--limit-rate 2M`):
